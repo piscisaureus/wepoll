@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test.vcxproj", "{58F32AFA-FCBB-2A4D-DCB4-242324A2FAC4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9221E672-D419-F7D7-9259-A7D2BE1D177A} = {9221E672-D419-F7D7-9259-A7D2BE1D177A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wpoll", "wpoll.vcxproj", "{9221E672-D419-F7D7-9259-A7D2BE1D177A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{58F32AFA-FCBB-2A4D-DCB4-242324A2FAC4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{58F32AFA-FCBB-2A4D-DCB4-242324A2FAC4}.Debug|Win32.Build.0 = Debug|Win32
+		{58F32AFA-FCBB-2A4D-DCB4-242324A2FAC4}.Release|Win32.ActiveCfg = Release|Win32
+		{58F32AFA-FCBB-2A4D-DCB4-242324A2FAC4}.Release|Win32.Build.0 = Release|Win32
+		{9221E672-D419-F7D7-9259-A7D2BE1D177A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9221E672-D419-F7D7-9259-A7D2BE1D177A}.Debug|Win32.Build.0 = Debug|Win32
+		{9221E672-D419-F7D7-9259-A7D2BE1D177A}.Release|Win32.ActiveCfg = Release|Win32
+		{9221E672-D419-F7D7-9259-A7D2BE1D177A}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+	EndGlobalSection
+EndGlobal
