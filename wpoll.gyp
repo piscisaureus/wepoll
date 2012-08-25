@@ -21,6 +21,7 @@
         'src/msafd.h',
         'src/tree.h',
         'src/wpoll.c',
+        'src/msafd.c'
       ]
     },
 
