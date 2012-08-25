@@ -18,10 +18,12 @@
       'sources': [
         'common.gypi',
         'include/wpoll.h',
+        'src/msafd.c',
         'src/msafd.h',
+        'src/ntapi.c',
+        'src/ntapi.h',
         'src/tree.h',
         'src/wpoll.c',
-        'src/msafd.c'
       ]
     },
 
