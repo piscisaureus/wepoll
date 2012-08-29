@@ -37,6 +37,9 @@ typedef union wpoll_data {
   int      fd;
   uint32_t u32;
   uint64_t u64;
+  /* Windows-specific extensions. */
+  SOCKET sock;
+  HANDLE hnd;
 } wpoll_data_t;
 
 struct wpoll_event {
