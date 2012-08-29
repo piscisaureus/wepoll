@@ -41,7 +41,7 @@
 #define _AFD_CONTROL_CODE(operation, method) \
     ((FSCTL_AFD_BASE) << 12 | (operation << 2) | method)
 
-#define AFD_POLL               9
+#define AFD_POLL                        9
 
 #define IOCTL_AFD_POLL \
     _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
@@ -67,5 +67,11 @@ static const GUID AFD_PROVIDER_IDS[] = {
   {0x9fc48064, 0x7298, 0x43e4,
       {0xb7, 0xbd, 0x18, 0x1f, 0x20, 0x89, 0x79, 0x2a}}
 };
+
+
+static int afd_init();
+
+int WSAAPI afd_poll(SOCKET socket, AFD_POLL_INFO* info,
+    OVERLAPPED* overlapped);
 
 #endif  /* WPOLL_MSAFD_H_ */
