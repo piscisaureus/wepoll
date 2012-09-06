@@ -5,6 +5,9 @@
 #include <windows.h>
 #include "ntapi.h"
 
+#ifndef SIO_BASE_HANDLE
+# define SIO_BASE_HANDLE 0x48000022
+#endif
 
 #define AFD_NO_FAST_IO   0x00000001
 #define AFD_OVERLAPPED   0x00000002

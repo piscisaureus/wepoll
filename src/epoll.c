@@ -120,6 +120,7 @@ epoll_t epoll_create() {
 int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
     struct epoll_event* ev) {
   epoll_port_data_t* port_data;
+  SOCKET base_sock;
 
   port_data = (epoll_port_data_t*) port_handle;
 
@@ -129,11 +130,28 @@ int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
       epoll_op_t* op;
       SOCKET peer_sock;
       WSAPROTOCOL_INFOW protocol_info;
+      DWORD bytes;
       int len;
+
+      /* Try to obtain a base handle for the socket, so we can bypass LSPs */
+      /* that get in the way if we want to talk to the kernel directly. If */
+      /* it fails we try if we work with the original socket. Note that on */
+      /* windows XP/2k3 this will always fail since they don't support the */
+      /* SIO_BASE_HANDLE ioctl. */
+      base_sock = sock;
+      WSAIoctl(sock,
+               SIO_BASE_HANDLE,
+               NULL,
+               0,
+               &base_sock,
+               sizeof base_sock,
+               &bytes,
+               NULL,
+               NULL);
 
       /* Obtain protocol information about the socket. */
       len = sizeof protocol_info;
-      if (getsockopt(sock,
+      if (getsockopt(base_sock,
                      SOL_SOCKET,
                      SO_PROTOCOL_INFOW,
                      (char*) &protocol_info,
@@ -160,8 +178,7 @@ int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
       }
 
       sock_data->sock = sock;
-      /* TODO: actually get base socket. */
-      sock_data->base_sock = sock;
+      sock_data->base_sock = base_sock;
       sock_data->op_generation = 0;
       sock_data->submitted_events = 0;
       sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
