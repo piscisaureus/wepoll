@@ -308,43 +308,6 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
 
   port_data = (epoll_port_data_t*) port_handle;
 
-  /* Create overlapped poll operations for all sockets on the attention list. */
-  while (port_data->attn_list != NULL) {
-    epoll_sock_data_t* sock_data = port_data->attn_list;
-    assert(sock_data->flags & EPOLL__SOCK_LISTED);
-
-    /* Check if there are events registered that are not yet submitted. In */
-    /* that case we need to submit another req. */
-    if (sock_data->registered_events & EPOLL__EVENT_MASK &
-        ~sock_data->submitted_events) {
-      int r = epoll__submit_poll_op(port_data, sock_data);
-
-      if (r) {
-        /* If submitting the poll op fails then most likely the socket is */
-        /* invalid. In this case we silently remove the socket from the */
-        /* epoll port. Ohter errors make epoll_wait() fail. */
-        if (WSAGetLastError() != WSAENOTSOCK)
-          return -1;
-
-        /* Skip to the next attention list item already, because we're about */
-        /* to delete the currently selected socket. */
-        port_data->attn_list = sock_data->attn_list_next;
-        sock_data->flags &= ~EPOLL__SOCK_LISTED;
-
-        /* Delete it. */
-        r = epoll_ctl(port_handle, EPOLL_CTL_DEL, sock_data->sock, NULL);
-        assert(r == 0);
-
-        continue;
-      }
-    }
-
-    /* Remove from attention list */
-    port_data->attn_list = sock_data->attn_list_next;
-    sock_data->attn_list_prev = sock_data->attn_list_next = NULL;
-    sock_data->flags &= ~EPOLL__SOCK_LISTED;
-  }
-
   /* Compute the timeout for GetQueuedCompletionStatus, and the wait end */
   /* time, if the user specified a timeout other than zero or infinite. */
   if (timeout > 0) {
@@ -363,6 +326,43 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
     ULONG count, i;
     OVERLAPPED_ENTRY entries[64];
     int num_events = 0;
+
+    /* Create overlapped poll operations for all sockets on the attention list. */
+    while (port_data->attn_list != NULL) {
+      epoll_sock_data_t* sock_data = port_data->attn_list;
+      assert(sock_data->flags & EPOLL__SOCK_LISTED);
+
+      /* Check if there are events registered that are not yet submitted. In */
+      /* that case we need to submit another req. */
+      if (sock_data->registered_events & EPOLL__EVENT_MASK &
+          ~sock_data->submitted_events) {
+        int r = epoll__submit_poll_op(port_data, sock_data);
+
+        if (r) {
+          /* If submitting the poll op fails then most likely the socket is */
+          /* invalid. In this case we silently remove the socket from the */
+          /* epoll port. Ohter errors make epoll_wait() fail. */
+          if (WSAGetLastError() != WSAENOTSOCK)
+            return -1;
+
+          /* Skip to the next attention list item already, because we're about */
+          /* to delete the currently selected socket. */
+          port_data->attn_list = sock_data->attn_list_next;
+          sock_data->flags &= ~EPOLL__SOCK_LISTED;
+
+          /* Delete it. */
+          r = epoll_ctl(port_handle, EPOLL_CTL_DEL, sock_data->sock, NULL);
+          assert(r == 0);
+
+          continue;
+        }
+      }
+
+      /* Remove from attention list */
+      port_data->attn_list = sock_data->attn_list_next;
+      sock_data->attn_list_prev = sock_data->attn_list_next = NULL;
+      sock_data->flags &= ~EPOLL__SOCK_LISTED;
+    }
 
     /* Compute how much overlapped entries can be dequeued at most. */
     max_entries = ARRAY_COUNT(entries);
