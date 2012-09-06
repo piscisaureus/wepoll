@@ -87,7 +87,7 @@ epoll_t epoll_create() {
   /* thread-safe at the moment. */
   if (!epoll__initialized) {
     if (epoll__initialize() < 0)
-      return -1;
+      return NULL;
     epoll__initialized = 1;
   }
 
