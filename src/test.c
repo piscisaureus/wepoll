@@ -5,14 +5,14 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <wpoll.h>
+#include <epoll.h>
 
 static const char PING[] = "PING";
 static const int NUM_PINGERS = 10000;
 static const int RUN_TIME = 10000;
 
 int main(int argc, char* argv[]) {
-  wpoll_t wpoll_hnd;
+  epoll_t epoll_hnd;
   WSADATA wsa_data;
   int r;
   u_long one = 1;
@@ -28,8 +28,8 @@ int main(int argc, char* argv[]) {
 
   afd_init();
 
-  wpoll_hnd = wpoll_create();
-  assert(wpoll_hnd);
+  epoll_hnd = epoll_create();
+  assert(epoll_hnd);
 
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET;
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 
   for (i = 0; i < NUM_PINGERS; i++) {
     SOCKET sock;
-    struct wpoll_event ev;
+    struct epoll_event ev;
     
     sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -69,24 +69,24 @@ int main(int argc, char* argv[]) {
     /* is being established in the background. */
     assert(r == 0 || WSAGetLastError() == WSAEWOULDBLOCK);
 
-    ev.events = WPOLLOUT | WPOLLERR;
+    ev.events = EPOLLOUT | EPOLLERR;
     ev.data.sock = sock;
-    r = wpoll_ctl(wpoll_hnd, WPOLL_CTL_ADD, sock, &ev);
+    r = epoll_ctl(epoll_hnd, EPOLL_CTL_ADD, sock, &ev);
     assert(r == 0);
   }
 
   {
     SOCKET sock;
-    struct wpoll_event ev;
+    struct epoll_event ev;
     
     sock = socket(AF_INET, SOCK_STREAM, 0);
 
     r = ioctlsocket(sock, FIONBIO, &one);
     assert(r == 0);
    
-    ev.events = WPOLLOUT | WPOLLERR;
+    ev.events = EPOLLOUT | EPOLLERR;
     ev.data.sock = sock;
-    r = wpoll_ctl(wpoll_hnd, WPOLL_CTL_ADD, sock, &ev);
+    r = epoll_ctl(epoll_hnd, EPOLL_CTL_ADD, sock, &ev);
     assert(r == 0);
   }
 
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
 
   for (;;) {
     int i, count;
-    struct wpoll_event events[16];
+    struct epoll_event events[16];
     DWORD ticks;
 
     ticks = GetTickCount();
@@ -108,14 +108,14 @@ int main(int argc, char* argv[]) {
         break;
     }
 
-    count = wpoll_wait(wpoll_hnd, events, 16, 1000);
+    count = epoll_wait(epoll_hnd, events, 16, 1000);
     assert(count >= 0);
 
     for (i = 0; i < count; i++) {
       SOCKET sock = events[i].data.sock;
       int revents = events[i].events;
 
-      if (revents & WPOLLERR) {
+      if (revents & EPOLLERR) {
         int r;
         int err = -1;
         int err_len = sizeof err;
@@ -124,16 +124,16 @@ int main(int argc, char* argv[]) {
         assert(r == 0);
         fprintf(stderr, "Socket error: %d\n", err);
 
-        r = wpoll_ctl(wpoll_hnd, WPOLL_CTL_DEL, sock, NULL);
+        r = epoll_ctl(epoll_hnd, EPOLL_CTL_DEL, sock, NULL);
         assert(r == 0);
         continue;
       }
       
-      if (revents & WPOLLIN) {
+      if (revents & EPOLLIN) {
         char buf[1024];
         WSABUF wsa_buf;
         DWORD flags, bytes;
-        struct wpoll_event ev;
+        struct epoll_event ev;
         int r;
 
         wsa_buf.buf = buf;
@@ -146,11 +146,11 @@ int main(int argc, char* argv[]) {
         assert(bytes == sizeof PING);
 
         ev.data.sock = sock;
-        ev.events = WPOLLOUT;
+        ev.events = EPOLLOUT;
 
-        r = wpoll_ctl(wpoll_hnd, WPOLL_CTL_DEL, sock, &ev);
-        assert(r == 0);
-        r = wpoll_ctl(wpoll_hnd, WPOLL_CTL_ADD, sock, &ev);
+        //r = epoll_ctl(epoll_hnd, EPOLL_CTL_DEL, sock, &ev);
+        //assert(r == 0);
+        r = epoll_ctl(epoll_hnd, EPOLL_CTL_MOD, sock, &ev);
         assert(r == 0);
         
         pings++;
@@ -158,11 +158,11 @@ int main(int argc, char* argv[]) {
         continue;
       }
 
-      if (revents & WPOLLOUT) {
+      if (revents & EPOLLOUT) {
         WSABUF wsa_buf;
         DWORD bytes;
         int r;
-        struct wpoll_event ev;
+        struct epoll_event ev;
 
         wsa_buf.buf = PING;
         wsa_buf.len = sizeof PING;
@@ -171,9 +171,9 @@ int main(int argc, char* argv[]) {
         assert(bytes == sizeof PING);
                 
         ev.data.sock = sock;
-        ev.events = WPOLLIN;
+        ev.events = EPOLLIN;
 
-        r = wpoll_ctl(wpoll_hnd, WPOLL_CTL_MOD, sock, &ev);
+        r = epoll_ctl(epoll_hnd, EPOLL_CTL_MOD, sock, &ev);
         assert(r == 0);
 
         pings_sent++;
@@ -185,7 +185,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  r = wpoll_close(wpoll_hnd);
+  r = epoll_close(epoll_hnd);
   assert(r == 0);
 }
 

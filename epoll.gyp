@@ -4,7 +4,7 @@
 
   'targets': [
     {
-      'target_name': 'wpoll',
+      'target_name': 'epoll',
       'type': '<(library)',
 
       'libraries': ['-lws2_32.lib' ],
@@ -17,13 +17,13 @@
 
       'sources': [
         'common.gypi',
-        'include/wpoll.h',
+        'include/epoll.h',
         'src/msafd.c',
         'src/msafd.h',
         'src/ntapi.c',
         'src/ntapi.h',
         'src/tree.h',
-        'src/wpoll.c',
+        'src/epoll.c',
       ]
     },
 
@@ -31,7 +31,7 @@
       'target_name': 'test',
       'type': 'executable',
 
-      'dependencies': [ 'wpoll' ],
+      'dependencies': [ 'epoll' ],
       'libraries': ['-lws2_32.lib' ],
       'include_dirs': [ 'include', 'src' ],
 

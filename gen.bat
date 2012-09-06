@@ -1,1 +1,1 @@
-python \gyp\gyp -Dlibrary=static_library -Icommon.gypi wpoll.gyp --depth=. 
+python \gyp\gyp -Dlibrary=static_library -Icommon.gypi epoll.gyp --depth=. 

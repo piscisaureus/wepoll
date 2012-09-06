@@ -1,6 +1,6 @@
  
-#ifndef WPOLL_MSAFD_H_
-#define WPOLL_MSAFD_H_
+#ifndef EPOLL_MSAFD_H_
+#define EPOLL_MSAFD_H_
 
 #include <windows.h>
 #include "ntapi.h"
@@ -74,4 +74,4 @@ int afd_init();
 int WSAAPI afd_poll(SOCKET socket, AFD_POLL_INFO* info,
     OVERLAPPED* overlapped);
 
-#endif  /* WPOLL_MSAFD_H_ */
+#endif  /* EPOLL_MSAFD_H_ */

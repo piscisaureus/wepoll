@@ -50,8 +50,8 @@
  * The maximum height of a red-black tree is 2lg (n+1).
  */
 
-#ifndef  WPOLL_TREE_H_
-#define  WPOLL_TREE_H_
+#ifndef  EPOLL_TREE_H_
+#define  EPOLL_TREE_H_
 
 #define SPLAY_HEAD(name, type)                                                \
 struct name {                                                                 \
@@ -757,4 +757,4 @@ name##_RB_MINMAX(struct name *head, int val)                                  \
       ((x) != NULL) && ((y) = name##_RB_PREV(x), (x) != NULL);                \
        (x) = (y))
 
-#endif  /* WPOLL_TREE_H_ */
+#endif  /* EPOLL_TREE_H_ */

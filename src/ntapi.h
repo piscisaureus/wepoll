@@ -1,6 +1,6 @@
 
-#ifndef WPOLL_NTAPI_H_
-#define WPOLL_NTAPI_H_
+#ifndef EPOLL_NTAPI_H_
+#define EPOLL_NTAPI_H_
 
 #include <windows.h>
 
@@ -4085,4 +4085,4 @@ typedef NTSTATUS (NTAPI *sNtDeviceIoControlFile)
                   PVOID OutputBuffer,
                   ULONG OutputBufferLength);
 
-#endif  /* WPOLL_NTAPI_H_ */
+#endif  /* EPOLL_NTAPI_H_ */
