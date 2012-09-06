@@ -439,6 +439,7 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
 
       /* Check for a closed socket. */
       if (afd_events & AFD_POLL_LOCAL_CLOSE) {
+        RB_REMOVE(epoll_sock_data_tree, &port_data->sock_data_tree, sock_data);
         free(op);
         free(sock_data);
         continue;
