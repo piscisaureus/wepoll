@@ -49,10 +49,13 @@ struct wpoll_event {
 
 wpoll_t wpoll_create();
 
-int wpoll_close();
+int wpoll_close(wpoll_t wpoll_hnd);
 
 int wpoll_ctl(wpoll_t wpoll_hnd, int op, SOCKET sock, struct wpoll_event* event); 
 
-int epoll_wait(wpoll_t wpoll_hnd, struct wpoll_event* events, int maxevents, int timeout);
+int wpoll_wait(wpoll_t wpoll_hnd, struct wpoll_event* events, int maxevents, int timeout);
+
+int afd_init();
+
 
 #endif  /* WPOLL_H_ */

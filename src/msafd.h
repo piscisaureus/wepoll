@@ -69,7 +69,7 @@ static const GUID AFD_PROVIDER_IDS[] = {
 };
 
 
-static int afd_init();
+int afd_init();
 
 int WSAAPI afd_poll(SOCKET socket, AFD_POLL_INFO* info,
     OVERLAPPED* overlapped);
