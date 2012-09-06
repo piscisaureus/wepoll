@@ -44,7 +44,7 @@ struct epoll_port_data_s {
   HANDLE iocp;
   SOCKET peer_sockets[ARRAY_COUNT(AFD_PROVIDER_IDS)];
   RB_HEAD(epoll_sock_data_tree, epoll_sock_data_s) sock_data_tree;
-  epoll_sock_data_t* attn;
+  epoll_sock_data_t* attn_list;
   size_t pending_ops_count;
 };
 
@@ -60,8 +60,8 @@ typedef struct epoll_sock_data_s {
   uint32_t op_generation;
   uint64_t user_data;
   epoll_op_t* free_op;
-  epoll_sock_data_t* attn_prev;
-  epoll_sock_data_t* attn_next;
+  epoll_sock_data_t* attn_list_prev;
+  epoll_sock_data_t* attn_list_next;
   RB_ENTRY(epoll_sock_data_s) tree_entry;
 };
 
@@ -107,7 +107,7 @@ epoll_t epoll_create() {
   }
 
   port_data->iocp = iocp;
-  port_data->attn = NULL;
+  port_data->attn_list = NULL;
   port_data->pending_ops_count = 0;
 
   memset(&port_data->peer_sockets, 0, sizeof port_data->peer_sockets);
@@ -181,11 +181,11 @@ int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
       }
 
       /* Add to attention list */
-      sock_data->attn_prev = NULL;
-      sock_data->attn_next = port_data->attn;
-      if (port_data->attn)
-        port_data->attn->attn_prev = sock_data;
-      port_data->attn = sock_data;
+      sock_data->attn_list_prev = NULL;
+      sock_data->attn_list_next = port_data->attn_list;
+      if (port_data->attn_list)
+        port_data->attn_list->attn_list_prev = sock_data;
+      port_data->attn_list = sock_data;
       sock_data->flags |= EPOLL__SOCK_LISTED;
 
       return 0;
@@ -218,11 +218,11 @@ int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
 
         /* Add to attention list, if not already added. */
         if (!(sock_data->flags & EPOLL__SOCK_LISTED)) {
-          sock_data->attn_prev = NULL;
-          sock_data->attn_next = port_data->attn;
-          if (port_data->attn)
-            port_data->attn->attn_prev = sock_data;
-          port_data->attn = sock_data;
+          sock_data->attn_list_prev = NULL;
+          sock_data->attn_list_next = port_data->attn_list;
+          if (port_data->attn_list)
+            port_data->attn_list->attn_list_prev = sock_data;
+          port_data->attn_list = sock_data;
           sock_data->flags |= EPOLL__SOCK_LISTED;
         }
       }
@@ -253,14 +253,14 @@ int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
 
       /* Remove from attention list. */
       if (sock_data->flags & EPOLL__SOCK_LISTED) {
-        if (sock_data->attn_prev != NULL)
-          sock_data->attn_prev->attn_next = sock_data->attn_next;
-        if (sock_data->attn_next != NULL)
-          sock_data->attn_next->attn_prev = sock_data->attn_prev;
-        if (port_data->attn == sock_data)
-          port_data->attn = sock_data->attn_next;
-        sock_data->attn_prev = NULL;
-        sock_data->attn_next = NULL;
+        if (sock_data->attn_list_prev != NULL)
+          sock_data->attn_list_prev->attn_list_next = sock_data->attn_list_next;
+        if (sock_data->attn_list_next != NULL)
+          sock_data->attn_list_next->attn_list_prev = sock_data->attn_list_prev;
+        if (port_data->attn_list == sock_data)
+          port_data->attn_list = sock_data->attn_list_next;
+        sock_data->attn_list_prev = NULL;
+        sock_data->attn_list_next = NULL;
         sock_data->flags &= ~EPOLL__SOCK_LISTED;
       }
 
@@ -292,8 +292,8 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
   port_data = (epoll_port_data_t*) port_handle;
 
   /* Create overlapped poll operations for all sockets on the attention list. */
-  while (port_data->attn != NULL) {
-    epoll_sock_data_t* sock_data = port_data->attn;
+  while (port_data->attn_list != NULL) {
+    epoll_sock_data_t* sock_data = port_data->attn_list;
     assert(sock_data->flags & EPOLL__SOCK_LISTED);
 
     /* Check if there are events registered that are not yet submitted. In */
@@ -311,7 +311,7 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
 
         /* Skip to the next attention list item already, because we're about */
         /* to delete the currently selected socket. */
-        port_data->attn = sock_data->attn_next;
+        port_data->attn_list = sock_data->attn_list_next;
         sock_data->flags &= ~EPOLL__SOCK_LISTED;
 
         /* Delete it. */
@@ -323,8 +323,8 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
     }
 
     /* Remove from attention list */
-    port_data->attn = sock_data->attn_next;
-    sock_data->attn_prev = sock_data->attn_next = NULL;
+    port_data->attn_list = sock_data->attn_list_next;
+    sock_data->attn_list_prev = sock_data->attn_list_next = NULL;
     sock_data->flags &= ~EPOLL__SOCK_LISTED;
   }
 
@@ -450,14 +450,14 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
       /* user is interested in, add the socket back to the attention list. */
       if (!registered_events & EPOLLONESHOT || reported_events == 0) {
         assert(!(sock_data->flags & EPOLL__SOCK_LISTED));
-        if (port_data->attn == NULL) {
-          sock_data->attn_next = sock_data->attn_prev = NULL;
-          port_data->attn = sock_data;
+        if (port_data->attn_list == NULL) {
+          sock_data->attn_list_next = sock_data->attn_list_prev = NULL;
+          port_data->attn_list = sock_data;
         } else {
-          sock_data->attn_prev = NULL;
-          sock_data->attn_next = port_data->attn;
-          port_data->attn->attn_next = sock_data;
-          port_data->attn = sock_data;
+          sock_data->attn_list_prev = NULL;
+          sock_data->attn_list_next = port_data->attn_list;
+          port_data->attn_list->attn_list_next = sock_data;
+          port_data->attn_list = sock_data;
         }
       }
 
