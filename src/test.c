@@ -11,6 +11,8 @@ static const char PING[] = "PING";
 static const int NUM_PINGERS = 10000;
 static const int RUN_TIME = 10000;
 
+int x = 0;
+
 int main(int argc, char* argv[]) {
   epoll_t epoll_hnd;
   WSADATA wsa_data;
@@ -23,13 +25,8 @@ int main(int argc, char* argv[]) {
   long long pings = 0, pings_sent = 0;
   int i;
 
-  r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-  assert(r == 0);
-
-  afd_init();
-
   epoll_hnd = epoll_create();
-  assert(epoll_hnd);
+  assert(epoll_hnd && epoll_hnd != INVALID_HANDLE_VALUE);
 
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET;
@@ -53,7 +50,6 @@ int main(int argc, char* argv[]) {
   bind_addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
   memset(bind_addr.sin_zero, 0, sizeof bind_addr.sin_zero);
   */
-
 
   for (i = 0; i < NUM_PINGERS; i++) {
     SOCKET sock;
@@ -104,11 +100,11 @@ int main(int argc, char* argv[]) {
       printf("%lld pings (%f per sec), %lld sent\n", pings, (double) pings / (ticks - ticks_start) * 1000, pings_sent);
       ticks_last = ticks;
 
-      if (ticks - ticks_start > RUN_TIME) 
-        break;
+     // if (ticks - ticks_start > RUN_TIME) 
+     //   break;
     }
 
-    count = epoll_wait(epoll_hnd, events, 16, 1000);
+    count = epoll_wait(epoll_hnd, events, 15, 1000);
     assert(count >= 0);
 
     for (i = 0; i < count; i++) {

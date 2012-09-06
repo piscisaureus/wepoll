@@ -20,8 +20,6 @@
 #define EPOLLWRBAND 0x200
 #define EPOLLRDHUP 0x2000
 
-#define EPOLL_EVENT_MASK 0xffff
-
 /* #define EPOLLET (1 << 30) Not supported */
 #define EPOLLONESHOT (1 << 31)
 
@@ -47,6 +45,7 @@ struct epoll_event {
   epoll_data_t data;      /* User data variable */
 };
 
+
 epoll_t epoll_create();
 
 int epoll_close(epoll_t epoll_hnd);
@@ -54,8 +53,6 @@ int epoll_close(epoll_t epoll_hnd);
 int epoll_ctl(epoll_t epoll_hnd, int op, SOCKET sock, struct epoll_event* event); 
 
 int epoll_wait(epoll_t epoll_hnd, struct epoll_event* events, int maxevents, int timeout);
-
-int afd_init();
 
 
 #endif  /* EPOLL_H_ */

@@ -4073,7 +4073,7 @@ typedef VOID (NTAPI *PIO_APC_ROUTINE)
               ULONG Reserved);
 
 
-typedef NTSTATUS (NTAPI *sNtDeviceIoControlFile)
+typedef NTSTATUS (NTAPI *PNTDEVICEIOCONTROLFILE)
                  (HANDLE FileHandle,
                   HANDLE Event,
                   PIO_APC_ROUTINE ApcRoutine,

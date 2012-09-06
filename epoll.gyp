@@ -18,9 +18,7 @@
       'sources': [
         'common.gypi',
         'include/epoll.h',
-        'src/msafd.c',
         'src/msafd.h',
-        'src/ntapi.c',
         'src/ntapi.h',
         'src/tree.h',
         'src/epoll.c',
