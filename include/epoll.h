@@ -1,4 +1,3 @@
-
 #ifndef EPOLL_H_
 #define EPOLL_H_
 
@@ -7,6 +6,11 @@
 
 #include <stdint.h>
 
+#ifdef  __cplusplus
+#define EXPORT extern "C" __declspec(dllexport)
+#else
+#define EXPORT   __declspec(dllexport)
+#endif
 
 #define EPOLLIN 0x001
 #define EPOLLPRI 0x002
@@ -46,13 +50,13 @@ struct epoll_event {
 };
 
 
-epoll_t epoll_create();
+EXPORT epoll_t epoll_create();
 
-int epoll_close(epoll_t epoll_hnd);
+EXPORT int epoll_close(epoll_t epoll_hnd);
 
-int epoll_ctl(epoll_t epoll_hnd, int op, SOCKET sock, struct epoll_event* event); 
+EXPORT int epoll_ctl(epoll_t epoll_hnd, int op, SOCKET sock, struct epoll_event* event); 
 
-int epoll_wait(epoll_t epoll_hnd, struct epoll_event* events, int maxevents, int timeout);
+EXPORT int epoll_wait(epoll_t epoll_hnd, struct epoll_event* events, int maxevents, int timeout);
 
 
 #endif  /* EPOLL_H_ */
