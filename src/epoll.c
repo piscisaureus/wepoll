@@ -13,6 +13,17 @@
 #define EPOLL__SOCK_LISTED 0x1
 #define EPOLL__SOCK_DELETED 0x2
 
+#define ATTN_LIST_ADD(p, s)                 \
+  do {                                      \
+    (s)->attn_list_prev = NULL;             \
+    (s)->attn_list_next = (p)->attn_list;   \
+    if ((p)->attn_list) {                   \
+      (p)->attn_list->attn_list_prev = (s); \
+    }                                       \
+    (p)->attn_list = (s);                   \
+    (s)->flags |= EPOLL__SOCK_LISTED;       \
+  } while (0)
+
 typedef struct epoll_port_data_s epoll_port_data_t;
 typedef struct epoll_op_s epoll_op_t;
 typedef struct epoll_sock_data_s epoll_sock_data_t;
@@ -44,7 +55,7 @@ struct epoll_port_data_s {
 };
 
 /* State associated with a socket that is registered to the epoll port. */
-typedef struct epoll_sock_data_s {
+struct epoll_sock_data_s {
   SOCKET sock;
   SOCKET base_sock;
   SOCKET peer_sock;
@@ -189,12 +200,7 @@ int epoll_ctl(epoll_t port_handle,
       }
 
       /* Add to attention list */
-      sock_data->attn_list_prev = NULL;
-      sock_data->attn_list_next = port_data->attn_list;
-      if (port_data->attn_list)
-        port_data->attn_list->attn_list_prev = sock_data;
-      port_data->attn_list = sock_data;
-      sock_data->flags |= EPOLL__SOCK_LISTED;
+      ATTN_LIST_ADD(port_data, sock_data);
 
       return 0;
     }
@@ -225,12 +231,7 @@ int epoll_ctl(epoll_t port_handle,
 
         /* Add to attention list, if not already added. */
         if (!(sock_data->flags & EPOLL__SOCK_LISTED)) {
-          sock_data->attn_list_prev = NULL;
-          sock_data->attn_list_next = port_data->attn_list;
-          if (port_data->attn_list)
-            port_data->attn_list->attn_list_prev = sock_data;
-          port_data->attn_list = sock_data;
-          sock_data->flags |= EPOLL__SOCK_LISTED;
+          ATTN_LIST_ADD(port_data, sock_data);
         }
       }
 
@@ -454,18 +455,15 @@ int epoll_wait(epoll_t port_handle,
       /* Don't report events that the user didn't specify. */
       reported_events &= registered_events;
 
-      /* Unless EPOLLONESHOT is used or no events were reported that the */
-      /* user is interested in, add the socket back to the attention list. */
-      if (!registered_events & EPOLLONESHOT || reported_events == 0) {
+      if (reported_events == 0) {
         assert(!(sock_data->flags & EPOLL__SOCK_LISTED));
-        if (port_data->attn_list == NULL) {
-          sock_data->attn_list_next = sock_data->attn_list_prev = NULL;
-          port_data->attn_list = sock_data;
-        } else {
-          sock_data->attn_list_prev = NULL;
-          sock_data->attn_list_next = port_data->attn_list;
-          port_data->attn_list->attn_list_next = sock_data;
-          port_data->attn_list = sock_data;
+        ATTN_LIST_ADD(port_data, sock_data);
+      } else {
+        /* Unless EPOLLONESHOT is used add the socket back to the attention
+         * list. */
+        if (!(registered_events & EPOLLONESHOT)) {
+          assert(!(sock_data->flags & EPOLL__SOCK_LISTED));
+          ATTN_LIST_ADD(port_data, sock_data);
         }
       }
 
