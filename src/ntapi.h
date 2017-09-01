@@ -1,7 +1,7 @@
 #ifndef EPOLL_NTAPI_H_
 #define EPOLL_NTAPI_H_
 
-#include <windows.h>
+#include <Windows.h>
 
 #ifndef _NTDEF_
 typedef LONG NTSTATUS;
