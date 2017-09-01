@@ -119,7 +119,7 @@ epoll_t epoll_create() {
 
 int epoll_ctl(epoll_t port_handle,
               int op,
-              SOCKET sock,
+              uintptr_t sock,
               struct epoll_event* ev) {
   epoll_port_data_t* port_data;
   SOCKET base_sock;
