@@ -8,6 +8,14 @@
 #define SIO_BASE_HANDLE 0x48000022
 #endif
 
+#ifndef FILE_DEVICE_NETWORK
+#define FILE_DEVICE_NETWORK 0x00000012
+#endif
+
+#ifndef METHOD_BUFFERED
+#define METHOD_BUFFERED 0
+#endif
+
 /* clang-format off */
 
 #define AFD_NO_FAST_IO   0x00000001
