@@ -11,6 +11,11 @@
 #include "msafd.h"
 #include "tree.h"
 
+#ifndef _SSIZE_T_DEFINED
+#define SSIZE_T_DEFINED
+typedef intptr_t ssize_t;
+#endif
+
 #define ARRAY_COUNT(a) (sizeof(a) / (sizeof((a)[0])))
 
 #define EPOLL__EVENT_MASK 0xffff
