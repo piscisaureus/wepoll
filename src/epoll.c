@@ -557,7 +557,7 @@ int epoll_close(epoll_t port_handle) {
   }
 
   /* Remove all entries from the socket_state tree. */
-  while (sock_data = RB_ROOT(&port_data->sock_data_tree)) {
+  while ((sock_data = RB_ROOT(&port_data->sock_data_tree))) {
     RB_REMOVE(epoll_sock_data_tree, &port_data->sock_data_tree, sock_data);
 
     if (sock_data->free_io_req != NULL)
