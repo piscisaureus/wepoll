@@ -4054,7 +4054,8 @@ typedef NTSTATUS* PNTSTATUS;
 #endif
 
 /* This is not the NTSTATUS_FROM_WIN32 that the DDK provides, because the
-/* DDK got it wrong! */
+ * DDK got it wrong!
+ */
 #ifdef NTSTATUS_FROM_WIN32
 #undef NTSTATUS_FROM_WIN32
 #endif
