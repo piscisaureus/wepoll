@@ -3,6 +3,7 @@
 #include <Windows.h>
 
 #include <assert.h>
+#include <malloc.h>
 #include <stdint.h>
 #include <stdio.h>
 
