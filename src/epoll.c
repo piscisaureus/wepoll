@@ -1,4 +1,3 @@
-
 #include <assert.h>
 #include <epoll.h>
 #include <stdint.h>
@@ -7,37 +6,33 @@
 #include "msafd.h"
 #include "tree.h"
 
-
 #define ARRAY_COUNT(a) (sizeof(a) / (sizeof((a)[0])))
 
-#define EPOLL__EVENT_MASK     0xffff
+#define EPOLL__EVENT_MASK 0xffff
 
-#define EPOLL__SOCK_LISTED    0x1
-#define EPOLL__SOCK_DELETED   0x2
-
+#define EPOLL__SOCK_LISTED 0x1
+#define EPOLL__SOCK_DELETED 0x2
 
 typedef struct epoll_port_data_s epoll_port_data_t;
 typedef struct epoll_op_s epoll_op_t;
 typedef struct epoll_sock_data_s epoll_sock_data_t;
 
-
 static int epoll__initialize();
 static SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
-    WSAPROTOCOL_INFOW* protocol_info);
+                                     WSAPROTOCOL_INFOW* protocol_info);
 static SOCKET epoll__create_peer_socket(HANDLE iocp,
-    WSAPROTOCOL_INFOW* protocol_info);
+                                        WSAPROTOCOL_INFOW* protocol_info);
 static int epoll__compare_sock_data(epoll_sock_data_t* a,
-    epoll_sock_data_t* b);
+                                    epoll_sock_data_t* b);
 static int epoll__submit_poll_op(epoll_port_data_t* port_data,
-    epoll_sock_data_t* sock_data);
-static int epoll__afd_poll(SOCKET socket, AFD_POLL_INFO* info,
-    OVERLAPPED* overlapped);
+                                 epoll_sock_data_t* sock_data);
+static int epoll__afd_poll(SOCKET socket,
+                           AFD_POLL_INFO* info,
+                           OVERLAPPED* overlapped);
 static int epoll__ntstatus_to_winsock_error(NTSTATUS status);
-
 
 static int epoll__initialized = 0;
 static PNTDEVICEIOCONTROLFILE pNtDeviceIoControlFile;
-
 
 /* State associated with a epoll handle. */
 struct epoll_port_data_s {
@@ -47,7 +42,6 @@ struct epoll_port_data_s {
   epoll_sock_data_t* attn_list;
   size_t pending_ops_count;
 };
-
 
 /* State associated with a socket that is registered to the epoll port. */
 typedef struct epoll_sock_data_s {
@@ -73,11 +67,10 @@ struct epoll_op_s {
   epoll_sock_data_t* sock_data;
 };
 
-
 RB_GENERATE_STATIC(epoll_sock_data_tree,
                    epoll_sock_data_s,
-                   tree_entry, epoll__compare_sock_data)
-
+                   tree_entry,
+                   epoll__compare_sock_data)
 
 epoll_t epoll_create() {
   epoll_port_data_t* port_data;
@@ -97,10 +90,7 @@ epoll_t epoll_create() {
     return NULL;
   }
 
-  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE,
-                                NULL,
-                                0,
-                                0);
+  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   if (iocp == INVALID_HANDLE_VALUE) {
     free(port_data);
     return NULL;
@@ -116,9 +106,10 @@ epoll_t epoll_create() {
   return (epoll_t) port_data;
 }
 
-
-int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
-    struct epoll_event* ev) {
+int epoll_ctl(epoll_t port_handle,
+              int op,
+              SOCKET sock,
+              struct epoll_event* ev) {
   epoll_port_data_t* port_data;
   SOCKET base_sock;
 
@@ -213,9 +204,8 @@ int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
       epoll_sock_data_t* sock_data;
 
       lookup.sock = sock;
-      sock_data = RB_FIND(epoll_sock_data_tree,
-                          &port_data->sock_data_tree,
-                          &lookup);
+      sock_data =
+          RB_FIND(epoll_sock_data_tree, &port_data->sock_data_tree, &lookup);
       if (sock_data == NULL) {
         /* Socket has not been registered with epoll instance. */
         SetLastError(ERROR_NOT_FOUND);
@@ -254,9 +244,8 @@ int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
       epoll_sock_data_t* sock_data;
 
       lookup.sock = sock;
-      sock_data = RB_FIND(epoll_sock_data_tree,
-                          &port_data->sock_data_tree,
-                          &lookup);
+      sock_data =
+          RB_FIND(epoll_sock_data_tree, &port_data->sock_data_tree, &lookup);
       if (sock_data == NULL) {
         /* Socket has not been registered with epoll instance. */
         SetLastError(ERROR_NOT_FOUND);
@@ -271,9 +260,11 @@ int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
       /* Remove from attention list. */
       if (sock_data->flags & EPOLL__SOCK_LISTED) {
         if (sock_data->attn_list_prev != NULL)
-          sock_data->attn_list_prev->attn_list_next = sock_data->attn_list_next;
+          sock_data->attn_list_prev->attn_list_next =
+              sock_data->attn_list_next;
         if (sock_data->attn_list_next != NULL)
-          sock_data->attn_list_next->attn_list_prev = sock_data->attn_list_prev;
+          sock_data->attn_list_next->attn_list_prev =
+              sock_data->attn_list_prev;
         if (port_data->attn_list == sock_data)
           port_data->attn_list = sock_data->attn_list_next;
         sock_data->attn_list_prev = NULL;
@@ -299,9 +290,10 @@ int epoll_ctl(epoll_t port_handle, int op, SOCKET sock,
   }
 }
 
-
-int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
-    int timeout) {
+int epoll_wait(epoll_t port_handle,
+               struct epoll_event* events,
+               int maxevents,
+               int timeout) {
   epoll_port_data_t* port_data;
   DWORD due;
   DWORD gqcs_timeout;
@@ -327,7 +319,8 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
     OVERLAPPED_ENTRY entries[64];
     int num_events = 0;
 
-    /* Create overlapped poll operations for all sockets on the attention list. */
+    /* Create overlapped poll operations for all sockets on the attention list.
+     */
     while (port_data->attn_list != NULL) {
       epoll_sock_data_t* sock_data = port_data->attn_list;
       assert(sock_data->flags & EPOLL__SOCK_LISTED);
@@ -345,7 +338,8 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
           if (WSAGetLastError() != WSAENOTSOCK)
             return -1;
 
-          /* Skip to the next attention list item already, because we're about */
+          /* Skip to the next attention list item already, because we're about
+           */
           /* to delete the currently selected socket. */
           port_data->attn_list = sock_data->attn_list_next;
           sock_data->flags &= ~EPOLL__SOCK_LISTED;
@@ -369,12 +363,8 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
     if ((int) max_entries > maxevents)
       max_entries = maxevents;
 
-    result = GetQueuedCompletionStatusEx(port_data->iocp,
-                                          entries,
-                                          max_entries,
-                                          &count,
-                                          gqcs_timeout,
-                                          FALSE);
+    result = GetQueuedCompletionStatusEx(
+        port_data->iocp, entries, max_entries, &count, gqcs_timeout, FALSE);
 
     if (!result) {
       DWORD error = GetLastError();
@@ -498,7 +488,6 @@ int epoll_wait(epoll_t port_handle, struct epoll_event* events, int maxevents,
   return 0;
 }
 
-
 int epoll_close(epoll_t port_handle) {
   epoll_port_data_t* port_data;
   epoll_sock_data_t* sock_data;
@@ -527,11 +516,11 @@ int epoll_close(epoll_t port_handle) {
     ULONG count, i;
 
     result = GetQueuedCompletionStatusEx(port_data->iocp,
-                                          entries,
-                                          ARRAY_COUNT(entries),
-                                          &count,
-                                          INFINITE,
-                                          FALSE);
+                                         entries,
+                                         ARRAY_COUNT(entries),
+                                         &count,
+                                         INFINITE,
+                                         FALSE);
 
     if (!result) {
       DWORD error = GetLastError();
@@ -541,9 +530,8 @@ int epoll_close(epoll_t port_handle) {
     port_data->pending_ops_count -= count;
 
     for (i = 0; i < count; i++) {
-      epoll_op_t* op = CONTAINING_RECORD(entries[i].lpOverlapped,
-                                         epoll_op_t,
-                                         overlapped);
+      epoll_op_t* op =
+          CONTAINING_RECORD(entries[i].lpOverlapped, epoll_op_t, overlapped);
       free(op);
     }
   }
@@ -566,7 +554,6 @@ int epoll_close(epoll_t port_handle) {
   return 0;
 }
 
-
 int epoll__initialize() {
   HMODULE ntdll;
   int r;
@@ -580,17 +567,16 @@ int epoll__initialize() {
   if (ntdll == NULL)
     return -1;
 
-  pNtDeviceIoControlFile = (PNTDEVICEIOCONTROLFILE) GetProcAddress(ntdll,
-      "NtDeviceIoControlFile");
+  pNtDeviceIoControlFile =
+      (PNTDEVICEIOCONTROLFILE) GetProcAddress(ntdll, "NtDeviceIoControlFile");
   if (pNtDeviceIoControlFile == NULL)
     return -1;
 
   return 0;
 }
 
-
 SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
-    WSAPROTOCOL_INFOW* protocol_info) {
+                              WSAPROTOCOL_INFOW* protocol_info) {
   int index, i;
   SOCKET peer_socket;
 
@@ -621,9 +607,8 @@ SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
   return peer_socket;
 }
 
-
 SOCKET epoll__create_peer_socket(HANDLE iocp,
-    WSAPROTOCOL_INFOW* protocol_info) {
+                                 WSAPROTOCOL_INFOW* protocol_info) {
   SOCKET sock = 0;
 
   sock = WSASocketW(protocol_info->iAddressFamily,
@@ -640,29 +625,23 @@ SOCKET epoll__create_peer_socket(HANDLE iocp,
     goto error;
   };
 
-  if (CreateIoCompletionPort((HANDLE) sock,
-                             iocp,
-                             0,
-                             0) == NULL) {
+  if (CreateIoCompletionPort((HANDLE) sock, iocp, 0, 0) == NULL) {
     goto error;
   }
 
   return sock;
 
- error:
+error:
   closesocket(sock);
   return INVALID_SOCKET;
 }
 
-
-int epoll__compare_sock_data(epoll_sock_data_t* a,
-    epoll_sock_data_t* b) {
+int epoll__compare_sock_data(epoll_sock_data_t* a, epoll_sock_data_t* b) {
   return a->sock - b->sock;
 }
 
-
 int epoll__submit_poll_op(epoll_port_data_t* port_data,
-    epoll_sock_data_t* sock_data) {
+                          epoll_sock_data_t* sock_data) {
   epoll_op_t* op;
   int registered_events;
   DWORD result, afd_events;
@@ -697,9 +676,8 @@ int epoll__submit_poll_op(epoll_port_data_t* port_data,
   op->poll_info.Handles[0].Status = 0;
   op->poll_info.Handles[0].Events = afd_events;
 
-  result = epoll__afd_poll(sock_data->peer_sock,
-                           &op->poll_info,
-                           &op->overlapped);
+  result =
+      epoll__afd_poll(sock_data->peer_sock, &op->poll_info, &op->overlapped);
   if (result != 0) {
     DWORD error = WSAGetLastError();
     if (error != WSA_IO_PENDING) {
@@ -717,9 +695,9 @@ int epoll__submit_poll_op(epoll_port_data_t* port_data,
   return 0;
 }
 
-
-int epoll__afd_poll(SOCKET socket, AFD_POLL_INFO* info,
-    OVERLAPPED* overlapped) {
+int epoll__afd_poll(SOCKET socket,
+                    AFD_POLL_INFO* info,
+                    OVERLAPPED* overlapped) {
   IO_STATUS_BLOCK iosb;
   IO_STATUS_BLOCK* iosb_ptr;
   HANDLE event = NULL;
@@ -803,7 +781,6 @@ int epoll__afd_poll(SOCKET socket, AFD_POLL_INFO* info,
     return SOCKET_ERROR;
   }
 }
-
 
 int epoll__ntstatus_to_winsock_error(NTSTATUS status) {
   switch (status) {
@@ -913,7 +890,7 @@ int epoll__ntstatus_to_winsock_error(NTSTATUS status) {
           (status & (ERROR_SEVERITY_ERROR | ERROR_SEVERITY_WARNING))) {
         /* It's a windows error that has been previously mapped to an */
         /* ntstatus code. */
-        return (DWORD) (status & 0xffff);
+        return (DWORD)(status & 0xffff);
       } else {
         /* The default fallback for unmappable ntstatus codes. */
         return WSAEINVAL;

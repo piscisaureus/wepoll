@@ -1,11 +1,10 @@
-
-#include <WinSock2.h>
 #include <WS2tcpip.h>
+#include <WinSock2.h>
 #include <Windows.h>
 
 #include <assert.h>
-#include <stdio.h>
 #include <epoll.h>
+#include <stdio.h>
 
 static const char PING[] = "PING";
 static const int NUM_PINGERS = 10000;
@@ -54,14 +53,15 @@ int main(int argc, char* argv[]) {
   for (i = 0; i < NUM_PINGERS; i++) {
     SOCKET sock;
     struct epoll_event ev;
-    
+
     sock = socket(AF_INET, SOCK_STREAM, 0);
 
     r = ioctlsocket(sock, FIONBIO, &one);
     assert(r == 0);
 
     r = connect(sock, (struct sockaddr*) &addr, sizeof addr);
-    /* Unlike unix, windows sets the error to EWOULDBLOCK when the connection */
+    /* Unlike unix, windows sets the error to EWOULDBLOCK when the connection
+     */
     /* is being established in the background. */
     assert(r == 0 || WSAGetLastError() == WSAEWOULDBLOCK);
 
@@ -74,18 +74,17 @@ int main(int argc, char* argv[]) {
   {
     SOCKET sock;
     struct epoll_event ev;
-    
+
     sock = socket(AF_INET, SOCK_STREAM, 0);
 
     r = ioctlsocket(sock, FIONBIO, &one);
     assert(r == 0);
-   
+
     ev.events = EPOLLOUT | EPOLLERR;
     ev.data.sock = sock;
     r = epoll_ctl(epoll_hnd, EPOLL_CTL_ADD, sock, &ev);
     assert(r == 0);
   }
-
 
   ticks_start = GetTickCount();
   ticks_last = ticks_start;
@@ -97,11 +96,14 @@ int main(int argc, char* argv[]) {
 
     ticks = GetTickCount();
     if (ticks >= ticks_last + 1000) {
-      printf("%lld pings (%f per sec), %lld sent\n", pings, (double) pings / (ticks - ticks_start) * 1000, pings_sent);
+      printf("%lld pings (%f per sec), %lld sent\n",
+             pings,
+             (double) pings / (ticks - ticks_start) * 1000,
+             pings_sent);
       ticks_last = ticks;
 
-     // if (ticks - ticks_start > RUN_TIME) 
-     //   break;
+      // if (ticks - ticks_start > RUN_TIME)
+      //   break;
     }
 
     count = epoll_wait(epoll_hnd, events, 15, 1000);
@@ -124,7 +126,7 @@ int main(int argc, char* argv[]) {
         assert(r == 0);
         continue;
       }
-      
+
       if (revents & EPOLLIN) {
         char buf[1024];
         WSABUF wsa_buf;
@@ -134,7 +136,7 @@ int main(int argc, char* argv[]) {
 
         wsa_buf.buf = buf;
         wsa_buf.len = sizeof buf;
-        
+
         flags = 0;
         r = WSARecv(sock, &wsa_buf, 1, &bytes, &flags, NULL, NULL);
         assert(r >= 0);
@@ -144,11 +146,11 @@ int main(int argc, char* argv[]) {
         ev.data.sock = sock;
         ev.events = EPOLLOUT;
 
-        //r = epoll_ctl(epoll_hnd, EPOLL_CTL_DEL, sock, &ev);
-        //assert(r == 0);
+        // r = epoll_ctl(epoll_hnd, EPOLL_CTL_DEL, sock, &ev);
+        // assert(r == 0);
         r = epoll_ctl(epoll_hnd, EPOLL_CTL_MOD, sock, &ev);
         assert(r == 0);
-        
+
         pings++;
 
         continue;
@@ -165,7 +167,7 @@ int main(int argc, char* argv[]) {
         r = WSASend(sock, &wsa_buf, 1, &bytes, 0, NULL, NULL);
         assert(r >= 0);
         assert(bytes == sizeof PING);
-                
+
         ev.data.sock = sock;
         ev.events = EPOLLIN;
 
@@ -184,5 +186,3 @@ int main(int argc, char* argv[]) {
   r = epoll_close(epoll_hnd);
   assert(r == 0);
 }
-
-

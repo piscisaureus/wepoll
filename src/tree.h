@@ -50,8 +50,8 @@
  * The maximum height of a red-black tree is 2lg (n+1).
  */
 
-#ifndef  EPOLL_TREE_H_
-#define  EPOLL_TREE_H_
+#ifndef EPOLL_TREE_H_
+#define EPOLL_TREE_H_
 
 /* clang-format off */
 
@@ -761,4 +761,4 @@ name##_RB_MINMAX(struct name *head, int val)                                  \
 
 /* clang-format on */
 
-#endif  /* EPOLL_TREE_H_ */
+#endif /* EPOLL_TREE_H_ */

@@ -1,4 +1,3 @@
- 
 #ifndef EPOLL_MSAFD_H_
 #define EPOLL_MSAFD_H_
 
@@ -6,7 +5,7 @@
 #include "ntapi.h"
 
 #ifndef SIO_BASE_HANDLE
-# define SIO_BASE_HANDLE 0x48000022
+#define SIO_BASE_HANDLE 0x48000022
 #endif
 
 /* clang-format off */
@@ -46,12 +45,11 @@
 #define FSCTL_AFD_BASE FILE_DEVICE_NETWORK
 
 #define _AFD_CONTROL_CODE(operation, method) \
-    ((FSCTL_AFD_BASE) << 12 | (operation << 2) | method)
+  ((FSCTL_AFD_BASE) << 12 | (operation << 2) | method)
 
-#define AFD_POLL                        9
+#define AFD_POLL 9
 
-#define IOCTL_AFD_POLL \
-    _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
+#define IOCTL_AFD_POLL _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
 
 typedef struct _AFD_POLL_HANDLE_INFO {
   HANDLE Handle;
@@ -67,12 +65,17 @@ typedef struct _AFD_POLL_INFO {
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
 static const GUID AFD_PROVIDER_IDS[] = {
-  {0xe70f1aa0, 0xab8b, 0x11cf,
-      {0x8c, 0xa3, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92}},
-  {0xf9eab0c0, 0x26d4, 0x11d0,
-      {0xbb, 0xbf, 0x00, 0xaa, 0x00, 0x6c, 0x34, 0xe4}},
-  {0x9fc48064, 0x7298, 0x43e4,
-      {0xb7, 0xbd, 0x18, 0x1f, 0x20, 0x89, 0x79, 0x2a}}
-};
+    {0xe70f1aa0,
+     0xab8b,
+     0x11cf,
+     {0x8c, 0xa3, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92}},
+    {0xf9eab0c0,
+     0x26d4,
+     0x11d0,
+     {0xbb, 0xbf, 0x00, 0xaa, 0x00, 0x6c, 0x34, 0xe4}},
+    {0x9fc48064,
+     0x7298,
+     0x43e4,
+     {0xb7, 0xbd, 0x18, 0x1f, 0x20, 0x89, 0x79, 0x2a}}};
 
-#endif  /* EPOLL_MSAFD_H_ */
+#endif /* EPOLL_MSAFD_H_ */
