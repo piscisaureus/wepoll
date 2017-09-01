@@ -777,7 +777,7 @@ int epoll__afd_poll(SOCKET socket,
         return SOCKET_ERROR;
       }
 
-      status = iosb.Status;
+      status = iosb_ptr->Status;
     }
 
     CloseHandle(event);
