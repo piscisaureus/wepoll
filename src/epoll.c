@@ -92,8 +92,9 @@ epoll_t epoll_create() {
   epoll_port_data_t* port_data;
   HANDLE iocp;
 
-  /* If necessary, do global initialization first. This is totally not */
-  /* thread-safe at the moment. */
+  /* If necessary, do global initialization first. This is totally not
+   * thread-safe at the moment.
+   */
   if (!epoll__initialized) {
     if (epoll__initialize() < 0)
       return NULL;
@@ -140,11 +141,12 @@ int epoll_ctl(epoll_t port_handle,
       DWORD bytes;
       int len;
 
-      /* Try to obtain a base handle for the socket, so we can bypass LSPs */
-      /* that get in the way if we want to talk to the kernel directly. If */
-      /* it fails we try if we work with the original socket. Note that on */
-      /* windows XP/2k3 this will always fail since they don't support the */
-      /* SIO_BASE_HANDLE ioctl. */
+      /* Try to obtain a base handle for the socket, so we can bypass LSPs
+       * that get in the way if we want to talk to the kernel directly. If
+       * it fails we try if we work with the original socket. Note that on
+       * windows XP/2k3 this will always fail since they don't support the
+       * SIO_BASE_HANDLE ioctl.
+       */
       base_sock = sock;
       WSAIoctl(sock,
                SIO_BASE_HANDLE,
@@ -282,8 +284,9 @@ int epoll_ctl(epoll_t port_handle,
         assert(sock_data->io_req_generation == 0);
         free(sock_data);
       } else {
-        /* There are still one or more io requests pending. */
-        /* Wait for all pending requests to return before freeing. */
+        /* There are still one or more io requests pending. Wait for
+         * all pending requests to return before freeing.
+         */
         assert(sock_data->io_req_generation > 0);
       }
 
@@ -306,8 +309,9 @@ int epoll_wait(epoll_t port_handle,
 
   port_data = (epoll_port_data_t*) port_handle;
 
-  /* Compute the timeout for GetQueuedCompletionStatus, and the wait end */
-  /* time, if the user specified a timeout other than zero or infinite. */
+  /* Compute the timeout for GetQueuedCompletionStatus, and the wait end
+   * time, if the user specified a timeout other than zero or infinite.
+   */
   if (timeout > 0) {
     due = GetTickCount64() + timeout;
     gqcs_timeout = (DWORD) timeout;
@@ -317,8 +321,9 @@ int epoll_wait(epoll_t port_handle,
     gqcs_timeout = INFINITE;
   }
 
-  /* Dequeue completion packets until either at least one interesting event */
-  /* has been discovered, or the timeout is reached. */
+  /* Dequeue completion packets until either at least one interesting event
+   * has been discovered, or the timeout is reached.
+   */
   do {
     DWORD result, max_entries;
     ULONG count, i;
@@ -331,8 +336,9 @@ int epoll_wait(epoll_t port_handle,
       epoll_sock_data_t* sock_data = port_data->attn_list;
       assert(sock_data->flags & EPOLL__SOCK_LISTED);
 
-      /* Check if there are events registered that are not yet submitted. In */
-      /* that case we need to submit another req. */
+      /* Check if there are events registered that are not yet submitted. In
+       * that case we need to submit another req.
+       */
       if (sock_data->registered_events & EPOLL__EVENT_MASK &
           ~sock_data->submitted_events) {
         int r = epoll__submit_poll_req(port_data, sock_data);
@@ -346,8 +352,8 @@ int epoll_wait(epoll_t port_handle,
             return -1;
 
           /* Skip to the next attention list item already, because we're about
+           * to delete the currently selected socket.
            */
-          /* to delete the currently selected socket. */
           port_data->attn_list = sock_data->attn_list_next;
           sock_data->flags &= ~EPOLL__SOCK_LISTED;
 
@@ -403,7 +409,8 @@ int epoll_wait(epoll_t port_handle,
       }
 
       /* Dequeued the most recent request. Reset generation and
-       * submitted_events. */
+       * submitted_events.
+       */
       sock_data->io_req_generation = 0;
       sock_data->submitted_events = 0;
       sock_data->free_io_req = io_req;
@@ -412,8 +419,8 @@ int epoll_wait(epoll_t port_handle,
       reported_events = 0;
 
       /* Check if this io request was associated with a socket that was removed
+       * with EPOLL_CTL_DEL.
        */
-      /* with EPOLL_CTL_DEL. */
       if (sock_data->flags & EPOLL__SOCK_DELETED) {
         free(io_req);
         free(sock_data);
@@ -429,8 +436,9 @@ int epoll_wait(epoll_t port_handle,
       }
 
       if (io_req->poll_info.NumberOfHandles == 0) {
-        /* NumberOfHandles can be zero if this poll request was canceled */
-        /* due to a more recent exclusive poll request. */
+        /* NumberOfHandles can be zero if this poll request was canceled
+         * due to a more recent exclusive poll request.
+         */
         afd_events = 0;
       } else {
         afd_events = io_req->poll_info.Handles[0].Events;
@@ -468,7 +476,8 @@ int epoll_wait(epoll_t port_handle,
         ATTN_LIST_ADD(port_data, sock_data);
       } else {
         /* Unless EPOLLONESHOT is used add the socket back to the attention
-         * list. */
+         * list.
+         */
         if (!(registered_events & EPOLLONESHOT)) {
           assert(!(sock_data->flags & EPOLL__SOCK_LISTED));
           ATTN_LIST_ADD(port_data, sock_data);
@@ -512,10 +521,11 @@ int epoll_close(epoll_t port_handle) {
     }
   }
 
-  /* There is no list of io requests to free. And even if there was, just */
-  /* freeing them would be dangerous since the kernel might still alter */
-  /* the overlapped status contained in them. But since we are sure that */
-  /* all requests will soon return, just await them all. */
+  /* There is no list of io requests to free. And even if there was, just
+   * freeing them would be dangerous since the kernel might still alter
+   * the overlapped status contained in them. But since we are sure that
+   * all requests will soon return, just await them all.
+   */
   while (port_data->pending_reqs_count > 0) {
     OVERLAPPED_ENTRY entries[64];
     DWORD result;
@@ -601,9 +611,10 @@ SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
     return INVALID_SOCKET;
   }
 
-  /* If we didn't (try) to create a peer socket yet, try to make one. Don't */
-  /* try again if the peer socket creation failed earlier for the same */
-  /* protocol. */
+  /* If we didn't (try) to create a peer socket yet, try to make one. Don't
+   * try again if the peer socket creation failed earlier for the same
+   * protocol.
+   */
   peer_socket = port_data->peer_sockets[index];
   if (peer_socket == 0) {
     peer_socket = epoll__create_peer_socket(port_data->iocp, protocol_info);
@@ -687,8 +698,9 @@ int epoll__submit_poll_req(epoll_port_data_t* port_data,
   if (result != 0) {
     DWORD error = WSAGetLastError();
     if (error != WSA_IO_PENDING) {
-      /* If this happens an error happened and no overlapped operation was */
-      /* started. */
+      /* If this happens an error happened and no overlapped operation was
+       * started.
+       */
       return -1;
     }
   }
@@ -747,8 +759,9 @@ int epoll__afd_poll(SOCKET socket,
                                   sizeof *info);
 
   if (overlapped == NULL) {
-    /* If this is a blocking operation, wait for the event to become */
-    /* signaled, and then grab the real status from the io status block. */
+    /* If this is a blocking operation, wait for the event to become
+     * signaled, and then grab the real status from the io status block.
+     */
     if (status == STATUS_PENDING) {
       DWORD r = WaitForSingleObject(event, INFINITE);
 
@@ -894,8 +907,9 @@ int epoll__ntstatus_to_winsock_error(NTSTATUS status) {
     default:
       if ((status & (FACILITY_NTWIN32 << 16)) == (FACILITY_NTWIN32 << 16) &&
           (status & (ERROR_SEVERITY_ERROR | ERROR_SEVERITY_WARNING))) {
-        /* It's a windows error that has been previously mapped to an */
-        /* ntstatus code. */
+        /* It's a windows error that has been previously mapped to an
+         * ntstatus code.
+         */
         return (DWORD)(status & 0xffff);
       } else {
         /* The default fallback for unmappable ntstatus codes. */
