@@ -42,6 +42,10 @@ struct epoll_event {
   epoll_data_t data; /* User data variable */
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 EPOLL_EXTERN epoll_t epoll_create();
 
 EPOLL_EXTERN int epoll_close(epoll_t epoll_hnd);
@@ -55,5 +59,9 @@ EPOLL_EXTERN int epoll_wait(epoll_t epoll_hnd,
                             struct epoll_event* events,
                             int maxevents,
                             int timeout);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif /* EPOLL_H_ */
