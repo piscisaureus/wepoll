@@ -1,6 +1,10 @@
 #ifndef EPOLL_H_
 #define EPOLL_H_
 
+#ifndef EPOLL_EXTERN
+#define EPOLL_EXTERN
+#endif
+
 #include <stdint.h>
 
 #define EPOLLIN 0x001
@@ -38,18 +42,18 @@ struct epoll_event {
   epoll_data_t data; /* User data variable */
 };
 
-epoll_t epoll_create();
+EPOLL_EXTERN epoll_t epoll_create();
 
-int epoll_close(epoll_t epoll_hnd);
+EPOLL_EXTERN int epoll_close(epoll_t epoll_hnd);
 
-int epoll_ctl(epoll_t epoll_hnd,
-              int op,
-              /* SOCKET */ uintptr_t sock,
-              struct epoll_event* event);
+EPOLL_EXTERN int epoll_ctl(epoll_t epoll_hnd,
+                           int op,
+                           /* SOCKET */ uintptr_t sock,
+                           struct epoll_event* event);
 
-int epoll_wait(epoll_t epoll_hnd,
-               struct epoll_event* events,
-               int maxevents,
-               int timeout);
+EPOLL_EXTERN int epoll_wait(epoll_t epoll_hnd,
+                            struct epoll_event* events,
+                            int maxevents,
+                            int timeout);
 
 #endif /* EPOLL_H_ */
