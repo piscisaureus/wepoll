@@ -53,6 +53,12 @@
 #ifndef EPOLL_TREE_H_
 #define EPOLL_TREE_H_
 
+#ifdef __clang__
+#define TREE_UNUSED __attribute__((__unused__))
+#else
+#define TREE_UNUSED /* empty */
+#endif
+
 /* clang-format off */
 
 #define SPLAY_HEAD(name, type)                                                \
@@ -119,7 +125,7 @@ struct type *name##_SPLAY_INSERT(struct name *, struct type *);               \
 struct type *name##_SPLAY_REMOVE(struct name *, struct type *);               \
                                                                               \
 /* Finds the node with the same key as elm */                                 \
-static __inline struct type *                                                 \
+static __inline TREE_UNUSED struct type *                                     \
 name##_SPLAY_FIND(struct name *head, struct type *elm)                        \
 {                                                                             \
   if (SPLAY_EMPTY(head))                                                      \
@@ -130,7 +136,7 @@ name##_SPLAY_FIND(struct name *head, struct type *elm)                        \
   return (NULL);                                                              \
 }                                                                             \
                                                                               \
-static __inline struct type *                                                 \
+static __inline TREE_UNUSED struct type *                                     \
 name##_SPLAY_NEXT(struct name *head, struct type *elm)                        \
 {                                                                             \
   name##_SPLAY(head, elm);                                                    \
@@ -144,7 +150,7 @@ name##_SPLAY_NEXT(struct name *head, struct type *elm)                        \
   return (elm);                                                               \
 }                                                                             \
                                                                               \
-static __inline struct type *                                                 \
+static __inline TREE_UNUSED struct type *                                     \
 name##_SPLAY_MIN_MAX(struct name *head, int val)                              \
 {                                                                             \
   name##_SPLAY_MINMAX(head, val);                                             \
@@ -377,7 +383,7 @@ struct {                                                                      \
 #define  RB_PROTOTYPE(name, type, field, cmp)                                 \
   RB_PROTOTYPE_INTERNAL(name, type, field, cmp,)
 #define  RB_PROTOTYPE_STATIC(name, type, field, cmp)                          \
-  RB_PROTOTYPE_INTERNAL(name, type, field, cmp, static)
+  RB_PROTOTYPE_INTERNAL(name, type, field, cmp, static TREE_UNUSED)
 #define RB_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)                   \
 attr void name##_RB_INSERT_COLOR(struct name *, struct type *);               \
 attr void name##_RB_REMOVE_COLOR(struct name *, struct type *, struct type *);\
@@ -396,7 +402,7 @@ attr struct type *name##_RB_MINMAX(struct name *, int);                       \
 #define  RB_GENERATE(name, type, field, cmp)                                  \
   RB_GENERATE_INTERNAL(name, type, field, cmp,)
 #define  RB_GENERATE_STATIC(name, type, field, cmp)                           \
-  RB_GENERATE_INTERNAL(name, type, field, cmp, static)
+  RB_GENERATE_INTERNAL(name, type, field, cmp, static TREE_UNUSED)
 #define RB_GENERATE_INTERNAL(name, type, field, cmp, attr)                    \
 attr void                                                                     \
 name##_RB_INSERT_COLOR(struct name *head, struct type *elm)                   \
