@@ -296,7 +296,7 @@ int epoll_wait(epoll_t port_handle,
                int maxevents,
                int timeout) {
   epoll_port_data_t* port_data;
-  DWORD due;
+  ULONGLONG due = 0;
   DWORD gqcs_timeout;
 
   port_data = (epoll_port_data_t*) port_handle;
@@ -304,7 +304,7 @@ int epoll_wait(epoll_t port_handle,
   /* Compute the timeout for GetQueuedCompletionStatus, and the wait end */
   /* time, if the user specified a timeout other than zero or infinite. */
   if (timeout > 0) {
-    due = GetTickCount() + timeout;
+    due = GetTickCount64() + timeout;
     gqcs_timeout = (DWORD) timeout;
   } else if (timeout == 0) {
     gqcs_timeout = 0;
@@ -482,7 +482,7 @@ int epoll_wait(epoll_t port_handle,
 
     /* Events were dequeued, but none were relevant. Recompute timeout. */
     if (timeout > 0) {
-      gqcs_timeout = due - GetTickCount();
+      gqcs_timeout = due - GetTickCount64();
     }
   } while (timeout > 0);
 
