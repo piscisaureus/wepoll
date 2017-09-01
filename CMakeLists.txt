@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 2.8.0)
+project(epoll)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
+
+add_definitions(-DHAVE_CONFIG_H)
+
+if(WIN32)
+	link_libraries(ws2_32)
+endif()
+
+if(MSVC)
+	add_compile_options(/Wall /wd4201 /wd4206 /wd4242 /wd4244 /wd4255 /wd4267 /wd4310 /wd4706 /wd4710 /wd4711 /wd4820 /wd4996)
+else()
+	add_compile_options(-Wall)
+endif()
+
+file(GLOB_RECURSE SOURCES_SRC src/*.c src/*.h)
+file(GLOB_RECURSE SOURCES_INCLUDE include/*.h)
+file(GLOB SOURCES_TEST test/*.c)
+file(GLOB_RECURSE SOURCES_TEST_SHARED test/shared/*.c test/shared/*.h)
+
+source_group("" FILES ${SOURCES_INCLUDE})
+source_group(src FILES ${SOURCES_SRC})
+source_group("" FILES ${SOURCES_TEST})
+source_group(test/shared FILES ${SOURCES_TEST_SHARED})
+
+foreach(TEST_SOURCE ${SOURCES_TEST})
+	get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
+	add_executable(${TEST_NAME} ${TEST_SOURCE} ${SOURCES_SRC} ${SOURCES_TEST_SHARED})
+	target_include_directories(${TEST_NAME} PUBLIC include src)
+endforeach(TEST_SOURCE ${SOURCES_TEST})
+
+foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
+	get_filename_component(HEADER_NAME ${HEADER_SOURCE} NAME_WE)
+	string(TOUPPER ${HEADER_NAME} HEADER_NAME_UC)
+
+	set(DLL_NAME "${HEADER_NAME}")
+	add_library(${DLL_NAME} SHARED ${HEADER_SOURCE} ${SOURCES_SRC})
+	target_include_directories(${DLL_NAME} PUBLIC include)
+	if(MSVC)
+		target_compile_options(${DLL_NAME} PUBLIC "-FI ${HEADER_SOURCE}")
+		target_compile_definitions(${DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXTERN=__declspec(dllexport)" )
+	else()
+		target_compile_options(${DLL_NAME} PUBLIC -include ${HEADER_SOURCE} -fvisibility=hidden)
+		target_compile_definitions(${DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXTERN=__attribute__((visibility(\"default\")))")
+	endif()
+endforeach(HEADER_SOURCE ${SOURCES_INCLUDE})
