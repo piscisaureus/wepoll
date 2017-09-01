@@ -744,7 +744,7 @@ int epoll__afd_poll(SOCKET socket,
   } else {
     /* Blocking operation. */
     iosb_ptr = &iosb;
-    event = CreateEvent(NULL, FALSE, FALSE, NULL);
+    event = CreateEventW(NULL, FALSE, FALSE, NULL);
     if (event == NULL) {
       return SOCKET_ERROR;
     }
