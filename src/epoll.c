@@ -542,10 +542,8 @@ int epoll_close(epoll_t port_handle) {
                                          INFINITE,
                                          FALSE);
 
-    if (!result) {
-      DWORD error = GetLastError();
+    if (!result)
       return -1;
-    }
 
     port_data->pending_reqs_count -= count;
 
