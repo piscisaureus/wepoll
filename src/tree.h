@@ -53,6 +53,8 @@
 #ifndef  EPOLL_TREE_H_
 #define  EPOLL_TREE_H_
 
+/* clang-format off */
+
 #define SPLAY_HEAD(name, type)                                                \
 struct name {                                                                 \
   struct type *sph_root; /* root of the tree */                               \
@@ -756,5 +758,7 @@ name##_RB_MINMAX(struct name *head, int val)                                  \
   for ((x) = RB_MAX(name, head);                                              \
       ((x) != NULL) && ((y) = name##_RB_PREV(x), (x) != NULL);                \
        (x) = (y))
+
+/* clang-format on */
 
 #endif  /* EPOLL_TREE_H_ */

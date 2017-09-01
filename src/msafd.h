@@ -9,6 +9,8 @@
 # define SIO_BASE_HANDLE 0x48000022
 #endif
 
+/* clang-format off */
+
 #define AFD_NO_FAST_IO   0x00000001
 #define AFD_OVERLAPPED   0x00000002
 #define AFD_IMMEDIATE    0x00000004
@@ -38,6 +40,8 @@
 
 #define AFD_NUM_POLL_EVENTS             11
 #define AFD_POLL_ALL                    ((1 << AFD_NUM_POLL_EVENTS) - 1)
+
+/* clang-format on */
 
 #define FSCTL_AFD_BASE FILE_DEVICE_NETWORK
 
