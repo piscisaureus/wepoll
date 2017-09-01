@@ -511,12 +511,11 @@ int epoll_wait(epoll_t port_handle,
 int epoll_close(epoll_t port_handle) {
   epoll_port_data_t* port_data;
   epoll_sock_data_t* sock_data;
-  int i;
 
   port_data = (epoll_port_data_t*) port_handle;
 
   /* Close all peer sockets. This will make all pending io requests return. */
-  for (i = 0; i < ARRAY_COUNT(port_data->peer_sockets); i++) {
+  for (size_t i = 0; i < ARRAY_COUNT(port_data->peer_sockets); i++) {
     SOCKET peer_sock = port_data->peer_sockets[i];
     if (peer_sock != 0 && peer_sock != INVALID_SOCKET) {
       if (closesocket(peer_sock) != 0)
@@ -598,7 +597,8 @@ int epoll__initialize() {
 
 SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
                               WSAPROTOCOL_INFOW* protocol_info) {
-  int index, i;
+  ssize_t index;
+  size_t i;
   SOCKET peer_socket;
 
   index = -1;
