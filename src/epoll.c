@@ -6,6 +6,7 @@
 #include "afd.h"
 #include "epoll.h"
 #include "error.h"
+#include "nt.h"
 #include "tree.h"
 #include "win.h"
 
@@ -50,7 +51,6 @@ static int epoll__afd_poll(SOCKET socket,
                            OVERLAPPED* overlapped);
 
 static int epoll__initialized = 0;
-static PNTDEVICEIOCONTROLFILE pNtDeviceIoControlFile;
 
 /* State associated with a epoll handle. */
 struct epoll_port_data_s {
@@ -570,7 +570,6 @@ int epoll_close(epoll_t port_handle) {
 }
 
 int epoll__initialize() {
-  HMODULE ntdll;
   int r;
   WSADATA wsa_data;
 
@@ -578,13 +577,7 @@ int epoll__initialize() {
   if (r != 0)
     return -1;
 
-  ntdll = LoadLibraryW(L"ntdll.dll");
-  if (ntdll == NULL)
-    return -1;
-
-  pNtDeviceIoControlFile =
-      (PNTDEVICEIOCONTROLFILE) GetProcAddress(ntdll, "NtDeviceIoControlFile");
-  if (pNtDeviceIoControlFile == NULL)
+  if (nt_initialize() < 0)
     return -1;
 
   return 0;
@@ -747,16 +740,16 @@ int epoll__afd_poll(SOCKET socket,
   }
 
   iosb_ptr->Status = STATUS_PENDING;
-  status = pNtDeviceIoControlFile((HANDLE) socket,
-                                  event,
-                                  NULL,
-                                  apc_context,
-                                  iosb_ptr,
-                                  IOCTL_AFD_POLL,
-                                  info,
-                                  sizeof *info,
-                                  info,
-                                  sizeof *info);
+  status = NtDeviceIoControlFile((HANDLE) socket,
+                                 event,
+                                 NULL,
+                                 apc_context,
+                                 iosb_ptr,
+                                 IOCTL_AFD_POLL,
+                                 info,
+                                 sizeof *info,
+                                 info,
+                                 sizeof *info);
 
   if (overlapped == NULL) {
     /* If this is a blocking operation, wait for the event to become
