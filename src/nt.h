@@ -1,5 +1,5 @@
-#ifndef EPOLL_NTAPI_H_
-#define EPOLL_NTAPI_H_
+#ifndef EPOLL_NT_H_
+#define EPOLL_NT_H_
 
 #include <Windows.h>
 
@@ -4088,4 +4088,4 @@ typedef NTSTATUS(NTAPI* PNTDEVICEIOCONTROLFILE)(HANDLE FileHandle,
                                                 PVOID OutputBuffer,
                                                 ULONG OutputBufferLength);
 
-#endif /* EPOLL_NTAPI_H_ */
+#endif /* EPOLL_NT_H_ */

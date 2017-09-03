@@ -1,9 +1,9 @@
-#ifndef EPOLL_MSAFD_H_
-#define EPOLL_MSAFD_H_
+#ifndef EPOLL_AFD_H_
+#define EPOLL_AFD_H_
 
 #include <Windows.h>
 
-#include "ntapi.h"
+#include "nt.h"
 
 #ifndef SIO_BASE_HANDLE
 #define SIO_BASE_HANDLE 0x48000022
@@ -87,4 +87,4 @@ static const GUID AFD_PROVIDER_IDS[] = {
      0x43e4,
      {0xb7, 0xbd, 0x18, 0x1f, 0x20, 0x89, 0x79, 0x2a}}};
 
-#endif /* EPOLL_MSAFD_H_ */
+#endif /* EPOLL_AFD_H_ */

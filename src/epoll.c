@@ -7,9 +7,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "afd.h"
 #include "epoll.h"
 #include "error.h"
-#include "msafd.h"
 #include "tree.h"
 
 #ifndef _SSIZE_T_DEFINED
