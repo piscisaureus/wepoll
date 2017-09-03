@@ -8,18 +8,12 @@
 #include "error.h"
 #include "nt.h"
 #include "tree.h"
+#include "util.h"
 #include "win.h"
 
 #ifndef SIO_BASE_HANDLE
 #define SIO_BASE_HANDLE 0x48000022
 #endif
-
-#ifndef _SSIZE_T_DEFINED
-#define SSIZE_T_DEFINED
-typedef intptr_t ssize_t;
-#endif
-
-#define ARRAY_COUNT(a) (sizeof(a) / (sizeof((a)[0])))
 
 #define EPOLL__EVENT_MASK 0xffff
 
