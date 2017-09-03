@@ -1,7 +1,7 @@
 #ifndef EPOLL_NT_H_
 #define EPOLL_NT_H_
 
-#include <Windows.h>
+#include "win.h"
 
 #ifndef _NTDEF_
 typedef LONG NTSTATUS;

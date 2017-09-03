@@ -1,10 +1,7 @@
-#define WIN32_LEAN_AND_MEAN
-#include <WinSock2.h>
-#include <Windows.h>
-
 #include <errno.h>
 
 #include "error-map.h"
+#include "win.h"
 
 #pragma warning(push)
 #pragma warning(disable : 4127) /* "conditional expression is constant" */

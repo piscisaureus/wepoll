@@ -1,10 +1,7 @@
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#include <Windows.h>
-
 #include <assert.h>
 #include <stdio.h>
 
+#include "win.h"
 #include "epoll.h"
 
 static const char PING[] = "PING";

@@ -1,9 +1,8 @@
 #ifndef EPOLL_AFD_H_
 #define EPOLL_AFD_H_
 
-#include <Windows.h>
-
 #include "nt.h"
+#include "win.h"
 
 #ifndef SIO_BASE_HANDLE
 #define SIO_BASE_HANDLE 0x48000022

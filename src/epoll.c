@@ -1,7 +1,3 @@
-#define WIN32_LEAN_AND_MEAN
-#include <WinSock2.h>
-#include <Windows.h>
-
 #include <assert.h>
 #include <malloc.h>
 #include <stdint.h>
@@ -11,6 +7,7 @@
 #include "epoll.h"
 #include "error.h"
 #include "tree.h"
+#include "win.h"
 
 #ifndef _SSIZE_T_DEFINED
 #define SSIZE_T_DEFINED
