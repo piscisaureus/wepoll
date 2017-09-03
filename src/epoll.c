@@ -31,9 +31,9 @@
     (s)->flags |= EPOLL__SOCK_LISTED;       \
   } while (0)
 
-typedef struct epoll_port_data_s epoll_port_data_t;
-typedef struct epoll_io_req_s epoll_io_req_t;
-typedef struct epoll_sock_data_s epoll_sock_data_t;
+typedef struct epoll_port_data epoll_port_data_t;
+typedef struct epoll_io_req epoll_io_req_t;
+typedef struct epoll_sock_data epoll_sock_data_t;
 
 static int epoll__initialize();
 static SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
@@ -48,16 +48,16 @@ static int epoll__submit_poll_req(epoll_port_data_t* port_data,
 static int epoll__initialized = 0;
 
 /* State associated with a epoll handle. */
-struct epoll_port_data_s {
+typedef struct epoll_port_data {
   HANDLE iocp;
   SOCKET peer_sockets[array_count(AFD_PROVIDER_IDS)];
-  RB_HEAD(epoll_sock_data_tree, epoll_sock_data_s) sock_data_tree;
+  RB_HEAD(epoll_sock_data_tree, epoll_sock_data) sock_data_tree;
   epoll_sock_data_t* attn_list;
   size_t pending_reqs_count;
-};
+} epoll_port_data_t;
 
 /* State associated with a socket that is registered to the epoll port. */
-struct epoll_sock_data_s {
+typedef struct epoll_sock_data {
   SOCKET sock;
   SOCKET base_sock;
   SOCKET peer_sock;
@@ -69,19 +69,19 @@ struct epoll_sock_data_s {
   epoll_io_req_t* free_io_req;
   epoll_sock_data_t* attn_list_prev;
   epoll_sock_data_t* attn_list_next;
-  RB_ENTRY(epoll_sock_data_s) tree_entry;
-};
+  RB_ENTRY(epoll_sock_data) tree_entry;
+} epoll_sock_data_t;
 
 /* State associated with a AFD_POLL request. */
-struct epoll_io_req_s {
+typedef struct epoll_io_req {
   OVERLAPPED overlapped;
   AFD_POLL_INFO poll_info;
   uint32_t generation;
   epoll_sock_data_t* sock_data;
-};
+} epoll_io_req_t;
 
 RB_GENERATE_STATIC(epoll_sock_data_tree,
-                   epoll_sock_data_s,
+                   epoll_sock_data,
                    tree_entry,
                    epoll__compare_sock_data)
 
