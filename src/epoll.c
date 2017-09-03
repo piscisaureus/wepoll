@@ -50,7 +50,7 @@ static int epoll__initialized = 0;
 /* State associated with a epoll handle. */
 struct epoll_port_data_s {
   HANDLE iocp;
-  SOCKET peer_sockets[ARRAY_COUNT(AFD_PROVIDER_IDS)];
+  SOCKET peer_sockets[array_count(AFD_PROVIDER_IDS)];
   RB_HEAD(epoll_sock_data_tree, epoll_sock_data_s) sock_data_tree;
   epoll_sock_data_t* attn_list;
   size_t pending_reqs_count;
@@ -369,7 +369,7 @@ int epoll_wait(epoll_t port_handle,
     }
 
     /* Compute how much overlapped entries can be dequeued at most. */
-    max_entries = ARRAY_COUNT(entries);
+    max_entries = array_count(entries);
     if ((int) max_entries > maxevents)
       max_entries = maxevents;
 
@@ -507,7 +507,7 @@ int epoll_close(epoll_t port_handle) {
   port_data = (epoll_port_data_t*) port_handle;
 
   /* Close all peer sockets. This will make all pending io requests return. */
-  for (size_t i = 0; i < ARRAY_COUNT(port_data->peer_sockets); i++) {
+  for (size_t i = 0; i < array_count(port_data->peer_sockets); i++) {
     SOCKET peer_sock = port_data->peer_sockets[i];
     if (peer_sock != 0 && peer_sock != INVALID_SOCKET) {
       if (closesocket(peer_sock) != 0)
@@ -529,7 +529,7 @@ int epoll_close(epoll_t port_handle) {
 
     result = GetQueuedCompletionStatusEx(port_data->iocp,
                                          entries,
-                                         ARRAY_COUNT(entries),
+                                         array_count(entries),
                                          &count,
                                          INFINITE,
                                          FALSE);
@@ -585,7 +585,7 @@ SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
   SOCKET peer_socket;
 
   index = -1;
-  for (i = 0; i < ARRAY_COUNT(AFD_PROVIDER_IDS); i++) {
+  for (i = 0; i < array_count(AFD_PROVIDER_IDS); i++) {
     if (memcmp((void*) &protocol_info->ProviderId,
                (void*) &AFD_PROVIDER_IDS[i],
                sizeof protocol_info->ProviderId) == 0) {
