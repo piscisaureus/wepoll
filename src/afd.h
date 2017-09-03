@@ -4,10 +4,6 @@
 #include "nt.h"
 #include "win.h"
 
-#ifndef SIO_BASE_HANDLE
-#define SIO_BASE_HANDLE 0x48000022
-#endif
-
 #ifndef FILE_DEVICE_NETWORK
 #define FILE_DEVICE_NETWORK 0x00000012
 #endif
@@ -85,5 +81,7 @@ static const GUID AFD_PROVIDER_IDS[] = {
      0x7298,
      0x43e4,
      {0xb7, 0xbd, 0x18, 0x1f, 0x20, 0x89, 0x79, 0x2a}}};
+
+int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped);
 
 #endif /* EPOLL_AFD_H_ */
