@@ -1,22 +1,14 @@
 #ifndef EPOLL_AFD_H_
 #define EPOLL_AFD_H_
 
-#include "nt.h"
+#include "ntstatus.h"
 #include "win.h"
-
-#ifndef FILE_DEVICE_NETWORK
-#define FILE_DEVICE_NETWORK 0x00000012
-#endif
-
-#ifndef METHOD_BUFFERED
-#define METHOD_BUFFERED 0
-#endif
 
 /* clang-format off */
 
-#define AFD_NO_FAST_IO   0x00000001
-#define AFD_OVERLAPPED   0x00000002
-#define AFD_IMMEDIATE    0x00000004
+#define AFD_NO_FAST_IO                  0x00000001
+#define AFD_OVERLAPPED                  0x00000002
+#define AFD_IMMEDIATE                   0x00000004
 
 #define AFD_POLL_RECEIVE_BIT            0
 #define AFD_POLL_RECEIVE                (1 << AFD_POLL_RECEIVE_BIT)
@@ -40,20 +32,10 @@
 #define AFD_POLL_QOS                    (1 << AFD_POLL_QOS_BIT)
 #define AFD_POLL_GROUP_QOS_BIT          10
 #define AFD_POLL_GROUP_QOS              (1 << AFD_POLL_GROUP_QOS_BIT)
-
 #define AFD_NUM_POLL_EVENTS             11
 #define AFD_POLL_ALL                    ((1 << AFD_NUM_POLL_EVENTS) - 1)
 
 /* clang-format on */
-
-#define FSCTL_AFD_BASE FILE_DEVICE_NETWORK
-
-#define _AFD_CONTROL_CODE(operation, method) \
-  ((FSCTL_AFD_BASE) << 12 | (operation << 2) | method)
-
-#define AFD_POLL 9
-
-#define IOCTL_AFD_POLL _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
 
 typedef struct _AFD_POLL_HANDLE_INFO {
   HANDLE Handle;
@@ -68,6 +50,8 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
+int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped);
+
 static const GUID AFD_PROVIDER_IDS[] = {
     {0xe70f1aa0,
      0xab8b,
@@ -81,7 +65,5 @@ static const GUID AFD_PROVIDER_IDS[] = {
      0x7298,
      0x43e4,
      {0xb7, 0xbd, 0x18, 0x1f, 0x20, 0x89, 0x79, 0x2a}}};
-
-int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped);
 
 #endif /* EPOLL_AFD_H_ */

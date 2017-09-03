@@ -1,6 +1,16 @@
 #include "afd.h"
 #include "error.h"
+#include "nt.h"
 #include "win.h"
+
+#define FILE_DEVICE_NETWORK 0x00000012
+#define METHOD_BUFFERED 0
+#define AFD_POLL 9
+
+#define _AFD_CONTROL_CODE(operation, method) \
+  ((FILE_DEVICE_NETWORK) << 12 | (operation << 2) | method)
+
+#define IOCTL_AFD_POLL _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
 
 int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped) {
   IO_STATUS_BLOCK iosb;
