@@ -59,7 +59,7 @@ struct epoll_event {
 extern "C" {
 #endif
 
-EPOLL_EXTERN epoll_t epoll_create();
+EPOLL_EXTERN epoll_t epoll_create(void);
 
 EPOLL_EXTERN int epoll_close(epoll_t epoll_hnd);
 

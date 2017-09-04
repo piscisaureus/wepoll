@@ -35,7 +35,7 @@ typedef struct epoll_port_data epoll_port_data_t;
 typedef struct epoll_io_req epoll_io_req_t;
 typedef struct epoll_sock_data epoll_sock_data_t;
 
-static int epoll__initialize();
+static int epoll__initialize(void);
 static SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
                                      WSAPROTOCOL_INFOW* protocol_info);
 static SOCKET epoll__create_peer_socket(HANDLE iocp,
@@ -85,7 +85,7 @@ RB_GENERATE_STATIC(epoll_sock_data_tree,
                    tree_entry,
                    epoll__compare_sock_data)
 
-epoll_t epoll_create() {
+epoll_t epoll_create(void) {
   epoll_port_data_t* port_data;
   HANDLE iocp;
 
@@ -549,7 +549,7 @@ int epoll_close(epoll_t port_handle) {
   return_success(0);
 }
 
-int epoll__initialize() {
+int epoll__initialize(void) {
   int r;
   WSADATA wsa_data;
 

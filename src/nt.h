@@ -4,7 +4,7 @@
 #include "ntstatus.h"
 #include "win.h"
 
-int nt_initialize();
+int nt_initialize(void);
 
 typedef struct _IO_STATUS_BLOCK {
   union {
