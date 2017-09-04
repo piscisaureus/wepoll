@@ -172,7 +172,7 @@ static int _ep_get_related_sockets(_ep_port_data_t* port_data,
   return 0;
 }
 
-int _ep_ctl_add(_ep_port_data_t* port_data,
+static int _ep_ctl_add(_ep_port_data_t* port_data,
                 uintptr_t sock,
                 struct epoll_event* ev) {
   _ep_sock_data_t* sock_data;
@@ -206,9 +206,9 @@ int _ep_ctl_add(_ep_port_data_t* port_data,
   return_success(0);
 }
 
-int _ep_ctl_mod(_ep_port_data_t* port_data,
-                uintptr_t sock,
-                struct epoll_event* ev) {
+static int _ep_ctl_mod(_ep_port_data_t* port_data,
+                       uintptr_t sock,
+                       struct epoll_event* ev) {
   _ep_sock_data_t lookup;
   _ep_sock_data_t* sock_data;
 
@@ -229,7 +229,7 @@ int _ep_ctl_mod(_ep_port_data_t* port_data,
   return_success(0);
 }
 
-int _ep_ctl_del(_ep_port_data_t* port_data, uintptr_t sock) {
+static int _ep_ctl_del(_ep_port_data_t* port_data, uintptr_t sock) {
   _ep_sock_data_t lookup;
   _ep_sock_data_t* sock_data;
 
@@ -552,7 +552,7 @@ int epoll_close(epoll_t port_handle) {
   return_success(0);
 }
 
-int _ep_initialize(void) {
+static int _ep_initialize(void) {
   int r;
   WSADATA wsa_data;
 
@@ -566,8 +566,8 @@ int _ep_initialize(void) {
   return_success(0);
 }
 
-SOCKET _ep_get_peer_socket(_ep_port_data_t* port_data,
-                           WSAPROTOCOL_INFOW* protocol_info) {
+static SOCKET _ep_get_peer_socket(_ep_port_data_t* port_data,
+                                  WSAPROTOCOL_INFOW* protocol_info) {
   ssize_t index;
   size_t i;
   SOCKET peer_socket;
@@ -598,7 +598,8 @@ SOCKET _ep_get_peer_socket(_ep_port_data_t* port_data,
   return peer_socket;
 }
 
-SOCKET _ep_create_peer_socket(HANDLE iocp, WSAPROTOCOL_INFOW* protocol_info) {
+static SOCKET _ep_create_peer_socket(HANDLE iocp,
+                                     WSAPROTOCOL_INFOW* protocol_info) {
   SOCKET sock = 0;
 
   sock = WSASocketW(protocol_info->iAddressFamily,
@@ -628,8 +629,8 @@ int _ep_compare_sock_data(_ep_sock_data_t* a, _ep_sock_data_t* b) {
   return a->sock - b->sock;
 }
 
-int _ep_submit_poll_req(_ep_port_data_t* port_data,
-                        _ep_sock_data_t* sock_data) {
+static int _ep_submit_poll_req(_ep_port_data_t* port_data,
+                               _ep_sock_data_t* sock_data) {
   _ep_io_req_t* io_req;
   int registered_events;
   DWORD result, afd_events;
