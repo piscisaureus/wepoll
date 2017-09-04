@@ -60,11 +60,11 @@ typedef struct _ep_sock_data {
   SOCKET sock;
   SOCKET base_sock;
   SOCKET peer_sock;
+  epoll_data_t user_data;
   uint32_t registered_events;
   uint32_t submitted_events;
   uint32_t flags;
   uint32_t io_req_generation;
-  uint64_t user_data;
   _ep_sock_data_t* attn_list_prev;
   _ep_sock_data_t* attn_list_next;
   RB_ENTRY(_ep_sock_data) tree_entry;
@@ -175,7 +175,7 @@ int _ep_ctl_add(_ep_port_data_t* port_data,
   sock_data->io_req_generation = 0;
   sock_data->submitted_events = 0;
   sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
-  sock_data->user_data = ev->data.u64;
+  sock_data->user_data = ev->data;
   sock_data->peer_sock = peer_sock;
   sock_data->flags = 0;
 
@@ -210,7 +210,7 @@ int _ep_ctl_mod(_ep_port_data_t* port_data,
   }
 
   sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
-  sock_data->user_data = ev->data.u64;
+  sock_data->user_data = ev->data;
 
   return_success(0);
 }
@@ -403,7 +403,7 @@ int epoll_wait(epoll_t port_handle,
       /* Check for error. */
       if (!NT_SUCCESS(overlapped->Internal)) {
         struct epoll_event* ev = events + (num_events++);
-        ev->data.u64 = sock_data->user_data;
+        ev->data = sock_data->user_data;
         ev->events = EPOLLERR;
         continue;
       }
@@ -459,7 +459,7 @@ int epoll_wait(epoll_t port_handle,
 
       if (reported_events) {
         struct epoll_event* ev = &events[num_events++];
-        ev->data.u64 = sock_data->user_data;
+        ev->data = sock_data->user_data;
         ev->events = reported_events;
       }
     }
