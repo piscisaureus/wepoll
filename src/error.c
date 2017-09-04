@@ -49,7 +49,3 @@ void we_set_win_error(DWORD error) {
     SetLastError(error);
   errno = we_map_win_error_to_errno(error);
 }
-
-void we_clear_win_error(void) {
-  SetLastError(ERROR_SUCCESS);
-}

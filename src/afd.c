@@ -73,7 +73,7 @@ int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped) {
   }
 
   if (status == STATUS_SUCCESS)
-    return_success(0);
+    return 0;
   else if (status == STATUS_PENDING)
     return_error(-1, ERROR_IO_PENDING);
   else
