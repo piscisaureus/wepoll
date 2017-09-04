@@ -127,10 +127,10 @@ epoll_t epoll_create(void) {
   return (epoll_t) port_data;
 }
 
-int _ep_ctl_add(_ep_port_data_t* port_data,
-                uintptr_t sock,
-                struct epoll_event* ev) {
-  _ep_sock_data_t* sock_data;
+static int _ep_get_related_sockets(_ep_port_data_t* port_data,
+                                   SOCKET sock,
+                                   SOCKET* base_sock_out,
+                                   SOCKET* peer_sock_out) {
   SOCKET base_sock, peer_sock;
   WSAPROTOCOL_INFOW protocol_info;
   DWORD bytes;
@@ -166,24 +166,38 @@ int _ep_ctl_add(_ep_port_data_t* port_data,
   if (peer_sock == INVALID_SOCKET)
     return -1;
 
+  *base_sock_out = base_sock;
+  *peer_sock_out = peer_sock;
+
+  return 0;
+}
+
+int _ep_ctl_add(_ep_port_data_t* port_data,
+                uintptr_t sock,
+                struct epoll_event* ev) {
+  _ep_sock_data_t* sock_data;
+
   sock_data = malloc(sizeof *sock_data);
   if (sock_data == NULL)
     return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
 
   sock_data->sock = sock;
-  sock_data->base_sock = base_sock;
   sock_data->io_req_generation = 0;
   sock_data->submitted_events = 0;
   sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
   sock_data->user_data = ev->data;
-  sock_data->peer_sock = peer_sock;
   sock_data->flags = 0;
+
+  if (_ep_get_related_sockets(
+          port_data, sock, &sock_data->base_sock, &sock_data->peer_sock) < 0) {
+    free(sock_data);
+    return -1;
+  }
 
   if (RB_INSERT(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data) !=
       NULL) {
-    /* Socket was already added. */
     free(sock_data);
-    return_error(-1, ERROR_ALREADY_EXISTS);
+    return_error(-1, ERROR_ALREADY_EXISTS); /* Socket already in epoll set. */
   }
 
   /* Add to attention list */
