@@ -32,6 +32,7 @@ typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext,
      ULONG InputBufferLength,        \
      PVOID OutputBuffer,             \
      ULONG OutputBufferLength))      \
+  X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))
 
 #define X(return_type, declarators, name, parameters) \
   extern return_type(declarators* name) parameters;
