@@ -71,7 +71,7 @@ struct name {                                                                 \
 
 #define SPLAY_INIT(root) do {                                                 \
   (root)->sph_root = NULL;                                                    \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 #define SPLAY_ENTRY(type)                                                     \
 struct {                                                                      \
@@ -89,32 +89,32 @@ struct {                                                                      \
   SPLAY_LEFT((head)->sph_root, field) = SPLAY_RIGHT(tmp, field);              \
   SPLAY_RIGHT(tmp, field) = (head)->sph_root;                                 \
   (head)->sph_root = tmp;                                                     \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 #define SPLAY_ROTATE_LEFT(head, tmp, field) do {                              \
   SPLAY_RIGHT((head)->sph_root, field) = SPLAY_LEFT(tmp, field);              \
   SPLAY_LEFT(tmp, field) = (head)->sph_root;                                  \
   (head)->sph_root = tmp;                                                     \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 #define SPLAY_LINKLEFT(head, tmp, field) do {                                 \
   SPLAY_LEFT(tmp, field) = (head)->sph_root;                                  \
   tmp = (head)->sph_root;                                                     \
   (head)->sph_root = SPLAY_LEFT((head)->sph_root, field);                     \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 #define SPLAY_LINKRIGHT(head, tmp, field) do {                                \
   SPLAY_RIGHT(tmp, field) = (head)->sph_root;                                 \
   tmp = (head)->sph_root;                                                     \
   (head)->sph_root = SPLAY_RIGHT((head)->sph_root, field);                    \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 #define SPLAY_ASSEMBLE(head, node, left, right, field) do {                   \
   SPLAY_RIGHT(left, field) = SPLAY_LEFT((head)->sph_root, field);             \
   SPLAY_LEFT(right, field) = SPLAY_RIGHT((head)->sph_root, field);            \
   SPLAY_LEFT((head)->sph_root, field) = SPLAY_RIGHT(node, field);             \
   SPLAY_RIGHT((head)->sph_root, field) = SPLAY_LEFT(node, field);             \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 /* Generates prototypes and inline functions */
 
@@ -305,7 +305,7 @@ struct name {                                                                 \
 
 #define RB_INIT(root) do {                                                    \
   (root)->rbh_root = NULL;                                                    \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 #define RB_BLACK  0
 #define RB_RED    1
@@ -328,12 +328,12 @@ struct {                                                                      \
   RB_PARENT(elm, field) = parent;                                             \
   RB_LEFT(elm, field) = RB_RIGHT(elm, field) = NULL;                          \
   RB_COLOR(elm, field) = RB_RED;                                              \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 #define RB_SET_BLACKRED(black, red, field) do {                               \
   RB_COLOR(black, field) = RB_BLACK;                                          \
   RB_COLOR(red, field) = RB_RED;                                              \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 #ifndef RB_AUGMENT
 #define RB_AUGMENT(x)  do {} while (0)
@@ -357,7 +357,7 @@ struct {                                                                      \
   RB_AUGMENT(tmp);                                                            \
   if ((RB_PARENT(tmp, field)))                                                \
     RB_AUGMENT(RB_PARENT(tmp, field));                                        \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 #define RB_ROTATE_RIGHT(head, elm, tmp, field) do {                           \
   (tmp) = RB_LEFT(elm, field);                                                \
@@ -377,7 +377,7 @@ struct {                                                                      \
   RB_AUGMENT(tmp);                                                            \
   if ((RB_PARENT(tmp, field)))                                                \
     RB_AUGMENT(RB_PARENT(tmp, field));                                        \
-} while (/*CONSTCOND*/ 0)
+} while (0)
 
 /* Generates prototypes and inline functions */
 #define  RB_PROTOTYPE(name, type, field, cmp)                                 \
