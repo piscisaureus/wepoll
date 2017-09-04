@@ -15,10 +15,10 @@
 #define SIO_BASE_HANDLE 0x48000022
 #endif
 
-#define EPOLL__EVENT_MASK 0xffff
+#define _EP_EVENT_MASK 0xffff
 
-#define EPOLL__SOCK_LISTED 0x1
-#define EPOLL__SOCK_DELETED 0x2
+#define _EP_SOCK_LISTED 0x1
+#define _EP_SOCK_DELETED 0x2
 
 #define ATTN_LIST_ADD(p, s)                 \
   do {                                      \
@@ -28,36 +28,35 @@
       (p)->attn_list->attn_list_prev = (s); \
     }                                       \
     (p)->attn_list = (s);                   \
-    (s)->flags |= EPOLL__SOCK_LISTED;       \
+    (s)->flags |= _EP_SOCK_LISTED;          \
   } while (0)
 
-typedef struct epoll_port_data epoll_port_data_t;
-typedef struct epoll_io_req epoll_io_req_t;
-typedef struct epoll_sock_data epoll_sock_data_t;
+typedef struct _ep_port_data _ep_port_data_t;
+typedef struct _ep_io_req _ep_io_req_t;
+typedef struct _ep_sock_data _ep_sock_data_t;
 
-static int epoll__initialize(void);
-static SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
+static int _ep_initialize(void);
+static SOCKET _ep_get_peer_socket(_ep_port_data_t* port_data,
+                                  WSAPROTOCOL_INFOW* protocol_info);
+static SOCKET _ep_create_peer_socket(HANDLE iocp,
                                      WSAPROTOCOL_INFOW* protocol_info);
-static SOCKET epoll__create_peer_socket(HANDLE iocp,
-                                        WSAPROTOCOL_INFOW* protocol_info);
-static int epoll__compare_sock_data(epoll_sock_data_t* a,
-                                    epoll_sock_data_t* b);
-static int epoll__submit_poll_req(epoll_port_data_t* port_data,
-                                  epoll_sock_data_t* sock_data);
+static int _ep_compare_sock_data(_ep_sock_data_t* a, _ep_sock_data_t* b);
+static int _ep_submit_poll_req(_ep_port_data_t* port_data,
+                               _ep_sock_data_t* sock_data);
 
-static int epoll__initialized = 0;
+static int _ep_initialized = 0;
 
 /* State associated with a epoll handle. */
-typedef struct epoll_port_data {
+typedef struct _ep_port_data {
   HANDLE iocp;
   SOCKET peer_sockets[array_count(AFD_PROVIDER_GUID_LIST)];
-  RB_HEAD(epoll_sock_data_tree, epoll_sock_data) sock_data_tree;
-  epoll_sock_data_t* attn_list;
+  RB_HEAD(_ep_sock_data_tree, _ep_sock_data) sock_data_tree;
+  _ep_sock_data_t* attn_list;
   size_t pending_reqs_count;
-} epoll_port_data_t;
+} _ep_port_data_t;
 
 /* State associated with a socket that is registered to the epoll port. */
-typedef struct epoll_sock_data {
+typedef struct _ep_sock_data {
   SOCKET sock;
   SOCKET base_sock;
   SOCKET peer_sock;
@@ -66,36 +65,36 @@ typedef struct epoll_sock_data {
   uint32_t flags;
   uint32_t io_req_generation;
   uint64_t user_data;
-  epoll_io_req_t* free_io_req;
-  epoll_sock_data_t* attn_list_prev;
-  epoll_sock_data_t* attn_list_next;
-  RB_ENTRY(epoll_sock_data) tree_entry;
-} epoll_sock_data_t;
+  _ep_io_req_t* free_io_req;
+  _ep_sock_data_t* attn_list_prev;
+  _ep_sock_data_t* attn_list_next;
+  RB_ENTRY(_ep_sock_data) tree_entry;
+} _ep_sock_data_t;
 
 /* State associated with a AFD_POLL request. */
-typedef struct epoll_io_req {
+typedef struct _ep_io_req {
   OVERLAPPED overlapped;
   AFD_POLL_INFO poll_info;
   uint32_t generation;
-  epoll_sock_data_t* sock_data;
-} epoll_io_req_t;
+  _ep_sock_data_t* sock_data;
+} _ep_io_req_t;
 
-RB_GENERATE_STATIC(epoll_sock_data_tree,
-                   epoll_sock_data,
+RB_GENERATE_STATIC(_ep_sock_data_tree,
+                   _ep_sock_data,
                    tree_entry,
-                   epoll__compare_sock_data)
+                   _ep_compare_sock_data)
 
 epoll_t epoll_create(void) {
-  epoll_port_data_t* port_data;
+  _ep_port_data_t* port_data;
   HANDLE iocp;
 
   /* If necessary, do global initialization first. This is totally not
    * thread-safe at the moment.
    */
-  if (!epoll__initialized) {
-    if (epoll__initialize() < 0)
+  if (!_ep_initialized) {
+    if (_ep_initialize() < 0)
       return NULL;
-    epoll__initialized = 1;
+    _ep_initialized = 1;
   }
 
   port_data = malloc(sizeof *port_data);
@@ -122,15 +121,15 @@ int epoll_ctl(epoll_t port_handle,
               int op,
               uintptr_t sock,
               struct epoll_event* ev) {
-  epoll_port_data_t* port_data;
+  _ep_port_data_t* port_data;
   SOCKET base_sock;
 
-  port_data = (epoll_port_data_t*) port_handle;
+  port_data = (_ep_port_data_t*) port_handle;
 
   switch (op) {
     case EPOLL_CTL_ADD: {
-      epoll_sock_data_t* sock_data;
-      epoll_io_req_t* io_req;
+      _ep_sock_data_t* sock_data;
+      _ep_io_req_t* io_req;
       SOCKET peer_sock;
       WSAPROTOCOL_INFOW protocol_info;
       DWORD bytes;
@@ -162,7 +161,7 @@ int epoll_ctl(epoll_t port_handle,
                      &len) != 0)
         return_error(-1);
 
-      peer_sock = epoll__get_peer_socket(port_data, &protocol_info);
+      peer_sock = _ep_get_peer_socket(port_data, &protocol_info);
       if (peer_sock == INVALID_SOCKET)
         return -1;
 
@@ -186,7 +185,7 @@ int epoll_ctl(epoll_t port_handle,
       sock_data->free_io_req = io_req;
       sock_data->flags = 0;
 
-      if (RB_INSERT(epoll_sock_data_tree,
+      if (RB_INSERT(_ep_sock_data_tree,
                     &port_data->sock_data_tree,
                     sock_data) != NULL) {
         /* Socket was already added. */
@@ -202,18 +201,18 @@ int epoll_ctl(epoll_t port_handle,
     }
 
     case EPOLL_CTL_MOD: {
-      epoll_sock_data_t lookup;
-      epoll_sock_data_t* sock_data;
+      _ep_sock_data_t lookup;
+      _ep_sock_data_t* sock_data;
 
       lookup.sock = sock;
       sock_data =
-          RB_FIND(epoll_sock_data_tree, &port_data->sock_data_tree, &lookup);
+          RB_FIND(_ep_sock_data_tree, &port_data->sock_data_tree, &lookup);
       if (sock_data == NULL)
         return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
 
-      if (ev->events & EPOLL__EVENT_MASK & ~sock_data->submitted_events) {
+      if (ev->events & _EP_EVENT_MASK & ~sock_data->submitted_events) {
         if (sock_data->free_io_req == NULL) {
-          epoll_io_req_t* io_req = malloc(sizeof *io_req);
+          _ep_io_req_t* io_req = malloc(sizeof *io_req);
           if (io_req == NULL)
             return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
 
@@ -221,7 +220,7 @@ int epoll_ctl(epoll_t port_handle,
         }
 
         /* Add to attention list, if not already added. */
-        if (!(sock_data->flags & EPOLL__SOCK_LISTED)) {
+        if (!(sock_data->flags & _EP_SOCK_LISTED)) {
           ATTN_LIST_ADD(port_data, sock_data);
         }
       }
@@ -233,23 +232,23 @@ int epoll_ctl(epoll_t port_handle,
     }
 
     case EPOLL_CTL_DEL: {
-      epoll_sock_data_t lookup;
-      epoll_sock_data_t* sock_data;
+      _ep_sock_data_t lookup;
+      _ep_sock_data_t* sock_data;
 
       lookup.sock = sock;
       sock_data =
-          RB_FIND(epoll_sock_data_tree, &port_data->sock_data_tree, &lookup);
+          RB_FIND(_ep_sock_data_tree, &port_data->sock_data_tree, &lookup);
       if (sock_data == NULL)
         /* Socket has not been registered with epoll instance. */
         return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
 
-      RB_REMOVE(epoll_sock_data_tree, &port_data->sock_data_tree, sock_data);
+      RB_REMOVE(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data);
 
       free(sock_data->free_io_req);
-      sock_data->flags |= EPOLL__SOCK_DELETED;
+      sock_data->flags |= _EP_SOCK_DELETED;
 
       /* Remove from attention list. */
-      if (sock_data->flags & EPOLL__SOCK_LISTED) {
+      if (sock_data->flags & _EP_SOCK_LISTED) {
         if (sock_data->attn_list_prev != NULL)
           sock_data->attn_list_prev->attn_list_next =
               sock_data->attn_list_next;
@@ -260,7 +259,7 @@ int epoll_ctl(epoll_t port_handle,
           port_data->attn_list = sock_data->attn_list_next;
         sock_data->attn_list_prev = NULL;
         sock_data->attn_list_next = NULL;
-        sock_data->flags &= ~EPOLL__SOCK_LISTED;
+        sock_data->flags &= ~_EP_SOCK_LISTED;
       }
 
       if (sock_data->submitted_events == 0) {
@@ -285,11 +284,11 @@ int epoll_wait(epoll_t port_handle,
                struct epoll_event* events,
                int maxevents,
                int timeout) {
-  epoll_port_data_t* port_data;
+  _ep_port_data_t* port_data;
   ULONGLONG due = 0;
   DWORD gqcs_timeout;
 
-  port_data = (epoll_port_data_t*) port_handle;
+  port_data = (_ep_port_data_t*) port_handle;
 
   /* Compute the timeout for GetQueuedCompletionStatus, and the wait end
    * time, if the user specified a timeout other than zero or infinite.
@@ -315,15 +314,15 @@ int epoll_wait(epoll_t port_handle,
     /* Create overlapped poll requests for all sockets on the attention list.
      */
     while (port_data->attn_list != NULL) {
-      epoll_sock_data_t* sock_data = port_data->attn_list;
-      assert(sock_data->flags & EPOLL__SOCK_LISTED);
+      _ep_sock_data_t* sock_data = port_data->attn_list;
+      assert(sock_data->flags & _EP_SOCK_LISTED);
 
       /* Check if there are events registered that are not yet submitted. In
        * that case we need to submit another req.
        */
-      if (sock_data->registered_events & EPOLL__EVENT_MASK &
+      if (sock_data->registered_events & _EP_EVENT_MASK &
           ~sock_data->submitted_events) {
-        int r = epoll__submit_poll_req(port_data, sock_data);
+        int r = _ep_submit_poll_req(port_data, sock_data);
 
         if (r) {
           /* If submitting the poll request fails then most likely the socket
@@ -337,7 +336,7 @@ int epoll_wait(epoll_t port_handle,
            * to delete the currently selected socket.
            */
           port_data->attn_list = sock_data->attn_list_next;
-          sock_data->flags &= ~EPOLL__SOCK_LISTED;
+          sock_data->flags &= ~_EP_SOCK_LISTED;
 
           /* Delete it. */
           r = epoll_ctl(port_handle, EPOLL_CTL_DEL, sock_data->sock, NULL);
@@ -350,7 +349,7 @@ int epoll_wait(epoll_t port_handle,
       /* Remove from attention list */
       port_data->attn_list = sock_data->attn_list_next;
       sock_data->attn_list_prev = sock_data->attn_list_next = NULL;
-      sock_data->flags &= ~EPOLL__SOCK_LISTED;
+      sock_data->flags &= ~_EP_SOCK_LISTED;
     }
 
     /* Compute how much overlapped entries can be dequeued at most. */
@@ -374,13 +373,13 @@ int epoll_wait(epoll_t port_handle,
     /* Successfully dequeued overlappeds. */
     for (i = 0; i < count; i++) {
       OVERLAPPED* overlapped;
-      epoll_io_req_t* io_req;
-      epoll_sock_data_t* sock_data;
+      _ep_io_req_t* io_req;
+      _ep_sock_data_t* sock_data;
       DWORD afd_events;
       int registered_events, reported_events;
 
       overlapped = entries[i].lpOverlapped;
-      io_req = container_of(overlapped, epoll_io_req_t, overlapped);
+      io_req = container_of(overlapped, _ep_io_req_t, overlapped);
       sock_data = io_req->sock_data;
 
       if (io_req->generation < sock_data->io_req_generation) {
@@ -402,7 +401,7 @@ int epoll_wait(epoll_t port_handle,
       /* Check if this io request was associated with a socket that was removed
        * with EPOLL_CTL_DEL.
        */
-      if (sock_data->flags & EPOLL__SOCK_DELETED) {
+      if (sock_data->flags & _EP_SOCK_DELETED) {
         free(io_req);
         free(sock_data);
         continue;
@@ -427,7 +426,7 @@ int epoll_wait(epoll_t port_handle,
 
       /* Check for a closed socket. */
       if (afd_events & AFD_POLL_LOCAL_CLOSE) {
-        RB_REMOVE(epoll_sock_data_tree, &port_data->sock_data_tree, sock_data);
+        RB_REMOVE(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data);
         free(io_req);
         free(sock_data);
         continue;
@@ -453,20 +452,20 @@ int epoll_wait(epoll_t port_handle,
       reported_events &= registered_events;
 
       if (reported_events == 0) {
-        assert(!(sock_data->flags & EPOLL__SOCK_LISTED));
+        assert(!(sock_data->flags & _EP_SOCK_LISTED));
         ATTN_LIST_ADD(port_data, sock_data);
       } else {
         /* Unless EPOLLONESHOT is used add the socket back to the attention
          * list.
          */
         if (!(registered_events & EPOLLONESHOT)) {
-          assert(!(sock_data->flags & EPOLL__SOCK_LISTED));
+          assert(!(sock_data->flags & _EP_SOCK_LISTED));
           ATTN_LIST_ADD(port_data, sock_data);
         }
       }
 
       if (reported_events) {
-        struct epoll_event* ev = events + (num_events++);
+        struct epoll_event* ev = &events[num_events++];
         ev->data.u64 = sock_data->user_data;
         ev->events = reported_events;
       }
@@ -485,10 +484,10 @@ int epoll_wait(epoll_t port_handle,
 }
 
 int epoll_close(epoll_t port_handle) {
-  epoll_port_data_t* port_data;
-  epoll_sock_data_t* sock_data;
+  _ep_port_data_t* port_data;
+  _ep_sock_data_t* sock_data;
 
-  port_data = (epoll_port_data_t*) port_handle;
+  port_data = (_ep_port_data_t*) port_handle;
 
   /* Close all peer sockets. This will make all pending io requests return. */
   for (size_t i = 0; i < array_count(port_data->peer_sockets); i++) {
@@ -524,15 +523,15 @@ int epoll_close(epoll_t port_handle) {
     port_data->pending_reqs_count -= count;
 
     for (i = 0; i < count; i++) {
-      epoll_io_req_t* io_req =
-          container_of(entries[i].lpOverlapped, epoll_io_req_t, overlapped);
+      _ep_io_req_t* io_req =
+          container_of(entries[i].lpOverlapped, _ep_io_req_t, overlapped);
       free(io_req);
     }
   }
 
   /* Remove all entries from the socket_state tree. */
   while ((sock_data = RB_ROOT(&port_data->sock_data_tree))) {
-    RB_REMOVE(epoll_sock_data_tree, &port_data->sock_data_tree, sock_data);
+    RB_REMOVE(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data);
 
     if (sock_data->free_io_req != NULL)
       free(sock_data->free_io_req);
@@ -549,7 +548,7 @@ int epoll_close(epoll_t port_handle) {
   return_success(0);
 }
 
-int epoll__initialize(void) {
+int _ep_initialize(void) {
   int r;
   WSADATA wsa_data;
 
@@ -563,8 +562,8 @@ int epoll__initialize(void) {
   return_success(0);
 }
 
-SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
-                              WSAPROTOCOL_INFOW* protocol_info) {
+SOCKET _ep_get_peer_socket(_ep_port_data_t* port_data,
+                           WSAPROTOCOL_INFOW* protocol_info) {
   ssize_t index;
   size_t i;
   SOCKET peer_socket;
@@ -588,15 +587,14 @@ SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
    */
   peer_socket = port_data->peer_sockets[index];
   if (peer_socket == 0) {
-    peer_socket = epoll__create_peer_socket(port_data->iocp, protocol_info);
+    peer_socket = _ep_create_peer_socket(port_data->iocp, protocol_info);
     port_data->peer_sockets[index] = peer_socket;
   }
 
   return peer_socket;
 }
 
-SOCKET epoll__create_peer_socket(HANDLE iocp,
-                                 WSAPROTOCOL_INFOW* protocol_info) {
+SOCKET _ep_create_peer_socket(HANDLE iocp, WSAPROTOCOL_INFOW* protocol_info) {
   SOCKET sock = 0;
 
   sock = WSASocketW(protocol_info->iAddressFamily,
@@ -622,13 +620,13 @@ error:;
   return_error(INVALID_SOCKET, error);
 }
 
-int epoll__compare_sock_data(epoll_sock_data_t* a, epoll_sock_data_t* b) {
+int _ep_compare_sock_data(_ep_sock_data_t* a, _ep_sock_data_t* b) {
   return a->sock - b->sock;
 }
 
-int epoll__submit_poll_req(epoll_port_data_t* port_data,
-                           epoll_sock_data_t* sock_data) {
-  epoll_io_req_t* io_req;
+int _ep_submit_poll_req(_ep_port_data_t* port_data,
+                        _ep_sock_data_t* sock_data) {
+  _ep_io_req_t* io_req;
   int registered_events;
   DWORD result, afd_events;
 
