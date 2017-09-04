@@ -94,38 +94,9 @@ static inline void _ep_io_req_free(_ep_io_req_t* io_req) {
   free(io_req);
 }
 
-epoll_t epoll_create(void) {
-  _ep_port_data_t* port_data;
-  HANDLE iocp;
 
-  /* If necessary, do global initialization first. This is totally not
-   * thread-safe at the moment.
-   */
-  if (!_ep_initialized) {
-    if (_ep_initialize() < 0)
-      return NULL;
-    _ep_initialized = 1;
-  }
 
-  port_data = malloc(sizeof *port_data);
-  if (port_data == NULL)
-    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
 
-  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-  if (iocp == INVALID_HANDLE_VALUE) {
-    free(port_data);
-    return_error(NULL);
-  }
-
-  port_data->iocp = iocp;
-  port_data->attn_list = NULL;
-  port_data->pending_reqs_count = 0;
-
-  memset(&port_data->peer_sockets, 0, sizeof port_data->peer_sockets);
-  RB_INIT(&port_data->sock_data_tree);
-
-  return (epoll_t) port_data;
-}
 
 static int _ep_get_related_sockets(_ep_port_data_t* port_data,
                                    SOCKET sock,
@@ -488,6 +459,39 @@ int epoll_wait(epoll_t port_handle,
   } while (timeout > 0);
 
   return_success(0);
+}
+
+epoll_t epoll_create(void) {
+  _ep_port_data_t* port_data;
+  HANDLE iocp;
+
+  /* If necessary, do global initialization first. This is totally not
+  * thread-safe at the moment.
+  */
+  if (!_ep_initialized) {
+    if (_ep_initialize() < 0)
+      return NULL;
+    _ep_initialized = 1;
+  }
+
+  port_data = malloc(sizeof *port_data);
+  if (port_data == NULL)
+    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
+
+  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+  if (iocp == INVALID_HANDLE_VALUE) {
+    free(port_data);
+    return_error(NULL);
+  }
+
+  port_data->iocp = iocp;
+  port_data->attn_list = NULL;
+  port_data->pending_reqs_count = 0;
+
+  memset(&port_data->peer_sockets, 0, sizeof port_data->peer_sockets);
+  RB_INIT(&port_data->sock_data_tree);
+
+  return (epoll_t)port_data;
 }
 
 int epoll_close(epoll_t port_handle) {
