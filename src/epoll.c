@@ -345,7 +345,7 @@ int epoll_wait(epoll_t port_handle,
            * is invalid. In this case we silently remove the socket from the
            * epoll port. Other errors make epoll_wait() fail.
            */
-          if (WSAGetLastError() != WSAENOTSOCK)
+          if (GetLastError() == ERROR_INVALID_HANDLE)
             return -1;
 
           /* Skip to the next attention list item already, because we're about
@@ -683,15 +683,8 @@ int epoll__submit_poll_req(epoll_port_data_t* port_data,
 
   result =
       afd_poll(sock_data->peer_sock, &io_req->poll_info, &io_req->overlapped);
-  if (result != 0) {
-    DWORD error = WSAGetLastError();
-    if (error != WSA_IO_PENDING) {
-      /* If this happens an error happened and no overlapped operation was
-       * started.
-       */
-      return -1;
-    }
-  }
+  if (result != 0 && GetLastError() != ERROR_IO_PENDING)
+    return_error(-1);
 
   sock_data->submitted_events = registered_events;
   sock_data->io_req_generation = io_req->generation;

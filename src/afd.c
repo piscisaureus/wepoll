@@ -18,7 +18,6 @@ int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped) {
   HANDLE event = NULL;
   void* apc_context;
   NTSTATUS status;
-  DWORD error;
 
   if (overlapped != NULL) {
     /* Overlapped operation. */
@@ -37,9 +36,8 @@ int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped) {
     /* Blocking operation. */
     iosb_ptr = &iosb;
     event = CreateEventW(NULL, FALSE, FALSE, NULL);
-    if (event == NULL) {
-      return SOCKET_ERROR;
-    }
+    if (event == NULL)
+      return_error(-1);
     apc_context = NULL;
   }
 
@@ -63,10 +61,9 @@ int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped) {
       DWORD r = WaitForSingleObject(event, INFINITE);
 
       if (r == WAIT_FAILED) {
-        DWORD saved_error = GetLastError();
+        DWORD error = GetLastError();
         CloseHandle(event);
-        WSASetLastError(saved_error);
-        return SOCKET_ERROR;
+        return_error(-1, error);
       }
 
       status = iosb_ptr->Status;
@@ -75,25 +72,10 @@ int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped) {
     CloseHandle(event);
   }
 
-  switch (status) {
-    case STATUS_SUCCESS:
-      error = ERROR_SUCCESS;
-      break;
-
-    case STATUS_PENDING:
-      error = WSA_IO_PENDING;
-      break;
-
-    default:
-      error = we_map_ntstatus_to_ws_error(status);
-      break;
-  }
-
-  WSASetLastError(error);
-
-  if (error == ERROR_SUCCESS) {
-    return 0;
-  } else {
-    return SOCKET_ERROR;
-  }
+  if (status == STATUS_SUCCESS)
+    return_success(0);
+  else if (status == STATUS_PENDING)
+    return_error(-1, ERROR_IO_PENDING);
+  else
+    return_error(-1, we_map_ntstatus_to_win_error(status));
 }
