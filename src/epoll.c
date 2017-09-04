@@ -117,167 +117,169 @@ epoll_t epoll_create(void) {
   return (epoll_t) port_data;
 }
 
+int _ep_ctl_add(_ep_port_data_t* port_data,
+                uintptr_t sock,
+                struct epoll_event* ev) {
+  _ep_sock_data_t* sock_data;
+  _ep_io_req_t* io_req;
+  SOCKET base_sock, peer_sock;
+  WSAPROTOCOL_INFOW protocol_info;
+  DWORD bytes;
+  int len;
+
+  /* Try to obtain a base handle for the socket, so we can bypass LSPs
+   * that get in the way if we want to talk to the kernel directly. If
+   * it fails we try if we work with the original socket. Note that on
+   * windows XP/2k3 this will always fail since they don't support the
+   * SIO_BASE_HANDLE ioctl.
+   */
+  base_sock = sock;
+  WSAIoctl(sock,
+           SIO_BASE_HANDLE,
+           NULL,
+           0,
+           &base_sock,
+           sizeof base_sock,
+           &bytes,
+           NULL,
+           NULL);
+
+  /* Obtain protocol information about the socket. */
+  len = sizeof protocol_info;
+  if (getsockopt(base_sock,
+                 SOL_SOCKET,
+                 SO_PROTOCOL_INFOW,
+                 (char*) &protocol_info,
+                 &len) != 0)
+    return_error(-1);
+
+  peer_sock = _ep_get_peer_socket(port_data, &protocol_info);
+  if (peer_sock == INVALID_SOCKET)
+    return -1;
+
+  sock_data = malloc(sizeof *sock_data);
+  if (sock_data == NULL)
+    return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
+
+  io_req = malloc(sizeof *io_req);
+  if (io_req == NULL) {
+    free(sock_data);
+    return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
+  }
+
+  sock_data->sock = sock;
+  sock_data->base_sock = base_sock;
+  sock_data->io_req_generation = 0;
+  sock_data->submitted_events = 0;
+  sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
+  sock_data->user_data = ev->data.u64;
+  sock_data->peer_sock = peer_sock;
+  sock_data->free_io_req = io_req;
+  sock_data->flags = 0;
+
+  if (RB_INSERT(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data) !=
+      NULL) {
+    /* Socket was already added. */
+    free(sock_data);
+    free(io_req);
+    return_error(-1, ERROR_ALREADY_EXISTS);
+  }
+
+  /* Add to attention list */
+  ATTN_LIST_ADD(port_data, sock_data);
+
+  return_success(0);
+}
+
+int _ep_ctl_mod(_ep_port_data_t* port_data,
+                uintptr_t sock,
+                struct epoll_event* ev) {
+  _ep_sock_data_t lookup;
+  _ep_sock_data_t* sock_data;
+
+  lookup.sock = sock;
+  sock_data = RB_FIND(_ep_sock_data_tree, &port_data->sock_data_tree, &lookup);
+  if (sock_data == NULL)
+    return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
+
+  if (ev->events & _EP_EVENT_MASK & ~sock_data->submitted_events) {
+    if (sock_data->free_io_req == NULL) {
+      _ep_io_req_t* io_req = malloc(sizeof *io_req);
+      if (io_req == NULL)
+        return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
+
+      sock_data->free_io_req = NULL;
+    }
+
+    /* Add to attention list, if not already added. */
+    if (!(sock_data->flags & _EP_SOCK_LISTED)) {
+      ATTN_LIST_ADD(port_data, sock_data);
+    }
+  }
+
+  sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
+  sock_data->user_data = ev->data.u64;
+
+  return_success(0);
+}
+
+int _ep_ctl_del(_ep_port_data_t* port_data, uintptr_t sock) {
+  _ep_sock_data_t lookup;
+  _ep_sock_data_t* sock_data;
+
+  lookup.sock = sock;
+  sock_data = RB_FIND(_ep_sock_data_tree, &port_data->sock_data_tree, &lookup);
+  if (sock_data == NULL)
+    /* Socket has not been registered with epoll instance. */
+    return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
+
+  RB_REMOVE(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data);
+
+  free(sock_data->free_io_req);
+  sock_data->flags |= _EP_SOCK_DELETED;
+
+  /* Remove from attention list. */
+  if (sock_data->flags & _EP_SOCK_LISTED) {
+    if (sock_data->attn_list_prev != NULL)
+      sock_data->attn_list_prev->attn_list_next = sock_data->attn_list_next;
+    if (sock_data->attn_list_next != NULL)
+      sock_data->attn_list_next->attn_list_prev = sock_data->attn_list_prev;
+    if (port_data->attn_list == sock_data)
+      port_data->attn_list = sock_data->attn_list_next;
+    sock_data->attn_list_prev = NULL;
+    sock_data->attn_list_next = NULL;
+    sock_data->flags &= ~_EP_SOCK_LISTED;
+  }
+
+  if (sock_data->submitted_events == 0) {
+    assert(sock_data->io_req_generation == 0);
+    free(sock_data);
+  } else {
+    /* There are still one or more io requests pending. Wait for
+     * all pending requests to return before freeing.
+     */
+    assert(sock_data->io_req_generation > 0);
+  }
+
+  return_success(0);
+}
+
 int epoll_ctl(epoll_t port_handle,
               int op,
               uintptr_t sock,
               struct epoll_event* ev) {
-  _ep_port_data_t* port_data;
-  SOCKET base_sock;
-
-  port_data = (_ep_port_data_t*) port_handle;
+  _ep_port_data_t* port_data = (_ep_port_data_t*) port_handle;
 
   switch (op) {
-    case EPOLL_CTL_ADD: {
-      _ep_sock_data_t* sock_data;
-      _ep_io_req_t* io_req;
-      SOCKET peer_sock;
-      WSAPROTOCOL_INFOW protocol_info;
-      DWORD bytes;
-      int len;
-
-      /* Try to obtain a base handle for the socket, so we can bypass LSPs
-       * that get in the way if we want to talk to the kernel directly. If
-       * it fails we try if we work with the original socket. Note that on
-       * windows XP/2k3 this will always fail since they don't support the
-       * SIO_BASE_HANDLE ioctl.
-       */
-      base_sock = sock;
-      WSAIoctl(sock,
-               SIO_BASE_HANDLE,
-               NULL,
-               0,
-               &base_sock,
-               sizeof base_sock,
-               &bytes,
-               NULL,
-               NULL);
-
-      /* Obtain protocol information about the socket. */
-      len = sizeof protocol_info;
-      if (getsockopt(base_sock,
-                     SOL_SOCKET,
-                     SO_PROTOCOL_INFOW,
-                     (char*) &protocol_info,
-                     &len) != 0)
-        return_error(-1);
-
-      peer_sock = _ep_get_peer_socket(port_data, &protocol_info);
-      if (peer_sock == INVALID_SOCKET)
-        return -1;
-
-      sock_data = malloc(sizeof *sock_data);
-      if (sock_data == NULL)
-        return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
-
-      io_req = malloc(sizeof *io_req);
-      if (io_req == NULL) {
-        free(sock_data);
-        return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
-      }
-
-      sock_data->sock = sock;
-      sock_data->base_sock = base_sock;
-      sock_data->io_req_generation = 0;
-      sock_data->submitted_events = 0;
-      sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
-      sock_data->user_data = ev->data.u64;
-      sock_data->peer_sock = peer_sock;
-      sock_data->free_io_req = io_req;
-      sock_data->flags = 0;
-
-      if (RB_INSERT(_ep_sock_data_tree,
-                    &port_data->sock_data_tree,
-                    sock_data) != NULL) {
-        /* Socket was already added. */
-        free(sock_data);
-        free(io_req);
-        return_error(-1, ERROR_ALREADY_EXISTS);
-      }
-
-      /* Add to attention list */
-      ATTN_LIST_ADD(port_data, sock_data);
-
-      return_success(0);
-    }
-
-    case EPOLL_CTL_MOD: {
-      _ep_sock_data_t lookup;
-      _ep_sock_data_t* sock_data;
-
-      lookup.sock = sock;
-      sock_data =
-          RB_FIND(_ep_sock_data_tree, &port_data->sock_data_tree, &lookup);
-      if (sock_data == NULL)
-        return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
-
-      if (ev->events & _EP_EVENT_MASK & ~sock_data->submitted_events) {
-        if (sock_data->free_io_req == NULL) {
-          _ep_io_req_t* io_req = malloc(sizeof *io_req);
-          if (io_req == NULL)
-            return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
-
-          sock_data->free_io_req = NULL;
-        }
-
-        /* Add to attention list, if not already added. */
-        if (!(sock_data->flags & _EP_SOCK_LISTED)) {
-          ATTN_LIST_ADD(port_data, sock_data);
-        }
-      }
-
-      sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
-      sock_data->user_data = ev->data.u64;
-
-      return_success(0);
-    }
-
-    case EPOLL_CTL_DEL: {
-      _ep_sock_data_t lookup;
-      _ep_sock_data_t* sock_data;
-
-      lookup.sock = sock;
-      sock_data =
-          RB_FIND(_ep_sock_data_tree, &port_data->sock_data_tree, &lookup);
-      if (sock_data == NULL)
-        /* Socket has not been registered with epoll instance. */
-        return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
-
-      RB_REMOVE(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data);
-
-      free(sock_data->free_io_req);
-      sock_data->flags |= _EP_SOCK_DELETED;
-
-      /* Remove from attention list. */
-      if (sock_data->flags & _EP_SOCK_LISTED) {
-        if (sock_data->attn_list_prev != NULL)
-          sock_data->attn_list_prev->attn_list_next =
-              sock_data->attn_list_next;
-        if (sock_data->attn_list_next != NULL)
-          sock_data->attn_list_next->attn_list_prev =
-              sock_data->attn_list_prev;
-        if (port_data->attn_list == sock_data)
-          port_data->attn_list = sock_data->attn_list_next;
-        sock_data->attn_list_prev = NULL;
-        sock_data->attn_list_next = NULL;
-        sock_data->flags &= ~_EP_SOCK_LISTED;
-      }
-
-      if (sock_data->submitted_events == 0) {
-        assert(sock_data->io_req_generation == 0);
-        free(sock_data);
-      } else {
-        /* There are still one or more io requests pending. Wait for
-         * all pending requests to return before freeing.
-         */
-        assert(sock_data->io_req_generation > 0);
-      }
-
-      return_success(0);
-    }
-
-    default:
-      return_error(-1, ERROR_INVALID_PARAMETER);
+    case EPOLL_CTL_ADD:
+      return _ep_ctl_add(port_data, sock, ev);
+    case EPOLL_CTL_MOD:
+      return _ep_ctl_mod(port_data, sock, ev);
+    case EPOLL_CTL_DEL:
+      return _ep_ctl_del(port_data, sock);
   }
+
+  return_error(-1, ERROR_INVALID_PARAMETER);
 }
 
 int epoll_wait(epoll_t port_handle,
