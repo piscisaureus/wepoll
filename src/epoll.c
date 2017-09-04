@@ -99,15 +99,13 @@ epoll_t epoll_create() {
   }
 
   port_data = malloc(sizeof *port_data);
-  if (port_data == NULL) {
-    SetLastError(ERROR_OUTOFMEMORY);
-    return NULL;
-  }
+  if (port_data == NULL)
+    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
 
   iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   if (iocp == INVALID_HANDLE_VALUE) {
     free(port_data);
-    return NULL;
+    return_error(NULL);
   }
 
   port_data->iocp = iocp;
@@ -161,26 +159,21 @@ int epoll_ctl(epoll_t port_handle,
                      SOL_SOCKET,
                      SO_PROTOCOL_INFOW,
                      (char*) &protocol_info,
-                     &len) != 0) {
-        return -1;
-      }
+                     &len) != 0)
+        return_error(-1);
 
       peer_sock = epoll__get_peer_socket(port_data, &protocol_info);
-      if (peer_sock == INVALID_SOCKET) {
+      if (peer_sock == INVALID_SOCKET)
         return -1;
-      }
 
       sock_data = malloc(sizeof *sock_data);
-      if (sock_data == NULL) {
-        SetLastError(ERROR_OUTOFMEMORY);
-        return -1;
-      }
+      if (sock_data == NULL)
+        return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
 
       io_req = malloc(sizeof *io_req);
       if (io_req == NULL) {
-        SetLastError(ERROR_OUTOFMEMORY);
         free(sock_data);
-        return -1;
+        return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
       }
 
       sock_data->sock = sock;
@@ -199,14 +192,13 @@ int epoll_ctl(epoll_t port_handle,
         /* Socket was already added. */
         free(sock_data);
         free(io_req);
-        SetLastError(ERROR_ALREADY_EXISTS);
-        return -1;
+        return_error(-1, ERROR_ALREADY_EXISTS);
       }
 
       /* Add to attention list */
       ATTN_LIST_ADD(port_data, sock_data);
 
-      return 0;
+      return_success(0);
     }
 
     case EPOLL_CTL_MOD: {
@@ -216,19 +208,14 @@ int epoll_ctl(epoll_t port_handle,
       lookup.sock = sock;
       sock_data =
           RB_FIND(epoll_sock_data_tree, &port_data->sock_data_tree, &lookup);
-      if (sock_data == NULL) {
-        /* Socket has not been registered with epoll instance. */
-        SetLastError(ERROR_NOT_FOUND);
-        return -1;
-      }
+      if (sock_data == NULL)
+        return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
 
       if (ev->events & EPOLL__EVENT_MASK & ~sock_data->submitted_events) {
         if (sock_data->free_io_req == NULL) {
           epoll_io_req_t* io_req = malloc(sizeof *io_req);
-          if (io_req == NULL) {
-            SetLastError(ERROR_OUTOFMEMORY);
-            return -1;
-          }
+          if (io_req == NULL)
+            return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
 
           sock_data->free_io_req = NULL;
         }
@@ -241,7 +228,8 @@ int epoll_ctl(epoll_t port_handle,
 
       sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
       sock_data->user_data = ev->data.u64;
-      return 0;
+
+      return_success(0);
     }
 
     case EPOLL_CTL_DEL: {
@@ -251,11 +239,9 @@ int epoll_ctl(epoll_t port_handle,
       lookup.sock = sock;
       sock_data =
           RB_FIND(epoll_sock_data_tree, &port_data->sock_data_tree, &lookup);
-      if (sock_data == NULL) {
+      if (sock_data == NULL)
         /* Socket has not been registered with epoll instance. */
-        SetLastError(ERROR_NOT_FOUND);
-        return -1;
-      }
+        return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
 
       RB_REMOVE(epoll_sock_data_tree, &port_data->sock_data_tree, sock_data);
 
@@ -287,12 +273,11 @@ int epoll_ctl(epoll_t port_handle,
         assert(sock_data->io_req_generation > 0);
       }
 
-      return 0;
+      return_success(0);
     }
 
     default:
-      WSASetLastError(WSAEINVAL);
-      return -1;
+      return_error(-1, ERROR_INVALID_PARAMETER);
   }
 }
 
@@ -378,11 +363,10 @@ int epoll_wait(epoll_t port_handle,
 
     if (!result) {
       DWORD error = GetLastError();
-      if (error == WAIT_TIMEOUT) {
-        return 0;
-      } else {
-        return -1;
-      }
+      if (error == WAIT_TIMEOUT)
+        return_success(0);
+      else
+        return_error(-1, error);
     }
 
     port_data->pending_reqs_count -= count;
@@ -489,7 +473,7 @@ int epoll_wait(epoll_t port_handle,
     }
 
     if (num_events > 0)
-      return num_events;
+      return_success(num_events);
 
     /* Events were dequeued, but none were relevant. Recompute timeout. */
     if (timeout > 0) {
@@ -497,7 +481,7 @@ int epoll_wait(epoll_t port_handle,
     }
   } while (timeout > 0);
 
-  return 0;
+  return_success(0);
 }
 
 int epoll_close(epoll_t port_handle) {
@@ -511,7 +495,7 @@ int epoll_close(epoll_t port_handle) {
     SOCKET peer_sock = port_data->peer_sockets[i];
     if (peer_sock != 0 && peer_sock != INVALID_SOCKET) {
       if (closesocket(peer_sock) != 0)
-        return -1;
+        return_error(-1);
 
       port_data->peer_sockets[i] = 0;
     }
@@ -535,7 +519,7 @@ int epoll_close(epoll_t port_handle) {
                                          FALSE);
 
     if (!result)
-      return -1;
+      return_error(-1);
 
     port_data->pending_reqs_count -= count;
 
@@ -556,12 +540,13 @@ int epoll_close(epoll_t port_handle) {
   }
 
   /* Close the I/O completion port. */
-  CloseHandle(port_data->iocp);
+  if (!CloseHandle(port_data->iocp))
+    return_error(-1);
 
   /* Finally, remove the port data. */
   free(port_data);
 
-  return 0;
+  return_success(0);
 }
 
 int epoll__initialize() {
@@ -570,12 +555,12 @@ int epoll__initialize() {
 
   r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
   if (r != 0)
-    return -1;
+    return_error(-1);
 
   if (nt_initialize() < 0)
     return -1;
 
-  return 0;
+  return_success(0);
 }
 
 SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
@@ -594,10 +579,8 @@ SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
   }
 
   /* Check if the protocol uses an msafd socket. */
-  if (index < 0) {
-    SetLastError(ERROR_NOT_SUPPORTED);
-    return INVALID_SOCKET;
-  }
+  if (index < 0)
+    return_error(INVALID_SOCKET, ERROR_NOT_SUPPORTED);
 
   /* If we didn't (try) to create a peer socket yet, try to make one. Don't
    * try again if the peer socket creation failed earlier for the same
@@ -622,23 +605,21 @@ SOCKET epoll__create_peer_socket(HANDLE iocp,
                     protocol_info,
                     0,
                     WSA_FLAG_OVERLAPPED);
-  if (sock == INVALID_SOCKET) {
-    return INVALID_SOCKET;
-  }
+  if (sock == INVALID_SOCKET)
+    return_error(INVALID_SOCKET);
 
-  if (!SetHandleInformation((HANDLE) sock, HANDLE_FLAG_INHERIT, 0)) {
+  if (!SetHandleInformation((HANDLE) sock, HANDLE_FLAG_INHERIT, 0))
     goto error;
-  };
 
-  if (CreateIoCompletionPort((HANDLE) sock, iocp, 0, 0) == NULL) {
+  if (CreateIoCompletionPort((HANDLE) sock, iocp, 0, 0) == NULL)
     goto error;
-  }
 
   return sock;
 
-error:
+error:;
+  DWORD error = GetLastError();
   closesocket(sock);
-  return INVALID_SOCKET;
+  return_error(INVALID_SOCKET, error);
 }
 
 int epoll__compare_sock_data(epoll_sock_data_t* a, epoll_sock_data_t* b) {
@@ -691,5 +672,5 @@ int epoll__submit_poll_req(epoll_port_data_t* port_data,
   sock_data->free_io_req = NULL;
   port_data->pending_reqs_count++;
 
-  return 0;
+  return_success(0);
 }
