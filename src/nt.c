@@ -11,7 +11,7 @@ NTDLL_IMPORT_LIST(X)
 int nt_initialize(void) {
   HMODULE ntdll;
 
-  ntdll = LoadLibraryW(L"ntdll.dll");
+  ntdll = GetModuleHandleW(L"ntdll.dll");
   if (ntdll == NULL)
     return -1;
 
