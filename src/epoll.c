@@ -380,7 +380,7 @@ int epoll_wait(epoll_t port_handle,
       int registered_events, reported_events;
 
       overlapped = entries[i].lpOverlapped;
-      io_req = CONTAINING_RECORD(overlapped, epoll_io_req_t, overlapped);
+      io_req = container_of(overlapped, epoll_io_req_t, overlapped);
       sock_data = io_req->sock_data;
 
       if (io_req->generation < sock_data->io_req_generation) {
@@ -524,8 +524,8 @@ int epoll_close(epoll_t port_handle) {
     port_data->pending_reqs_count -= count;
 
     for (i = 0; i < count; i++) {
-      epoll_io_req_t* io_req = CONTAINING_RECORD(
-          entries[i].lpOverlapped, epoll_io_req_t, overlapped);
+      epoll_io_req_t* io_req =
+          container_of(entries[i].lpOverlapped, epoll_io_req_t, overlapped);
       free(io_req);
     }
   }
