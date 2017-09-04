@@ -65,7 +65,6 @@ typedef struct _ep_sock_data {
   uint32_t flags;
   uint32_t io_req_generation;
   uint64_t user_data;
-  _ep_io_req_t* free_io_req;
   _ep_sock_data_t* attn_list_prev;
   _ep_sock_data_t* attn_list_next;
   RB_ENTRY(_ep_sock_data) tree_entry;
@@ -83,6 +82,17 @@ RB_GENERATE_STATIC(_ep_sock_data_tree,
                    _ep_sock_data,
                    tree_entry,
                    _ep_compare_sock_data)
+
+static inline _ep_io_req_t* _ep_io_req_alloc(void) {
+  _ep_io_req_t* io_req = malloc(sizeof *io_req);
+  if (io_req == NULL)
+    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
+  return io_req;
+}
+
+static inline void _ep_io_req_free(_ep_io_req_t* io_req) {
+  free(io_req);
+}
 
 epoll_t epoll_create(void) {
   _ep_port_data_t* port_data;
@@ -121,7 +131,6 @@ int _ep_ctl_add(_ep_port_data_t* port_data,
                 uintptr_t sock,
                 struct epoll_event* ev) {
   _ep_sock_data_t* sock_data;
-  _ep_io_req_t* io_req;
   SOCKET base_sock, peer_sock;
   WSAPROTOCOL_INFOW protocol_info;
   DWORD bytes;
@@ -161,12 +170,6 @@ int _ep_ctl_add(_ep_port_data_t* port_data,
   if (sock_data == NULL)
     return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
 
-  io_req = malloc(sizeof *io_req);
-  if (io_req == NULL) {
-    free(sock_data);
-    return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
-  }
-
   sock_data->sock = sock;
   sock_data->base_sock = base_sock;
   sock_data->io_req_generation = 0;
@@ -174,14 +177,12 @@ int _ep_ctl_add(_ep_port_data_t* port_data,
   sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
   sock_data->user_data = ev->data.u64;
   sock_data->peer_sock = peer_sock;
-  sock_data->free_io_req = io_req;
   sock_data->flags = 0;
 
   if (RB_INSERT(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data) !=
       NULL) {
     /* Socket was already added. */
     free(sock_data);
-    free(io_req);
     return_error(-1, ERROR_ALREADY_EXISTS);
   }
 
@@ -203,18 +204,9 @@ int _ep_ctl_mod(_ep_port_data_t* port_data,
     return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
 
   if (ev->events & _EP_EVENT_MASK & ~sock_data->submitted_events) {
-    if (sock_data->free_io_req == NULL) {
-      _ep_io_req_t* io_req = malloc(sizeof *io_req);
-      if (io_req == NULL)
-        return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
-
-      sock_data->free_io_req = NULL;
-    }
-
     /* Add to attention list, if not already added. */
-    if (!(sock_data->flags & _EP_SOCK_LISTED)) {
+    if (!(sock_data->flags & _EP_SOCK_LISTED))
       ATTN_LIST_ADD(port_data, sock_data);
-    }
   }
 
   sock_data->registered_events = ev->events | EPOLLERR | EPOLLHUP;
@@ -235,7 +227,6 @@ int _ep_ctl_del(_ep_port_data_t* port_data, uintptr_t sock) {
 
   RB_REMOVE(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data);
 
-  free(sock_data->free_io_req);
   sock_data->flags |= _EP_SOCK_DELETED;
 
   /* Remove from attention list. */
@@ -395,7 +386,7 @@ int epoll_wait(epoll_t port_handle,
        */
       sock_data->io_req_generation = 0;
       sock_data->submitted_events = 0;
-      sock_data->free_io_req = io_req;
+      _ep_io_req_free(io_req);
 
       registered_events = sock_data->registered_events;
       reported_events = 0;
@@ -534,9 +525,6 @@ int epoll_close(epoll_t port_handle) {
   /* Remove all entries from the socket_state tree. */
   while ((sock_data = RB_ROOT(&port_data->sock_data_tree))) {
     RB_REMOVE(_ep_sock_data_tree, &port_data->sock_data_tree, sock_data);
-
-    if (sock_data->free_io_req != NULL)
-      free(sock_data->free_io_req);
     free(sock_data);
   }
 
@@ -632,11 +620,11 @@ int _ep_submit_poll_req(_ep_port_data_t* port_data,
   int registered_events;
   DWORD result, afd_events;
 
-  io_req = sock_data->free_io_req;
-  registered_events = sock_data->registered_events;
+  io_req = _ep_io_req_alloc();
+  if (io_req == NULL)
+    return -1;
 
-  /* epoll_ctl should ensure that there is a free io_req struct. */
-  assert(io_req != NULL);
+  registered_events = sock_data->registered_events;
 
   /* These events should always be registered. */
   assert(registered_events & EPOLLERR);
@@ -669,7 +657,6 @@ int _ep_submit_poll_req(_ep_port_data_t* port_data,
 
   sock_data->submitted_events = registered_events;
   sock_data->io_req_generation = io_req->generation;
-  sock_data->free_io_req = NULL;
   port_data->pending_reqs_count++;
 
   return_success(0);
