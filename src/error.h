@@ -3,14 +3,10 @@
 
 #include <errno.h>
 
-unsigned long we_map_ntstatus_to_winsock_error(unsigned long ntstatus);
-unsigned long we_map_ntstatus_to_win_error(unsigned long ntstatus);
-errno_t we_map_ntstatus_to_errno(unsigned long ntstatus);
+#include "ntstatus.h"
 
-errno_t we_map_win_error_to_errno(unsigned long code);
-
-const char* we_get_ntstatus_symbol(unsigned long ntstatus);
-const char* we_get_win_error_symbol(unsigned long code);
-const char* we_get_errno_symbol(errno_t err);
+DWORD we_map_ntstatus_to_win_error(NTSTATUS ntstatus);
+DWORD we_map_ntstatus_to_ws_error(NTSTATUS ntstatus);
+errno_t we_map_win_error_to_errno(DWORD error);
 
 #endif /* ERROR_H_ */

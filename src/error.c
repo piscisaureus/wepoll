@@ -1,82 +1,43 @@
 #include <errno.h>
 
 #include "error-map.h"
+#include "error.h"
+#include "nt.h"
+#include "ntstatus.h"
 #include "win.h"
 
 #pragma warning(push)
 #pragma warning(disable : 4127) /* "conditional expression is constant" */
 
-unsigned long we_map_ntstatus_to_winsock_error(unsigned long ntstatus) {
-#define X(ntstatus_code, ntstatus_symbol, win_error, winsock_error, c_err) \
-  if (winsock_error != -1 && ntstatus == ntstatus_code)                    \
-    return (unsigned long) winsock_error;
+DWORD we_map_ntstatus_to_win_error(NTSTATUS status) {
+  if (NT_SUCCESS(status))
+    return ERROR_SUCCESS;
+#define X(ntstatus, win_error, win_errno, ws_error, ws_errno) \
+  if (status == ntstatus && win_error != -1)                  \
+    return (DWORD) win_error;
   WE_ERROR_MAP(X)
 #undef X
-  return WSAEINVAL;
+  return RtlNtStatusToDosError(status);
 }
 
-unsigned long we_map_ntstatus_to_win_error(unsigned long ntstatus) {
-#define X(ntstatus_code, ntstatus_symbol, win_error, winsock_error, c_err) \
-  if (win_error != -1 && ntstatus == ntstatus_code)                        \
-    return win_error;
+DWORD we_map_ntstatus_to_ws_error(NTSTATUS status) {
+#define X(ntstatus, win_error, win_errno, ws_error, ws_errno) \
+  if (status == ntstatus && ws_error != -1)                   \
+    return (DWORD) ws_error;
   WE_ERROR_MAP(X)
 #undef X
-  return ERROR_MR_MID_NOT_FOUND;
+  return we_map_ntstatus_to_win_error(status);
 }
 
-errno_t we_map_ntstatus_to_errno(unsigned long ntstatus) {
-#define X(ntstatus_code, ntstatus_symbol, win_error, winsock_error, c_err) \
-  if (c_err != -1 && ntstatus == ntstatus_code)                            \
-    return c_err;
+errno_t we_map_win_error_to_errno(DWORD error) {
+#define X(ntstatus, win_error, win_errno, ws_error, ws_errno) \
+  if (error == win_error && win_errno != -1)                  \
+    return win_errno;                                         \
+  if (error == ws_error && ws_errno != -1)                    \
+    return ws_errno;
   WE_ERROR_MAP(X)
 #undef X
   return EINVAL;
-}
-
-errno_t we_map_win_error_to_errno(unsigned long code) {
-#define X(ntstatus_code, ntstatus_symbol, win_error, winsock_error, c_err) \
-  if (c_err != -1 && ((win_error != -1 && code == win_error) ||            \
-                      (winsock_error != -1 && code == winsock_error)))     \
-    return c_err;
-  WE_ERROR_MAP(X)
-#undef X
-  return EINVAL;
-}
-
-const char* we_get_ntstatus_symbol(unsigned long ntstatus) {
-#define X(ntstatus_code, ntstatus_symbol, win_error, winsock_error, c_err) \
-  {                                                                        \
-    static const char SYMBOL[] = #ntstatus_symbol;                         \
-    if (sizeof SYMBOL > 0 && ntstatus == ntstatus_code)                    \
-      return SYMBOL;                                                       \
-  }
-  WE_ERROR_MAP(X)
-#undef X
-  return "";
-}
-
-const char* we_get_win_error_symbol(unsigned long code) {
-#define X(ntstatus_code, ntstatus_symbol, win_error, winsock_error, c_err) \
-  {                                                                        \
-    static const char SYMBOL[] = #win_error;                               \
-    if (sizeof SYMBOL > 0 && win_error != -1 && code == win_error)         \
-      return SYMBOL;                                                       \
-  }
-  WE_ERROR_MAP(X)
-#undef X
-  return "";
-}
-
-const char* we_get_errno_symbol(errno_t err) {
-#define X(ntstatus_code, ntstatus_symbol, win_error, winsock_error, c_err) \
-  {                                                                        \
-    static const char SYMBOL[] = #c_err;                                   \
-    if (sizeof SYMBOL > 0 && c_err != -1 && err == c_err)                  \
-      return SYMBOL;                                                       \
-  }
-  WE_ERROR_MAP(X)
-#undef X
-  return "";
 }
 
 #pragma warning(pop)

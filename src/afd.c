@@ -85,7 +85,7 @@ int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped) {
       break;
 
     default:
-      error = we_map_ntstatus_to_winsock_error(status);
+      error = we_map_ntstatus_to_ws_error(status);
       break;
   }
 
