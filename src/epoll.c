@@ -50,7 +50,7 @@ static int epoll__initialized = 0;
 /* State associated with a epoll handle. */
 typedef struct epoll_port_data {
   HANDLE iocp;
-  SOCKET peer_sockets[array_count(AFD_PROVIDER_IDS)];
+  SOCKET peer_sockets[array_count(AFD_PROVIDER_GUID_LIST)];
   RB_HEAD(epoll_sock_data_tree, epoll_sock_data) sock_data_tree;
   epoll_sock_data_t* attn_list;
   size_t pending_reqs_count;
@@ -570,9 +570,9 @@ SOCKET epoll__get_peer_socket(epoll_port_data_t* port_data,
   SOCKET peer_socket;
 
   index = -1;
-  for (i = 0; i < array_count(AFD_PROVIDER_IDS); i++) {
+  for (i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
     if (memcmp((void*) &protocol_info->ProviderId,
-               (void*) &AFD_PROVIDER_IDS[i],
+               (void*) &AFD_PROVIDER_GUID_LIST[i],
                sizeof protocol_info->ProviderId) == 0) {
       index = i;
     }
