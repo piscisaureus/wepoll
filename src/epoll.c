@@ -60,14 +60,14 @@ typedef struct _ep_sock_data {
   SOCKET sock;
   SOCKET base_sock;
   SOCKET peer_sock;
+  RB_ENTRY(_ep_sock_data) tree_entry;
+  _ep_sock_data_t* attn_list_prev;
+  _ep_sock_data_t* attn_list_next;
   epoll_data_t user_data;
   uint32_t registered_events;
   uint32_t submitted_events;
   uint32_t flags;
   uint32_t io_req_generation;
-  _ep_sock_data_t* attn_list_prev;
-  _ep_sock_data_t* attn_list_next;
-  RB_ENTRY(_ep_sock_data) tree_entry;
 } _ep_sock_data_t;
 
 /* State associated with a AFD_POLL request. */
