@@ -7,7 +7,7 @@
 #include "epoll.h"
 
 static const char PING[] = "PING";
-static const int NUM_PINGERS = 10000;
+static const int NUM_PINGERS = 1000;
 static const DWORD RUN_TIME = 40000;
 
 int main(int argc, char* argv[]) {

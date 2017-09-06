@@ -9,6 +9,7 @@
 #include "epoll.h"
 #include "error.h"
 #include "nt.h"
+#include "poll-request.h"
 #include "queue.h"
 #include "tree.h"
 #include "util.h"
@@ -32,7 +33,7 @@
   } while (0)
 
 typedef struct _ep_port_data _ep_port_data_t;
-typedef struct _ep_poll_req _ep_poll_req_t;
+typedef struct poll_req poll_req_t;
 typedef struct _ep_sock_data _ep_sock_data_t;
 
 static int _ep_initialize(void);
@@ -63,19 +64,12 @@ typedef struct _ep_sock_data {
   RB_ENTRY(_ep_sock_data) tree_entry;
   QUEUE queue_entry;
   epoll_data_t user_data;
-  _ep_poll_req_t* latest_poll_req;
+  poll_req_t* latest_poll_req;
   uint32_t user_events;
   uint32_t latest_poll_req_events;
   uint32_t poll_req_count;
   uint32_t flags;
 } _ep_sock_data_t;
-
-/* State associated with a AFD_POLL request. */
-typedef struct _ep_poll_req {
-  OVERLAPPED overlapped;
-  AFD_POLL_INFO poll_info;
-  _ep_sock_data_t* sock_data;
-} _ep_poll_req_t;
 
 static int _ep_sock_data_delete(_ep_port_data_t* port_data,
                                 _ep_sock_data_t* sock_data);
@@ -84,46 +78,6 @@ RB_GENERATE_STATIC(_ep_sock_data_tree,
                    _ep_sock_data,
                    tree_entry,
                    _ep_compare_sock_data)
-
-static inline _ep_poll_req_t* _ep_poll_req_alloc(void) {
-  _ep_poll_req_t* poll_req = malloc(sizeof *poll_req);
-  if (poll_req == NULL)
-    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
-  return poll_req;
-}
-
-static inline _ep_poll_req_t* _ep_poll_req_free(_ep_poll_req_t* poll_req) {
-  free(poll_req);
-  return NULL;
-}
-
-static _ep_poll_req_t* _ep_poll_req_new(_ep_port_data_t* port_data,
-                                        _ep_sock_data_t* sock_data) {
-  _ep_poll_req_t* poll_req = _ep_poll_req_alloc();
-  if (poll_req == NULL)
-    return NULL;
-
-  memset(poll_req, 0, sizeof *poll_req);
-
-  port_data->poll_req_count++;
-  sock_data->poll_req_count++;
-
-  return poll_req;
-}
-
-static void _ep_poll_req_delete(_ep_port_data_t* port_data,
-                                _ep_sock_data_t* sock_data,
-                                _ep_poll_req_t* poll_req) {
-  assert(poll_req != NULL);
-
-  port_data->poll_req_count--;
-  sock_data->poll_req_count--;
-
-  _ep_poll_req_free(poll_req);
-
-  if ((sock_data->flags & _EP_SOCK_DELETED) && sock_data->poll_req_count == 0)
-    _ep_sock_data_delete(port_data, sock_data);
-}
 
 static int _ep_get_related_sockets(_ep_port_data_t* port_data,
                                    SOCKET socket,
@@ -192,6 +146,22 @@ static _ep_sock_data_t* _ep_sock_data_new(_ep_port_data_t* port_data) {
   QUEUE_INIT(&sock_data->queue_entry);
 
   return sock_data;
+}
+
+void _ep_sock_data_add_poll_req(_ep_port_data_t* port_data,
+                                _ep_sock_data_t* sock_data) {
+  assert(!(sock_data->flags & _EP_SOCK_DELETED));
+  sock_data->poll_req_count++;
+  port_data->poll_req_count++;
+}
+
+void _ep_sock_data_del_poll_req(_ep_port_data_t* port_data,
+                                _ep_sock_data_t* sock_data) {
+  sock_data->poll_req_count--;
+  port_data->poll_req_count--;
+
+  if ((sock_data->flags & _EP_SOCK_DELETED) && sock_data->poll_req_count == 0)
+    _ep_sock_data_delete(port_data, sock_data);
 }
 
 static int _ep_sock_data_set_socket(_ep_port_data_t* port_data,
@@ -382,120 +352,50 @@ static int _ep_port_update_events(_ep_port_data_t* port_data) {
       return -1;
 
     /* _ep_sock_update() removes the socket from the update list if
-     * appropriate. */
+     * successfull. */
   }
 
   return 0;
 }
 
-static uint32_t _afd_events_to_epoll_events(DWORD afd_events) {
-  uint32_t epoll_events = 0;
-
-  if (afd_events & (AFD_POLL_RECEIVE | AFD_POLL_ACCEPT))
-    epoll_events |= EPOLLIN | EPOLLRDNORM;
-  if (afd_events & AFD_POLL_RECEIVE_EXPEDITED)
-    epoll_events |= EPOLLPRI | EPOLLRDBAND;
-  if (afd_events & AFD_POLL_SEND)
-    epoll_events |= EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND;
-  if ((afd_events & AFD_POLL_DISCONNECT) && !(afd_events & AFD_POLL_ABORT))
-    epoll_events |= EPOLLIN | EPOLLRDHUP;
-  if (afd_events & AFD_POLL_ABORT)
-    epoll_events |= EPOLLHUP;
-  if (afd_events & AFD_POLL_CONNECT)
-    epoll_events |= EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND;
-  if (afd_events & AFD_POLL_CONNECT_FAIL)
-    epoll_events |= EPOLLERR;
-
-  return epoll_events;
-}
-
-static DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
-  DWORD afd_events;
-
-  /* These events should always be monitored. */
-  assert(epoll_events & EPOLLERR);
-  assert(epoll_events & EPOLLHUP);
-  afd_events = AFD_POLL_ABORT | AFD_POLL_CONNECT_FAIL | AFD_POLL_LOCAL_CLOSE;
-
-  if (epoll_events & (EPOLLIN | EPOLLRDNORM))
-    afd_events |= AFD_POLL_RECEIVE | AFD_POLL_ACCEPT;
-  if (epoll_events & (EPOLLPRI | EPOLLRDBAND))
-    afd_events |= AFD_POLL_RECEIVE_EXPEDITED;
-  if (epoll_events & (EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND))
-    afd_events |= AFD_POLL_SEND | AFD_POLL_CONNECT;
-
-  return afd_events;
-}
-
-static inline bool _ep_poll_req_is_most_recent(_ep_sock_data_t* sock_data,
-                                               _ep_poll_req_t* poll_req) {
+static inline bool _poll_req_is_most_recent(_ep_sock_data_t* sock_data,
+                                            poll_req_t* poll_req) {
   return poll_req == sock_data->latest_poll_req;
 }
 
-static inline void _ep_poll_req_clear_recent(_ep_sock_data_t* sock_data) {
+static inline void _poll_req_clear_recent(_ep_sock_data_t* sock_data) {
   sock_data->latest_poll_req = NULL;
   sock_data->latest_poll_req_events = 0;
 }
 
-static inline void _ep_poll_req_set_recent(_ep_sock_data_t* sock_data,
-                                           _ep_poll_req_t* poll_req,
-                                           uint32_t epoll_events) {
+static inline void _poll_req_set_recent(_ep_sock_data_t* sock_data,
+                                        poll_req_t* poll_req,
+                                        uint32_t epoll_events) {
   sock_data->latest_poll_req = poll_req;
   sock_data->latest_poll_req_events = epoll_events;
 }
 
-static inline void _ep_poll_req_parse_completion(
-    const _ep_poll_req_t* poll_req,
-    uint32_t* epoll_events_out,
-    bool* socket_closed_out) {
-  const OVERLAPPED* overlapped = &poll_req->overlapped;
-
-  uint32_t epoll_events = 0;
-  bool socket_closed = false;
-
-  if (!NT_SUCCESS(overlapped->Internal)) {
-    /* The overlapped request itself failed, there are no events to consider.
-     */
-    epoll_events = EPOLLERR;
-  } else if (poll_req->poll_info.NumberOfHandles < 1) {
-    /* This overlapped request succeeded but didn't report any events. */
-  } else {
-    /* Events related to our socket were reported. */
-    DWORD afd_events = poll_req->poll_info.Handles[0].Events;
-    assert(poll_req->poll_info.Handles[0].Handle ==
-           (HANDLE) sock_data->afd_socket);
-
-    if (afd_events & AFD_POLL_LOCAL_CLOSE)
-      socket_closed = true; /* Socket closed locally be silently dropped. */
-    else
-      epoll_events = _afd_events_to_epoll_events(afd_events);
-  }
-
-  *epoll_events_out = epoll_events;
-  *socket_closed_out = socket_closed;
-}
-
 static size_t _ep_port_feed_event(_ep_port_data_t* port_data,
-                                  _ep_poll_req_t* poll_req,
+                                  poll_req_t* poll_req,
                                   struct epoll_event* ev) {
-  _ep_sock_data_t* sock_data = poll_req->sock_data;
+  _ep_sock_data_t* sock_data = poll_req_get_sock_data(poll_req);
 
   uint32_t epoll_events;
   bool drop_socket;
   size_t ev_count = 0;
 
   if (_ep_sock_data_marked_for_deletion(sock_data) ||
-      !_ep_poll_req_is_most_recent(sock_data, poll_req)) {
+      !_poll_req_is_most_recent(sock_data, poll_req)) {
     /* Ignore completion for overlapped poll operation if it isn't
      * the the most recently posted one, or if the socket has been
      * deleted. */
-    _ep_poll_req_delete(port_data, sock_data, poll_req);
+    poll_req_delete(port_data, sock_data, poll_req);
     return 0;
   }
 
-  _ep_poll_req_clear_recent(sock_data);
+  _poll_req_clear_recent(sock_data);
 
-  _ep_poll_req_parse_completion(poll_req, &epoll_events, &drop_socket);
+  poll_req_complete(poll_req, &epoll_events, &drop_socket);
 
   /* Filter events that the user didn't ask for. */
   epoll_events &= sock_data->user_events;
@@ -512,7 +412,7 @@ static size_t _ep_port_feed_event(_ep_port_data_t* port_data,
     ev_count = 1;
   }
 
-  _ep_poll_req_delete(port_data, sock_data, poll_req);
+  poll_req_delete(port_data, sock_data, poll_req);
 
   if (drop_socket)
     /* Drop the socket from the epoll set. */
@@ -537,8 +437,7 @@ static size_t _ep_port_feed_events(_ep_port_data_t* port_data,
 
   for (size_t i = 0; i < completion_count; i++) {
     OVERLAPPED* overlapped = completion_list[i].lpOverlapped;
-    _ep_poll_req_t* poll_req =
-        container_of(overlapped, _ep_poll_req_t, overlapped);
+    poll_req_t* poll_req = overlapped_to_poll_req(overlapped);
     struct epoll_event* ev = &event_list[event_count];
 
     event_count += _ep_port_feed_event(port_data, poll_req, ev);
@@ -682,12 +581,9 @@ int epoll_close(epoll_t port_handle) {
     if (!result)
       return_error(-1);
 
-    port_data->poll_req_count -= count;
-
     for (i = 0; i < count; i++) {
-      _ep_poll_req_t* poll_req =
-          container_of(entries[i].lpOverlapped, _ep_poll_req_t, overlapped);
-      free(poll_req);
+      poll_req_t* poll_req = overlapped_to_poll_req(entries[i].lpOverlapped);
+      poll_req_delete(port_data, poll_req_get_sock_data(poll_req), poll_req);
     }
   }
 
@@ -786,34 +682,22 @@ int _ep_compare_sock_data(_ep_sock_data_t* a, _ep_sock_data_t* b) {
 
 static int _ep_submit_poll_req(_ep_port_data_t* port_data,
                                _ep_sock_data_t* sock_data) {
-  _ep_poll_req_t* poll_req;
-  int user_events;
-  DWORD result, afd_events;
+  poll_req_t* poll_req;
+  uint32_t epoll_events = sock_data->user_events;
 
-  poll_req = _ep_poll_req_new(port_data, sock_data);
+  poll_req = poll_req_new(port_data, sock_data);
   if (poll_req == NULL)
     return -1;
 
-  user_events = sock_data->user_events;
-  afd_events = _epoll_events_to_afd_events(user_events);
+  if (poll_req_submit(poll_req,
+                      epoll_events,
+                      sock_data->afd_socket,
+                      sock_data->driver_socket) < 0) {
+    poll_req_delete(port_data, sock_data, poll_req);
+    return -1;
+  }
 
-  poll_req->sock_data = sock_data;
-
-  memset(&poll_req->overlapped, 0, sizeof poll_req->overlapped);
-
-  poll_req->poll_info.Exclusive = TRUE;
-  poll_req->poll_info.NumberOfHandles = 1;
-  poll_req->poll_info.Timeout.QuadPart = INT64_MAX;
-  poll_req->poll_info.Handles[0].Handle = (HANDLE) sock_data->afd_socket;
-  poll_req->poll_info.Handles[0].Status = 0;
-  poll_req->poll_info.Handles[0].Events = afd_events;
-
-  result = afd_poll(
-      sock_data->driver_socket, &poll_req->poll_info, &poll_req->overlapped);
-  if (result != 0 && GetLastError() != ERROR_IO_PENDING)
-    return_error(-1);
-
-  _ep_poll_req_set_recent(sock_data, poll_req, user_events);
+  _poll_req_set_recent(sock_data, poll_req, epoll_events);
 
   return 0;
 }
