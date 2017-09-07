@@ -39,7 +39,7 @@
 #define EPOLL_TREE_H_
 
 #ifdef __clang__
-#define TREE_UNUSED __attribute__((__unused__))
+//#define TREE_UNUSED __attribute__((__unused__))
 #else
 #define TREE_UNUSED /* empty */
 #endif

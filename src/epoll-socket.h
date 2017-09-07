@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "epoll.h"
+#include "handle-tree.h"
 #include "queue.h"
 #include "tree.h"
 #include "util.h"
@@ -12,14 +13,10 @@
 typedef struct _ep_port_data _ep_port_data_t;
 typedef struct poll_req poll_req_t;
 
-typedef RB_HEAD(ep_sock_tree, ep_sock) ep_sock_tree_head_t;
-typedef RB_ENTRY(ep_sock) ep_sock_tree_entry_t;
-
 typedef struct ep_sock {
-  SOCKET socket;
   SOCKET afd_socket;
   SOCKET driver_socket;
-  ep_sock_tree_entry_t tree_entry;
+  handle_tree_entry_t tree_entry;
   QUEUE queue_entry;
   epoll_data_t user_data;
   poll_req_t* latest_poll_req;
@@ -49,8 +46,6 @@ void ep_sock_register_poll_req(_ep_port_data_t* port_data,
 void ep_sock_unregister_poll_req(_ep_port_data_t* port_data,
                                  ep_sock_t* sock_info);
 
-int ep_sock_compare(ep_sock_t* a, ep_sock_t* b);
-
-RB_GENERATE_STATIC(ep_sock_tree, ep_sock, tree_entry, ep_sock_compare)
+ep_sock_t* ep_sock_from_tree_entry(handle_tree_entry_t* tree_entry);
 
 #endif /* EPOLL_SOCK_DATA_H_ */

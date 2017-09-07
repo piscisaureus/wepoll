@@ -44,17 +44,18 @@ ep_sock_t* ep_sock_new(_ep_port_data_t* port_data) {
   (void) port_data;
 
   memset(sock_info, 0, sizeof *sock_info);
+  handle_tree_entry_init(&sock_info->tree_entry);
   QUEUE_INIT(&sock_info->queue_entry);
 
   return sock_info;
 }
 
 int ep_sock_delete(_ep_port_data_t* port_data, ep_sock_t* sock_info) {
-  /* Remove from lookup tree. */
-  if (sock_info->socket != 0 && !(sock_info->flags & _EP_SOCK_DELETED)) {
-    RB_REMOVE(ep_sock_tree, &port_data->sock_data_tree, sock_info);
-    sock_info->flags |= _EP_SOCK_DELETED;
-  }
+  /* Remove SOCKET -> ep_sock mapping from port. */
+  if (!(sock_info->flags & _EP_SOCK_DELETED))
+    _ep_port_del_socket(port_data, &sock_info->tree_entry);
+
+  sock_info->flags |= _EP_SOCK_DELETED;
 
   /* Remove from attention list. */
   if (sock_info->flags & _EP_SOCK_LISTED) {
@@ -70,10 +71,6 @@ int ep_sock_delete(_ep_port_data_t* port_data, ep_sock_t* sock_info) {
     _ep_sock_free(sock_info);
 
   return 0;
-}
-
-int ep_sock_compare(ep_sock_t* a, ep_sock_t* b) {
-  return a->socket - b->socket;
 }
 
 static inline bool _ep_sock_delete_pending(ep_sock_t* sock_info) {
@@ -135,8 +132,8 @@ int ep_sock_set_socket(_ep_port_data_t* port_data,
                        SOCKET socket) {
   if (socket == 0 || socket == INVALID_SOCKET)
     return_error(-1, ERROR_INVALID_HANDLE);
-  if (sock_info->socket != 0)
-    return_error(-1, ERROR_INVALID_PARAMETER);
+  if (sock_info->afd_socket != 0)
+    return_error(-1, ERROR_ALREADY_ASSIGNED);
 
   if (_get_related_sockets(port_data,
                            socket,
@@ -144,12 +141,8 @@ int ep_sock_set_socket(_ep_port_data_t* port_data,
                            &sock_info->driver_socket) < 0)
     return -1;
 
-  sock_info->socket = socket;
-
-  if (RB_INSERT(ep_sock_tree, &port_data->sock_data_tree, sock_info) != NULL) {
-    sock_info->socket = 0;
-    return_error(-1, ERROR_ALREADY_EXISTS); /* Socket already in epoll set. */
-  }
+  if (_ep_port_add_socket(port_data, &sock_info->tree_entry, socket) < 0)
+    return -1;
 
   return 0;
 }
@@ -296,4 +289,9 @@ int ep_sock_feed_event(_ep_port_data_t* port_data,
     ATTN_LIST_ADD(port_data, sock_info);
 
   return ev_count;
+}
+
+ep_sock_t* ep_sock_from_tree_entry(handle_tree_entry_t* tree_entry) {
+  assert(tree_entry != NULL);
+  return container_of(tree_entry, ep_sock_t, tree_entry);
 }

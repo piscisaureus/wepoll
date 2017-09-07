@@ -50,13 +50,14 @@ static int _ep_ctl_add(_ep_port_data_t* port_data,
 static int _ep_ctl_mod(_ep_port_data_t* port_data,
                        uintptr_t socket,
                        struct epoll_event* ev) {
-  ep_sock_t lookup;
+  handle_tree_entry_t* tree_entry;
   ep_sock_t* sock_info;
 
-  lookup.socket = socket;
-  sock_info = RB_FIND(ep_sock_tree, &port_data->sock_data_tree, &lookup);
-  if (sock_info == NULL)
-    return_error(-1, ERROR_BAD_NETPATH); /* Socket not in epoll set. */
+  tree_entry = handle_tree_find(&port_data->sock_tree, socket);
+  if (tree_entry == NULL)
+    return -1;
+
+  sock_info = ep_sock_from_tree_entry(tree_entry);
 
   if (ep_sock_set_event(port_data, sock_info, ev) < 0)
     return -1;
@@ -65,13 +66,14 @@ static int _ep_ctl_mod(_ep_port_data_t* port_data,
 }
 
 static int _ep_ctl_del(_ep_port_data_t* port_data, uintptr_t socket) {
-  ep_sock_t lookup;
+  handle_tree_entry_t* tree_entry;
   ep_sock_t* sock_info;
 
-  lookup.socket = socket;
-  sock_info = RB_FIND(ep_sock_tree, &port_data->sock_data_tree, &lookup);
-  if (sock_info == NULL)
-    return_error(-1, ERROR_NOT_FOUND); /* Socket not in epoll set. */
+  tree_entry = handle_tree_find(&port_data->sock_tree, socket);
+  if (tree_entry == NULL)
+    return -1;
+
+  sock_info = ep_sock_from_tree_entry(tree_entry);
 
   if (ep_sock_delete(port_data, sock_info) < 0)
     return -1;
@@ -230,14 +232,14 @@ epoll_t epoll_create(void) {
   QUEUE_INIT(&port_data->update_queue);
 
   memset(&port_data->driver_sockets, 0, sizeof port_data->driver_sockets);
-  RB_INIT(&port_data->sock_data_tree);
+  handle_tree_init(&port_data->sock_tree);
 
   return (epoll_t) port_data;
 }
 
 int epoll_close(epoll_t port_handle) {
   _ep_port_data_t* port_data;
-  ep_sock_t* sock_info;
+  handle_tree_entry_t* tree_entry;
 
   port_data = (_ep_port_data_t*) port_handle;
 
@@ -279,9 +281,9 @@ int epoll_close(epoll_t port_handle) {
   }
 
   /* Remove all entries from the socket_state tree. */
-  while ((sock_info = RB_ROOT(&port_data->sock_data_tree))) {
-    RB_REMOVE(ep_sock_tree, &port_data->sock_data_tree, sock_info);
-    free(sock_info);
+  while ((tree_entry = handle_tree_root(&port_data->sock_tree))) {
+    ep_sock_t* sock_info = ep_sock_from_tree_entry(tree_entry);
+    ep_sock_delete(port_data, sock_info);
   }
 
   /* Close the I/O completion port. */
@@ -306,6 +308,17 @@ static int _ep_initialize(void) {
     return -1;
 
   return 0;
+}
+
+int _ep_port_add_socket(_ep_port_data_t* port_data,
+                        handle_tree_entry_t* tree_entry,
+                        SOCKET socket) {
+  return handle_tree_add(&port_data->sock_tree, tree_entry, socket);
+}
+
+int _ep_port_del_socket(_ep_port_data_t* port_data,
+                        handle_tree_entry_t* tree_entry) {
+  return handle_tree_del(&port_data->sock_tree, tree_entry);
 }
 
 SOCKET _ep_get_driver_socket(_ep_port_data_t* port_data, SOCKET socket) {
