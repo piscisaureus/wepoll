@@ -4,17 +4,17 @@
 #include <stdint.h>
 
 #include "afd.h"
+#include "epoll-socket.h"
 #include "epoll.h"
 #include "error.h"
 #include "poll-request.h"
-#include "sock-data.h"
 #include "util.h"
 #include "win.h"
 
 typedef struct poll_req {
   OVERLAPPED overlapped;
   AFD_POLL_INFO poll_info;
-  _ep_sock_data_t* sock_data;
+  ep_sock_t* sock_info;
 } poll_req_t;
 
 static inline poll_req_t* _poll_req_alloc(void) {
@@ -29,26 +29,25 @@ static inline poll_req_t* _poll_req_free(poll_req_t* poll_req) {
   return NULL;
 }
 
-poll_req_t* poll_req_new(_ep_port_data_t* port_data,
-                         _ep_sock_data_t* sock_data) {
+poll_req_t* poll_req_new(_ep_port_data_t* port_data, ep_sock_t* sock_info) {
   poll_req_t* poll_req = _poll_req_alloc();
   if (poll_req == NULL)
     return NULL;
 
   memset(poll_req, 0, sizeof *poll_req);
-  poll_req->sock_data = sock_data;
+  poll_req->sock_info = sock_info;
 
-  _ep_sock_data_add_poll_req(port_data, sock_data);
+  ep_sock_register_poll_req(port_data, sock_info);
 
   return poll_req;
 }
 
 void poll_req_delete(_ep_port_data_t* port_data,
-                     _ep_sock_data_t* sock_data,
+                     ep_sock_t* sock_info,
                      poll_req_t* poll_req) {
   assert(poll_req != NULL);
 
-  _ep_sock_data_del_poll_req(port_data, sock_data);
+  ep_sock_unregister_poll_req(port_data, sock_info);
 
   _poll_req_free(poll_req);
 }
@@ -57,8 +56,8 @@ poll_req_t* overlapped_to_poll_req(OVERLAPPED* overlapped) {
   return container_of(overlapped, poll_req_t, overlapped);
 }
 
-_ep_sock_data_t* poll_req_get_sock_data(const poll_req_t* poll_req) {
-  return poll_req->sock_data;
+ep_sock_t* poll_req_get_sock_data(const poll_req_t* poll_req) {
+  return poll_req->sock_info;
 }
 
 static DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
