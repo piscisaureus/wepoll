@@ -14,6 +14,7 @@ else()
 endif()
 
 file(GLOB_RECURSE SOURCES_SRC src/*.c src/*.h)
+file(GLOB_RECURSE SOURCES_SRC_C src/*.c)
 file(GLOB_RECURSE SOURCES_INCLUDE include/*.h)
 file(GLOB SOURCES_TEST test/*.c)
 file(GLOB_RECURSE SOURCES_TEST_SHARED test/shared/*.c test/shared/*.h)
@@ -33,7 +34,30 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
 	get_filename_component(HEADER_NAME ${HEADER_SOURCE} NAME_WE)
 	string(TOUPPER ${HEADER_NAME} HEADER_NAME_UC)
 
-	set(DLL_NAME "${HEADER_NAME}")
+	set(ALLINONE_NAME "${HEADER_NAME}-all-in-one.c.out")
+	set(ALLINONE_SRC_C "allinone/${HEADER_NAME}-all-in-one.c")
+	add_custom_command(
+		OUTPUT ${ALLINONE_SRC_C}
+		COMMAND node allinone/build.js ${HEADER_SOURCE} ${SOURCES_SRC_C} > ${ALLINONE_SRC_C}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		IMPLICIT_DEPENDS c ${SOURCES_INCLUDE} ${SOURCES_SRC}
+	)
+
+	add_custom_target(${ALLINONE_NAME} DEPENDS ${ALLINONE_SRC_C})
+
+	set(ALLINONE_DLL_NAME "${HEADER_NAME}-all-in-one.dll")
+	set(ALLINONE_DLL_OUTPUT "${HEADER_NAME}-all-in-one")
+	add_library(${ALLINONE_DLL_NAME} SHARED ${ALLINONE_SRC_C})
+	if(MSVC)
+		target_compile_definitions(${ALLINONE_DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXTERN=__declspec(dllexport)" )
+	else()
+		target_compile_definitions(${ALLINONE_DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXTERN=__attribute__((visibility(\"default\")))")
+	endif()
+	set_target_properties(${ALLINONE_DLL_NAME} PROPERTIES OUTPUT_NAME ${ALLINONE_DLL_OUTPUT})
+
+
+	set(DLL_NAME "${HEADER_NAME}.dll")
+	set(DLL_OUTPUT "${HEADER_NAME}")
 	add_library(${DLL_NAME} SHARED ${HEADER_SOURCE} ${SOURCES_SRC})
 	target_include_directories(${DLL_NAME} PUBLIC include)
 	if(MSVC)
@@ -43,4 +67,6 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
 		target_compile_options(${DLL_NAME} PUBLIC -include ${HEADER_SOURCE} -fvisibility=hidden)
 		target_compile_definitions(${DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXTERN=__attribute__((visibility(\"default\")))")
 	endif()
+	set_target_properties(${DLL_NAME} PROPERTIES OUTPUT_NAME ${DLL_OUTPUT})
+
 endforeach(HEADER_SOURCE ${SOURCES_INCLUDE})
