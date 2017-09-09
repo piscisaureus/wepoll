@@ -63,11 +63,13 @@ int handle_tree_del(handle_tree_t* tree, handle_tree_entry_t* entry) {
 
 handle_tree_entry_t* handle_tree_find(handle_tree_t* tree, uintptr_t key) {
   handle_tree_entry_t* entry;
-  handle_tree_entry_t lookup = {0};
-  lookup.key = key;
+  handle_tree_entry_t lookup;
 
   if (key == 0)
     return_error(NULL, ERROR_INVALID_PARAMETER);
+
+  memset(&lookup, 0, sizeof lookup);
+  lookup.key = key;
 
   entry = RB_FIND(handle_tree, tree, &lookup);
   if (entry == NULL)
