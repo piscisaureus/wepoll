@@ -7,7 +7,7 @@ function load(filename) {
   if (/[\/\\]/.test(filename))
     return fs.readFileSync(filename, 'utf8');
 
-  var PATH = [ '.', 'include', 'src' ];
+  var PATH = ['.', 'include', 'src'];
   for (;;) {
     var dir = PATH.shift();
     try {
@@ -50,14 +50,14 @@ function lines(filename) {
 }
 
 function comment(s) {
-  return ''; //'/* ' + s + '*/'
+  return '';  //'/* ' + s + '*/'
 }
 
 function include(line, filename) {
   var key = path.basename(filename).toLowerCase();
   if (included[key])
     return comment(line);
-  console.error("Including: " + key);
+  console.error('Including: ' + key);
   included[key] = true;
   return lines(filename);
 }
@@ -78,8 +78,8 @@ for (var i = 2; i < process.argv.length; i++) {
 }
 
 var patterns = [
-  {re : /^\s*#include\s*"([^"]*)".*$/, fn : include},
-  {re : /^\s*#include\s*<([^"]*)>.*$/, fn : include_sys}
+  {re: /^\s*#include\s*"([^"]*)".*$/, fn: include},
+  {re: /^\s*#include\s*<([^"]*)>.*$/, fn: include_sys}
 ]
 
 restart: for (var lno = 0; lno < source.length;) {
@@ -90,7 +90,7 @@ restart: for (var lno = 0; lno < source.length;) {
     if (match) {
       var repl = pattern.fn.apply(null, match);
       if (repl != null && repl !== line) {
-        source.splice.apply(source, [ lno, 1 ].concat(repl));
+        source.splice.apply(source, [lno, 1].concat(repl));
         continue restart;
       }
     }
