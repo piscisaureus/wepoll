@@ -20,3 +20,18 @@ SpacesInContainerLiterals: false
 
 # Alas, not supported:
 # ForceEmptyLineAtEOF: true
+
+---
+Language:      JavaScript
+BasedOnStyle:  Google
+
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBraces: Attach
+ColumnLimit: 79
+IndentWrappedFunctionNames: true
+MaxEmptyLinesToKeep: 1
+SpacesInContainerLiterals: false
