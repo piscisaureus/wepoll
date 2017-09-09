@@ -196,9 +196,10 @@ int epoll_wait(epoll_t port_handle,
 
     /* Events were dequeued, but none were relevant. Recompute timeout. */
     if (timeout > 0) {
-      gqcs_timeout = due - GetTickCount64();
+      ULONGLONG now = GetTickCount64();
+      gqcs_timeout = (now < due) ? (DWORD)(due - now) : 0;
     }
-  } while (timeout > 0);
+  } while (gqcs_timeout > 0);
 
   return 0;
 }
