@@ -1,6 +1,7 @@
 #ifndef EPOLL_AFD_H_
 #define EPOLL_AFD_H_
 
+#include "internal.h"
 #include "ntstatus.h"
 #include "win.h"
 
@@ -50,7 +51,9 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
-int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped);
+EPOLL_INTERNAL int afd_poll(SOCKET socket,
+                            AFD_POLL_INFO* info,
+                            OVERLAPPED* overlapped);
 
 /* clang-format off */
 

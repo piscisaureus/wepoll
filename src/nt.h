@@ -1,10 +1,11 @@
 #ifndef EPOLL_NT_H_
 #define EPOLL_NT_H_
 
+#include "internal.h"
 #include "ntstatus.h"
 #include "win.h"
 
-int nt_initialize(void);
+EPOLL_INTERNAL int nt_initialize(void);
 
 typedef struct _IO_STATUS_BLOCK {
   union {
@@ -35,7 +36,7 @@ typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext,
   X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))
 
 #define X(return_type, declarators, name, parameters) \
-  extern return_type(declarators* name) parameters;
+  EPOLL_INTERNAL_EXTERN return_type(declarators* name) parameters;
 NTDLL_IMPORT_LIST(X)
 #undef X
 

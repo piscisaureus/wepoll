@@ -5,6 +5,7 @@
 
 #include "epoll.h"
 #include "handle-tree.h"
+#include "internal.h"
 #include "queue.h"
 #include "tree.h"
 #include "util.h"
@@ -26,26 +27,29 @@ typedef struct ep_sock {
   uint32_t flags;
 } ep_sock_t;
 
-ep_sock_t* ep_sock_new(_ep_port_data_t* port_data);
-int ep_sock_delete(_ep_port_data_t* port_data, ep_sock_t* sock_info);
+EPOLL_INTERNAL ep_sock_t* ep_sock_new(_ep_port_data_t* port_data);
+EPOLL_INTERNAL int ep_sock_delete(_ep_port_data_t* port_data,
+                                  ep_sock_t* sock_info);
 
-int ep_sock_set_socket(_ep_port_data_t* port_data,
-                       ep_sock_t* sock_info,
-                       SOCKET socket);
-int ep_sock_set_event(_ep_port_data_t* port_data,
-                      ep_sock_t* sock_info,
-                      const struct epoll_event* ev);
+EPOLL_INTERNAL int ep_sock_set_socket(_ep_port_data_t* port_data,
+                                      ep_sock_t* sock_info,
+                                      SOCKET socket);
+EPOLL_INTERNAL int ep_sock_set_event(_ep_port_data_t* port_data,
+                                     ep_sock_t* sock_info,
+                                     const struct epoll_event* ev);
 
-int ep_sock_update(_ep_port_data_t* port_data, ep_sock_t* sock_info);
-int ep_sock_feed_event(_ep_port_data_t* port_data,
-                       poll_req_t* poll_req,
-                       struct epoll_event* ev);
+EPOLL_INTERNAL int ep_sock_update(_ep_port_data_t* port_data,
+                                  ep_sock_t* sock_info);
+EPOLL_INTERNAL int ep_sock_feed_event(_ep_port_data_t* port_data,
+                                      poll_req_t* poll_req,
+                                      struct epoll_event* ev);
 
-void ep_sock_register_poll_req(_ep_port_data_t* port_data,
-                               ep_sock_t* sock_info);
-void ep_sock_unregister_poll_req(_ep_port_data_t* port_data,
-                                 ep_sock_t* sock_info);
+EPOLL_INTERNAL void ep_sock_register_poll_req(_ep_port_data_t* port_data,
+                                              ep_sock_t* sock_info);
+EPOLL_INTERNAL void ep_sock_unregister_poll_req(_ep_port_data_t* port_data,
+                                                ep_sock_t* sock_info);
 
-ep_sock_t* ep_sock_from_tree_entry(handle_tree_entry_t* tree_entry);
+EPOLL_INTERNAL ep_sock_t* ep_sock_from_tree_entry(
+    handle_tree_entry_t* tree_entry);
 
 #endif /* EPOLL_SOCK_DATA_H_ */

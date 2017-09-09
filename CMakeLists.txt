@@ -38,7 +38,7 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
 	set(ALLINONE_SRC_C "allinone/${HEADER_NAME}-all-in-one.c")
 	add_custom_command(
 		OUTPUT ${ALLINONE_SRC_C}
-		COMMAND node allinone/build.js ${HEADER_SOURCE} ${SOURCES_SRC_C} > ${ALLINONE_SRC_C}
+		COMMAND node allinone/build.js allinone/header.h ${HEADER_SOURCE} ${SOURCES_SRC_C} > ${ALLINONE_SRC_C}
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		IMPLICIT_DEPENDS c ${SOURCES_INCLUDE} ${SOURCES_SRC}
 	)

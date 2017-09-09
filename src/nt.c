@@ -4,7 +4,7 @@
 #include "win.h"
 
 #define X(return_type, declarators, name, parameters) \
-  return_type(declarators* name) parameters = NULL;
+  EPOLL_INTERNAL return_type(declarators* name) parameters = NULL;
 NTDLL_IMPORT_LIST(X)
 #undef X
 

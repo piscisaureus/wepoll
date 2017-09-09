@@ -4,6 +4,7 @@
 #include "afd.h"
 #include "epoll-socket.h"
 #include "handle-tree.h"
+#include "internal.h"
 #include "queue.h"
 #include "tree.h"
 #include "util.h"
@@ -22,10 +23,10 @@ typedef struct _ep_port_data {
 
 SOCKET _ep_get_driver_socket(_ep_port_data_t* port_data, SOCKET socket);
 
-int _ep_port_add_socket(_ep_port_data_t* port_data,
-                        handle_tree_entry_t* tree_entry,
-                        SOCKET socket);
-int _ep_port_del_socket(_ep_port_data_t* port_data,
-                        handle_tree_entry_t* tree_entry);
+EPOLL_INTERNAL int _ep_port_add_socket(_ep_port_data_t* port_data,
+                                       handle_tree_entry_t* tree_entry,
+                                       SOCKET socket);
+EPOLL_INTERNAL int _ep_port_del_socket(_ep_port_data_t* port_data,
+                                       handle_tree_entry_t* tree_entry);
 
 #endif /* EPOLL_PORT_DATA_H_ */

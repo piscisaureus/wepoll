@@ -3,13 +3,14 @@
 
 #include <errno.h>
 
+#include "internal.h"
 #include "ntstatus.h"
 
-DWORD we_map_ntstatus_to_win_error(NTSTATUS ntstatus);
-DWORD we_map_ntstatus_to_ws_error(NTSTATUS ntstatus);
-errno_t we_map_win_error_to_errno(DWORD error);
+EPOLL_INTERNAL DWORD we_map_ntstatus_to_win_error(NTSTATUS ntstatus);
+EPOLL_INTERNAL DWORD we_map_ntstatus_to_ws_error(NTSTATUS ntstatus);
+EPOLL_INTERNAL errno_t we_map_win_error_to_errno(DWORD error);
 
-void we_set_win_error(DWORD error);
+EPOLL_INTERNAL void we_set_win_error(DWORD error);
 
 #define _return_error_helper(error, value)         \
   do {                                             \
