@@ -6,7 +6,12 @@
 
 static inline int _handle_tree_compare(handle_tree_entry_t* a,
                                        handle_tree_entry_t* b) {
-  return a->key - b->key;
+  if (a->key < b->key)
+    return -1;
+  else if (a->key > b->key)
+    return 1;
+  else
+    return 0;
 }
 
 RB_GENERATE_STATIC(handle_tree,
