@@ -282,7 +282,7 @@ int epoll_close(epoll_t port_handle) {
   }
 
   /* Remove all entries from the socket_state tree. */
-  while ((tree_entry = handle_tree_root(&port_data->sock_tree))) {
+  while ((tree_entry = handle_tree_root(&port_data->sock_tree)) != NULL) {
     ep_sock_t* sock_info = ep_sock_from_tree_entry(tree_entry);
     ep_sock_delete(port_data, sock_info);
   }
