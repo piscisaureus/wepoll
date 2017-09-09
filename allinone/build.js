@@ -3,20 +3,50 @@ var path = require('path');
 var fs = require('fs');
 var included = {};
 
-function lines(filename) {
+function load(filename) {
   if (/[\/\\]/.test(filename))
-    return fs.readFileSync(filename, 'utf8').split(/\r?\n/g);
+    return fs.readFileSync(filename, 'utf8');
 
   var PATH = [ '.', 'include', 'src' ];
   for (;;) {
     var dir = PATH.shift();
     try {
-      return fs.readFileSync(dir + '/' + filename, 'utf8').split(/\r?\n/g);
+      return fs.readFileSync(dir + '/' + filename, 'utf8');
     } catch (e) {
       if (PATH.length == 0)
         throw e;
     }
   }
+}
+
+function strip_guards(filename, source) {
+  var lead_comments_re = /^(\s*\/\*((?!\*\/)[\s\S])*\*\/)*\s*/;
+  var trail_comments_re = /(\s*\/\*((?!\*\/)[\s\S])*\*\/)*\s*$/;
+  var lead_guards_re = /^#ifndef\s+(\w+)\s+#define\s+(\w+)\s+/;
+  var trail_guards_re = /#endif$/;
+
+  // Strip leading and trailing comments and whitespace.
+  source = source.replace(lead_comments_re, '');
+  source = source.replace(trail_comments_re, '');
+
+  // Find include guards.
+  var lead_guards = lead_guards_re.exec(source);
+  var trail_guards = trail_guards_re.exec(source);
+
+  // Remove include guards, if found.
+  if (lead_guards && trail_guards && lead_guards[1] == lead_guards[2]) {
+    console.error('Stripping include guards: ' + filename);
+    source = source.replace(lead_guards_re, '');
+    source = source.replace(trail_guards_re, '');
+  }
+
+  return source;
+}
+
+function lines(filename) {
+  var source = load(filename);
+  source = strip_guards(filename, source);
+  return source.split(/\r?\n/g);
 }
 
 function comment(s) {
