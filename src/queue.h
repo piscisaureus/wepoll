@@ -37,6 +37,7 @@ typedef void* QUEUE[2];
   for ((q) = _QUEUE_NEXT(h); (q) != (h); (q) = _QUEUE_NEXT(q))
 
 #define QUEUE_EMPTY(q) ((const QUEUE*) (q) == (const QUEUE*) _QUEUE_NEXT(q))
+#define QUEUE_ENQUEUED(q) (!QUEUE_EMPTY(q))
 
 #define QUEUE_HEAD(q) (_QUEUE_NEXT(q))
 
@@ -94,6 +95,7 @@ typedef void* QUEUE[2];
   do {                                    \
     _QUEUE_PREV_NEXT(q) = _QUEUE_NEXT(q); \
     _QUEUE_NEXT_PREV(q) = _QUEUE_PREV(q); \
+    QUEUE_INIT(q);                        \
   } while (0)
 
 #endif /* QUEUE_H_ */
