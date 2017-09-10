@@ -397,7 +397,6 @@ name##_RB_NFIND(struct name *head, struct type *elm)                          \
   return (res);                                                               \
 }                                                                             \
                                                                               \
-/* ARGSUSED */                                                                \
 attr struct type *                                                            \
 name##_RB_NEXT(struct type *elm)                                              \
 {                                                                             \
@@ -419,7 +418,6 @@ name##_RB_NEXT(struct type *elm)                                              \
   return (elm);                                                               \
 }                                                                             \
                                                                               \
-/* ARGSUSED */                                                                \
 attr struct type *                                                            \
 name##_RB_PREV(struct type *elm)                                              \
 {                                                                             \
