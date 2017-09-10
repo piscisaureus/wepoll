@@ -40,6 +40,10 @@ static inline _ep_sock_private_t* _ep_sock_private(ep_sock_t* sock_info) {
   return container_of(sock_info, _ep_sock_private_t, pub);
 }
 
+static inline bool _ep_sock_is_deleted(_ep_sock_private_t* sock_private) {
+  return sock_private->flags & _EP_SOCK_DELETED;
+}
+
 static inline _ep_sock_private_t* _ep_sock_alloc(void) {
   _ep_sock_private_t* sock_private = malloc(sizeof *sock_private);
   if (sock_private == NULL)
@@ -65,37 +69,35 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info) {
   return &sock_private->pub;
 }
 
+void _ep_sock_maybe_free(_ep_sock_private_t* sock_private) {
+  /* The socket may still have pending overlapped requests that have yet to be
+   * reported by the completion port. If that's the case the memory can't be
+   * released yet. It'll be released later as ep_sock_unregister_poll_req()
+   * calls this function.
+   */
+  if (_ep_sock_is_deleted(sock_private) && sock_private->poll_req_count == 0)
+    _ep_sock_free(sock_private);
+}
+
 int ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
-  /* Remove SOCKET -> ep_sock mapping from port. */
-  if (!(sock_private->flags & _EP_SOCK_DELETED))
-    ep_port_del_socket(port_info, &sock_info->tree_entry);
+  assert(!_ep_sock_is_deleted(sock_private));
+
+  ep_port_del_socket(port_info, &sock_info->tree_entry);
+  ep_port_clear_socket_update(port_info, sock_info);
 
   sock_private->flags |= _EP_SOCK_DELETED;
 
-  /* Remove from update list. */
-  ep_port_clear_socket_update(port_info, sock_info);
-
-  /* The socket may still have pending overlapped requests that have yet to be
-   * reported by the completion port. If that'sock_private the case the
-   * structure can't be free'd yet; epoll_wait() will do it as it dequeues
-   * those requests.
-   */
-  if (sock_private->poll_req_count == 0)
-    _ep_sock_free(sock_private);
+  _ep_sock_maybe_free(sock_private);
 
   return 0;
-}
-
-static inline bool _ep_sock_delete_pending(_ep_sock_private_t* sock_private) {
-  return sock_private->flags & _EP_SOCK_DELETED;
 }
 
 void ep_sock_register_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
-  assert(!_ep_sock_delete_pending(sock_private));
+  assert(!_ep_sock_is_deleted(sock_private));
   sock_private->poll_req_count++;
   port_info->poll_req_count++;
 }
@@ -106,9 +108,7 @@ void ep_sock_unregister_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
   sock_private->poll_req_count--;
   port_info->poll_req_count--;
 
-  if (_ep_sock_delete_pending(sock_private) &&
-      sock_private->poll_req_count == 0)
-    ep_sock_delete(port_info, sock_info);
+  _ep_sock_maybe_free(sock_private);
 }
 
 static int _get_related_sockets(ep_port_t* port_info,
@@ -267,7 +267,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
   bool drop_socket;
   int ev_count = 0;
 
-  if (_ep_sock_delete_pending(sock_private) ||
+  if (_ep_sock_is_deleted(sock_private) ||
       !_is_latest_poll_req(sock_private, poll_req)) {
     /* Ignore completion for overlapped poll operation if it isn't
      * the the most recently posted one, or if the socket has been
