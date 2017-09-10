@@ -46,7 +46,7 @@ typedef void* QUEUE[2];
     _QUEUE_PREV(q) = (q); \
   } while (0)
 
-#define QUEUE_ADD(h, n)                 \
+#define QUEUE_MERGE(h, n)                 \
   do {                                    \
     _QUEUE_PREV_NEXT(h) = _QUEUE_NEXT(n); \
     _QUEUE_NEXT_PREV(n) = _QUEUE_PREV(h); \
