@@ -57,7 +57,7 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info) {
   unused(port_info);
 
   memset(sock_private, 0, sizeof *sock_private);
-  handle_tree_node_init(&sock_private->pub.tree_node);
+  tree_node_init(&sock_private->pub.tree_node);
   queue_node_init(&sock_private->pub.queue_node);
 
   return &sock_private->pub;
@@ -303,7 +303,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
   return ev_count;
 }
 
-ep_sock_t* ep_sock_from_tree_node(handle_tree_node_t* tree_node) {
+ep_sock_t* ep_sock_from_tree_node(tree_node_t* tree_node) {
   assert(tree_node != NULL);
   return container_of(tree_node, ep_sock_t, tree_node);
 }

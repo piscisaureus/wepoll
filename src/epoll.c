@@ -49,10 +49,10 @@ static int _ep_ctl_add(ep_port_t* port_info,
 static int _ep_ctl_mod(ep_port_t* port_info,
                        uintptr_t socket,
                        struct epoll_event* ev) {
-  handle_tree_node_t* tree_node;
+  tree_node_t* tree_node;
   ep_sock_t* sock_info;
 
-  tree_node = handle_tree_find(&port_info->sock_tree, socket);
+  tree_node = tree_find(&port_info->sock_tree, socket);
   if (tree_node == NULL)
     return -1;
 
@@ -65,10 +65,10 @@ static int _ep_ctl_mod(ep_port_t* port_info,
 }
 
 static int _ep_ctl_del(ep_port_t* port_info, uintptr_t socket) {
-  handle_tree_node_t* tree_node;
+  tree_node_t* tree_node;
   ep_sock_t* sock_info;
 
-  tree_node = handle_tree_find(&port_info->sock_tree, socket);
+  tree_node = tree_find(&port_info->sock_tree, socket);
   if (tree_node == NULL)
     return -1;
 
@@ -232,14 +232,14 @@ epoll_t epoll_create(void) {
   queue_init(&port_info->update_queue);
 
   memset(&port_info->driver_sockets, 0, sizeof port_info->driver_sockets);
-  handle_tree_init(&port_info->sock_tree);
+  tree_init(&port_info->sock_tree);
 
   return (epoll_t) port_info;
 }
 
 int epoll_close(epoll_t port_handle) {
   ep_port_t* port_info;
-  handle_tree_node_t* tree_node;
+  tree_node_t* tree_node;
 
   port_info = (ep_port_t*) port_handle;
 
@@ -281,7 +281,7 @@ int epoll_close(epoll_t port_handle) {
   }
 
   /* Remove all entries from the socket_state tree. */
-  while ((tree_node = handle_tree_root(&port_info->sock_tree)) != NULL) {
+  while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
     ep_sock_t* sock_info = ep_sock_from_tree_node(tree_node);
     ep_sock_delete(port_info, sock_info);
   }
@@ -311,13 +311,13 @@ static int _ep_initialize(void) {
 }
 
 int ep_port_add_socket(ep_port_t* port_info,
-                       handle_tree_node_t* tree_node,
+                       tree_node_t* tree_node,
                        SOCKET socket) {
-  return handle_tree_add(&port_info->sock_tree, tree_node, socket);
+  return tree_add(&port_info->sock_tree, tree_node, socket);
 }
 
-int ep_port_del_socket(ep_port_t* port_info, handle_tree_node_t* tree_node) {
-  return handle_tree_del(&port_info->sock_tree, tree_node);
+int ep_port_del_socket(ep_port_t* port_info, tree_node_t* tree_node) {
+  return tree_del(&port_info->sock_tree, tree_node);
 }
 
 void ep_port_add_req(ep_port_t* port_info) {
