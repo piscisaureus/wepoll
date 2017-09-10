@@ -16,7 +16,7 @@ typedef struct poll_req poll_req_t;
 
 typedef struct ep_sock {
   handle_tree_entry_t tree_entry;
-  QUEUE queue_entry;
+  queue_elem_t queue_entry;
 } ep_sock_t;
 
 EPOLL_INTERNAL ep_sock_t* ep_sock_new(ep_port_t* port_info);

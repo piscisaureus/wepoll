@@ -30,12 +30,6 @@ typedef struct _ep_sock_private {
   uint32_t flags;
 } _ep_sock_private_t;
 
-#define ATTN_LIST_ADD(p, sock_info)                                   \
-  do {                                                                \
-    QUEUE_INSERT_TAIL(&(p)->update_queue, &(sock_info)->queue_entry); \
-    (_ep_sock_private(sock_info))->flags |= _EP_SOCK_LISTED;          \
-  } while (0)
-
 static inline _ep_sock_private_t* _ep_sock_private(ep_sock_t* sock_info) {
   return container_of(sock_info, _ep_sock_private_t, pub);
 }
@@ -64,7 +58,7 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info) {
 
   memset(sock_private, 0, sizeof *sock_private);
   handle_tree_entry_init(&sock_private->pub.tree_entry);
-  QUEUE_INIT(&sock_private->pub.queue_entry);
+  queue_elem_init(&sock_private->pub.queue_entry);
 
   return &sock_private->pub;
 }

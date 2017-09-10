@@ -17,7 +17,7 @@ typedef struct ep_port {
   HANDLE iocp;
   SOCKET driver_sockets[array_count(AFD_PROVIDER_GUID_LIST)];
   handle_tree_t sock_tree;
-  QUEUE update_queue;
+  queue_t update_queue;
   size_t poll_req_count;
 } ep_port_t;
 

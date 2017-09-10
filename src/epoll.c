@@ -99,13 +99,13 @@ int epoll_ctl(epoll_t port_handle,
 }
 
 static int _ep_port_update_events(ep_port_t* port_info) {
-  QUEUE* update_queue = &port_info->update_queue;
+  queue_t* update_queue = &port_info->update_queue;
 
   /* Walk the queue, submitting new poll requests for every socket that needs
    * it. */
-  while (!QUEUE_EMPTY(update_queue)) {
-    QUEUE* queue_entry = QUEUE_HEAD(update_queue);
-    ep_sock_t* sock_info = QUEUE_DATA(queue_entry, ep_sock_t, queue_entry);
+  while (!queue_empty(update_queue)) {
+    queue_elem_t* queue_entry = queue_first(update_queue);
+    ep_sock_t* sock_info = container_of(queue_entry, ep_sock_t, queue_entry);
 
     if (ep_sock_update(port_info, sock_info) < 0)
       return -1;
@@ -229,7 +229,7 @@ epoll_t epoll_create(void) {
   port_info->iocp = iocp;
   port_info->poll_req_count = 0;
 
-  QUEUE_INIT(&port_info->update_queue);
+  queue_init(&port_info->update_queue);
 
   memset(&port_info->driver_sockets, 0, sizeof port_info->driver_sockets);
   handle_tree_init(&port_info->sock_tree);
@@ -393,19 +393,19 @@ error:;
 bool ep_port_is_socket_update_pending(ep_port_t* port_info,
                                       ep_sock_t* sock_info) {
   unused(port_info);
-  return QUEUE_ENQUEUED(&sock_info->queue_entry);
+  return queue_enqueued(&sock_info->queue_entry);
 }
 
 void ep_port_request_socket_update(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
   if (ep_port_is_socket_update_pending(port_info, sock_info))
     return;
-  QUEUE_INSERT_TAIL(&port_info->update_queue, &sock_info->queue_entry);
+  queue_append(&port_info->update_queue, &sock_info->queue_entry);
   assert(ep_port_is_socket_update_pending(port_info, sock_info));
 }
 
 void ep_port_clear_socket_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   if (!ep_port_is_socket_update_pending(port_info, sock_info))
     return;
-  QUEUE_REMOVE(&sock_info->queue_entry);
+  queue_remove(&sock_info->queue_entry);
 }
