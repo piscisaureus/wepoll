@@ -13,4 +13,6 @@ typedef intptr_t ssize_t;
 #define container_of(ptr, type, member) \
   ((type*) ((char*) (ptr) -offsetof(type, member)))
 
+#define unused(v) ((void) (v))
+
 #endif /* EPOLL_UTIL_H_ */

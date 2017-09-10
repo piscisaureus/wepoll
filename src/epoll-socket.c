@@ -57,7 +57,7 @@ ep_sock_t* ep_sock_new(_ep_port_data_t* port_data) {
   if (sock_private == NULL)
     return NULL;
 
-  (void) port_data;
+  unused(port_data);
 
   memset(sock_private, 0, sizeof *sock_private);
   handle_tree_entry_init(&sock_private->pub.tree_entry);
