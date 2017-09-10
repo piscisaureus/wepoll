@@ -16,7 +16,6 @@
 
 #define _EP_EVENT_MASK 0xffff
 
-#define _EP_SOCK_LISTED 0x1
 #define _EP_SOCK_DELETED 0x2
 
 typedef struct _ep_sock_private {
@@ -75,11 +74,8 @@ int ep_sock_delete(_ep_port_data_t* port_data, ep_sock_t* sock_info) {
 
   sock_private->flags |= _EP_SOCK_DELETED;
 
-  /* Remove from attention list. */
-  if (sock_private->flags & _EP_SOCK_LISTED) {
-    QUEUE_REMOVE(&sock_info->queue_entry);
-    sock_private->flags &= ~_EP_SOCK_LISTED;
-  }
+  /* Remove from update list. */
+  _ep_port_clear_socket_update(port_data, sock_info);
 
   /* The socket may still have pending overlapped requests that have yet to be
    * reported by the completion port. If that'sock_private the case the
@@ -184,13 +180,8 @@ int ep_sock_set_event(_ep_port_data_t* port_data,
   sock_private->user_events = events;
   sock_private->user_data = ev->data;
 
-  if (events & _EP_EVENT_MASK & ~(sock_private->latest_poll_req_events)) {
-    /* Add to attention list, if not already added. */
-    if (!(sock_private->flags & _EP_SOCK_LISTED)) {
-      QUEUE_INSERT_TAIL(&port_data->update_queue, &sock_info->queue_entry);
-      sock_private->flags |= _EP_SOCK_LISTED;
-    }
-  }
+  if (events & _EP_EVENT_MASK & ~(sock_private->latest_poll_req_events))
+    _ep_port_request_socket_update(port_data, sock_info);
 
   return 0;
 }
@@ -238,7 +229,7 @@ int ep_sock_update(_ep_port_data_t* port_data, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
   bool broken = false;
 
-  assert(sock_private->flags & _EP_SOCK_LISTED);
+  assert(_ep_port_is_socket_update_pending(port_data, sock_info));
 
   /* Check if there are events registered that are not yet submitted. In
    * that case we need to submit another req.
@@ -259,9 +250,7 @@ int ep_sock_update(_ep_port_data_t* port_data, ep_sock_t* sock_info) {
   }
 
 done:
-  /* Remove the socket from the update queue. */
-  QUEUE_REMOVE(&sock_info->queue_entry);
-  sock_private->flags &= ~_EP_SOCK_LISTED;
+  _ep_port_clear_socket_update(port_data, sock_info);
 
   /* If we saw an ERROR_INVALID_HANDLE error, drop the socket. */
   if (broken)
@@ -316,7 +305,7 @@ int ep_sock_feed_event(_ep_port_data_t* port_data,
   else
     /* Put the socket back onto the attention list so a new poll request will
      * be submitted. */
-    ATTN_LIST_ADD(port_data, sock_info);
+    _ep_port_request_socket_update(port_data, sock_info);
 
   return ev_count;
 }

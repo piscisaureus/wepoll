@@ -391,3 +391,24 @@ error:;
   closesocket(socket);
   return_error(INVALID_SOCKET, error);
 }
+
+bool _ep_port_is_socket_update_pending(_ep_port_data_t* port_data,
+                                       ep_sock_t* sock_info) {
+  unused(port_data);
+  return QUEUE_ENQUEUED(&sock_info->queue_entry);
+}
+
+void _ep_port_request_socket_update(_ep_port_data_t* port_data,
+                                    ep_sock_t* sock_info) {
+  if (_ep_port_is_socket_update_pending(port_data, sock_info))
+    return;
+  QUEUE_INSERT_TAIL(&port_data->update_queue, &sock_info->queue_entry);
+  assert(_ep_port_is_socket_update_pending(port_data, sock_info));
+}
+
+void _ep_port_clear_socket_update(_ep_port_data_t* port_data,
+                                  ep_sock_t* sock_info) {
+  if (!_ep_port_is_socket_update_pending(port_data, sock_info))
+    return;
+  QUEUE_REMOVE(&sock_info->queue_entry);
+}
