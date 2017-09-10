@@ -25,10 +25,10 @@ EPOLL_INTERNAL SOCKET ep_port_get_driver_socket(ep_port_t* port_info,
                                                 SOCKET socket);
 
 EPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
-                                      handle_tree_entry_t* tree_entry,
+                                      handle_tree_node_t* tree_node,
                                       SOCKET socket);
 EPOLL_INTERNAL int ep_port_del_socket(ep_port_t* port_info,
-                                      handle_tree_entry_t* tree_entry);
+                                      handle_tree_node_t* tree_node);
 
 EPOLL_INTERNAL void ep_port_add_req(ep_port_t* port_info);
 EPOLL_INTERNAL void ep_port_del_req(ep_port_t* port_info);

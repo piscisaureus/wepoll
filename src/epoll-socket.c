@@ -57,8 +57,8 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info) {
   unused(port_info);
 
   memset(sock_private, 0, sizeof *sock_private);
-  handle_tree_entry_init(&sock_private->pub.tree_entry);
-  queue_elem_init(&sock_private->pub.queue_entry);
+  handle_tree_node_init(&sock_private->pub.tree_node);
+  queue_node_init(&sock_private->pub.queue_node);
 
   return &sock_private->pub;
 }
@@ -78,7 +78,7 @@ int ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
 
   assert(!_ep_sock_is_deleted(sock_private));
 
-  ep_port_del_socket(port_info, &sock_info->tree_entry);
+  ep_port_del_socket(port_info, &sock_info->tree_node);
   ep_port_clear_socket_update(port_info, sock_info);
 
   sock_private->flags |= _EP_SOCK_DELETED;
@@ -156,7 +156,7 @@ int ep_sock_set_socket(ep_port_t* port_info,
                            &sock_private->driver_socket) < 0)
     return -1;
 
-  if (ep_port_add_socket(port_info, &sock_info->tree_entry, socket) < 0)
+  if (ep_port_add_socket(port_info, &sock_info->tree_node, socket) < 0)
     return -1;
 
   return 0;
@@ -303,7 +303,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
   return ev_count;
 }
 
-ep_sock_t* ep_sock_from_tree_entry(handle_tree_entry_t* tree_entry) {
-  assert(tree_entry != NULL);
-  return container_of(tree_entry, ep_sock_t, tree_entry);
+ep_sock_t* ep_sock_from_tree_node(handle_tree_node_t* tree_node) {
+  assert(tree_node != NULL);
+  return container_of(tree_node, ep_sock_t, tree_node);
 }

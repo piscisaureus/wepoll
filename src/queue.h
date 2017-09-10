@@ -6,59 +6,59 @@
 
 #include "internal.h"
 
-typedef struct queue_elem queue_elem_t;
-typedef struct queue_elem {
-  queue_elem_t* prev;
-  queue_elem_t* next;
-} queue_elem_t;
+typedef struct queue_node queue_node_t;
+typedef struct queue_node {
+  queue_node_t* prev;
+  queue_node_t* next;
+} queue_node_t;
 typedef struct queue {
-  queue_elem_t head;
+  queue_node_t head;
 } queue_t;
 
-EPOLL_INTERNAL inline void queue_elem_init(queue_elem_t* elem) {
-  elem->prev = elem;
-  elem->next = elem;
+EPOLL_INTERNAL inline void queue_node_init(queue_node_t* node) {
+  node->prev = node;
+  node->next = node;
 }
 
 EPOLL_INTERNAL inline void queue_init(queue_t* queue) {
-  queue_elem_init(&queue->head);
+  queue_node_init(&queue->head);
 }
 
-EPOLL_INTERNAL inline bool queue_enqueued(const queue_elem_t* elem) {
-  return elem->prev != elem;
+EPOLL_INTERNAL inline bool queue_enqueued(const queue_node_t* node) {
+  return node->prev != node;
 }
 
 EPOLL_INTERNAL inline bool queue_empty(const queue_t* queue) {
   return !queue_enqueued(&queue->head);
 }
 
-EPOLL_INTERNAL inline queue_elem_t* queue_first(const queue_t* queue) {
+EPOLL_INTERNAL inline queue_node_t* queue_first(const queue_t* queue) {
   return !queue_empty(queue) ? queue->head.next : NULL;
 }
 
-EPOLL_INTERNAL inline queue_elem_t* queue_last(const queue_t* queue) {
+EPOLL_INTERNAL inline queue_node_t* queue_last(const queue_t* queue) {
   return !queue_empty(queue) ? queue->head.prev : NULL;
 }
 
-EPOLL_INTERNAL inline void queue_prepend(queue_t* queue, queue_elem_t* elem) {
-  elem->next = queue->head.next;
-  elem->prev = &queue->head;
-  elem->next->prev = elem;
-  queue->head.next = elem;
+EPOLL_INTERNAL inline void queue_prepend(queue_t* queue, queue_node_t* node) {
+  node->next = queue->head.next;
+  node->prev = &queue->head;
+  node->next->prev = node;
+  queue->head.next = node;
 }
 
-EPOLL_INTERNAL inline void queue_append(queue_t* queue, queue_elem_t* elem) {
-  elem->next = &queue->head;
-  elem->prev = queue->head.prev;
-  elem->prev->next = elem;
-  queue->head.prev = elem;
+EPOLL_INTERNAL inline void queue_append(queue_t* queue, queue_node_t* node) {
+  node->next = &queue->head;
+  node->prev = queue->head.prev;
+  node->prev->next = node;
+  queue->head.prev = node;
 }
 
-EPOLL_INTERNAL inline void queue_remove(queue_elem_t* elem) {
-  elem->prev->next = elem->next;
-  elem->next->prev = elem->prev;
-  elem->prev = elem;
-  elem->next = elem;
+EPOLL_INTERNAL inline void queue_remove(queue_node_t* node) {
+  node->prev->next = node->next;
+  node->next->prev = node->prev;
+  node->prev = node;
+  node->next = node;
 }
 
 #endif /* QUEUE_H_ */

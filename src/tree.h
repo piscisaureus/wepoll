@@ -63,9 +63,9 @@ struct name {                                                                 \
 #define RB_RED    1
 #define RB_ENTRY(type)                                                        \
 struct {                                                                      \
-  struct type *rbe_left;        /* left element */                            \
-  struct type *rbe_right;       /* right element */                           \
-  struct type *rbe_parent;      /* parent element */                          \
+  struct type *rbe_left;        /* left nodeent */                            \
+  struct type *rbe_right;       /* right nodeent */                           \
+  struct type *rbe_parent;      /* parent nodeent */                          \
   int rbe_color;                /* node color */                              \
 }
 

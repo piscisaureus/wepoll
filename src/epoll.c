@@ -49,14 +49,14 @@ static int _ep_ctl_add(ep_port_t* port_info,
 static int _ep_ctl_mod(ep_port_t* port_info,
                        uintptr_t socket,
                        struct epoll_event* ev) {
-  handle_tree_entry_t* tree_entry;
+  handle_tree_node_t* tree_node;
   ep_sock_t* sock_info;
 
-  tree_entry = handle_tree_find(&port_info->sock_tree, socket);
-  if (tree_entry == NULL)
+  tree_node = handle_tree_find(&port_info->sock_tree, socket);
+  if (tree_node == NULL)
     return -1;
 
-  sock_info = ep_sock_from_tree_entry(tree_entry);
+  sock_info = ep_sock_from_tree_node(tree_node);
 
   if (ep_sock_set_event(port_info, sock_info, ev) < 0)
     return -1;
@@ -65,14 +65,14 @@ static int _ep_ctl_mod(ep_port_t* port_info,
 }
 
 static int _ep_ctl_del(ep_port_t* port_info, uintptr_t socket) {
-  handle_tree_entry_t* tree_entry;
+  handle_tree_node_t* tree_node;
   ep_sock_t* sock_info;
 
-  tree_entry = handle_tree_find(&port_info->sock_tree, socket);
-  if (tree_entry == NULL)
+  tree_node = handle_tree_find(&port_info->sock_tree, socket);
+  if (tree_node == NULL)
     return -1;
 
-  sock_info = ep_sock_from_tree_entry(tree_entry);
+  sock_info = ep_sock_from_tree_node(tree_node);
 
   if (ep_sock_delete(port_info, sock_info) < 0)
     return -1;
@@ -104,8 +104,8 @@ static int _ep_port_update_events(ep_port_t* port_info) {
   /* Walk the queue, submitting new poll requests for every socket that needs
    * it. */
   while (!queue_empty(update_queue)) {
-    queue_elem_t* queue_entry = queue_first(update_queue);
-    ep_sock_t* sock_info = container_of(queue_entry, ep_sock_t, queue_entry);
+    queue_node_t* queue_node = queue_first(update_queue);
+    ep_sock_t* sock_info = container_of(queue_node, ep_sock_t, queue_node);
 
     if (ep_sock_update(port_info, sock_info) < 0)
       return -1;
@@ -239,7 +239,7 @@ epoll_t epoll_create(void) {
 
 int epoll_close(epoll_t port_handle) {
   ep_port_t* port_info;
-  handle_tree_entry_t* tree_entry;
+  handle_tree_node_t* tree_node;
 
   port_info = (ep_port_t*) port_handle;
 
@@ -281,8 +281,8 @@ int epoll_close(epoll_t port_handle) {
   }
 
   /* Remove all entries from the socket_state tree. */
-  while ((tree_entry = handle_tree_root(&port_info->sock_tree)) != NULL) {
-    ep_sock_t* sock_info = ep_sock_from_tree_entry(tree_entry);
+  while ((tree_node = handle_tree_root(&port_info->sock_tree)) != NULL) {
+    ep_sock_t* sock_info = ep_sock_from_tree_node(tree_node);
     ep_sock_delete(port_info, sock_info);
   }
 
@@ -311,13 +311,13 @@ static int _ep_initialize(void) {
 }
 
 int ep_port_add_socket(ep_port_t* port_info,
-                       handle_tree_entry_t* tree_entry,
+                       handle_tree_node_t* tree_node,
                        SOCKET socket) {
-  return handle_tree_add(&port_info->sock_tree, tree_entry, socket);
+  return handle_tree_add(&port_info->sock_tree, tree_node, socket);
 }
 
-int ep_port_del_socket(ep_port_t* port_info, handle_tree_entry_t* tree_entry) {
-  return handle_tree_del(&port_info->sock_tree, tree_entry);
+int ep_port_del_socket(ep_port_t* port_info, handle_tree_node_t* tree_node) {
+  return handle_tree_del(&port_info->sock_tree, tree_node);
 }
 
 void ep_port_add_req(ep_port_t* port_info) {
@@ -401,19 +401,19 @@ error:;
 bool ep_port_is_socket_update_pending(ep_port_t* port_info,
                                       ep_sock_t* sock_info) {
   unused(port_info);
-  return queue_enqueued(&sock_info->queue_entry);
+  return queue_enqueued(&sock_info->queue_node);
 }
 
 void ep_port_request_socket_update(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
   if (ep_port_is_socket_update_pending(port_info, sock_info))
     return;
-  queue_append(&port_info->update_queue, &sock_info->queue_entry);
+  queue_append(&port_info->update_queue, &sock_info->queue_node);
   assert(ep_port_is_socket_update_pending(port_info, sock_info));
 }
 
 void ep_port_clear_socket_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   if (!ep_port_is_socket_update_pending(port_info, sock_info))
     return;
-  queue_remove(&sock_info->queue_entry);
+  queue_remove(&sock_info->queue_node);
 }

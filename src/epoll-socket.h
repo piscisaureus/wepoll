@@ -15,8 +15,8 @@ typedef struct ep_port ep_port_t;
 typedef struct poll_req poll_req_t;
 
 typedef struct ep_sock {
-  handle_tree_entry_t tree_entry;
-  queue_elem_t queue_entry;
+  handle_tree_node_t tree_node;
+  queue_node_t queue_node;
 } ep_sock_t;
 
 EPOLL_INTERNAL ep_sock_t* ep_sock_new(ep_port_t* port_info);
@@ -39,7 +39,7 @@ EPOLL_INTERNAL void ep_sock_register_poll_req(ep_port_t* port_info,
 EPOLL_INTERNAL void ep_sock_unregister_poll_req(ep_port_t* port_info,
                                                 ep_sock_t* sock_info);
 
-EPOLL_INTERNAL ep_sock_t* ep_sock_from_tree_entry(
-    handle_tree_entry_t* tree_entry);
+EPOLL_INTERNAL ep_sock_t* ep_sock_from_tree_node(
+    handle_tree_node_t* tree_node);
 
 #endif /* EPOLL_SOCK_DATA_H_ */
