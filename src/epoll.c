@@ -320,6 +320,14 @@ int ep_port_del_socket(ep_port_t* port_info, handle_tree_entry_t* tree_entry) {
   return handle_tree_del(&port_info->sock_tree, tree_entry);
 }
 
+void ep_port_add_req(ep_port_t* port_info) {
+  port_info->poll_req_count++;
+}
+
+void ep_port_del_req(ep_port_t* port_info) {
+  port_info->poll_req_count--;
+}
+
 SOCKET ep_port_get_driver_socket(ep_port_t* port_info, SOCKET socket) {
   ssize_t index;
   size_t i;

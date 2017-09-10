@@ -30,6 +30,9 @@ EPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
 EPOLL_INTERNAL int ep_port_del_socket(ep_port_t* port_info,
                                       handle_tree_entry_t* tree_entry);
 
+EPOLL_INTERNAL void ep_port_add_req(ep_port_t* port_info);
+EPOLL_INTERNAL void ep_port_del_req(ep_port_t* port_info);
+
 EPOLL_INTERNAL void ep_port_request_socket_update(ep_port_t* port_info,
                                                   ep_sock_t* sock_info);
 EPOLL_INTERNAL void ep_port_clear_socket_update(ep_port_t* port_info,

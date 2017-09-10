@@ -92,15 +92,16 @@ void ep_sock_register_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
   assert(!_ep_sock_is_deleted(sock_private));
+
+  ep_port_add_req(port_info);
   sock_private->poll_req_count++;
-  port_info->poll_req_count++;
 }
 
 void ep_sock_unregister_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
+  ep_port_del_req(port_info);
   sock_private->poll_req_count--;
-  port_info->poll_req_count--;
 
   _ep_sock_maybe_free(sock_private);
 }
