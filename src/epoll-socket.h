@@ -15,16 +15,8 @@ typedef struct _ep_port_data _ep_port_data_t;
 typedef struct poll_req poll_req_t;
 
 typedef struct ep_sock {
-  SOCKET afd_socket;
-  SOCKET driver_socket;
   handle_tree_entry_t tree_entry;
   QUEUE queue_entry;
-  epoll_data_t user_data;
-  poll_req_t* latest_poll_req;
-  uint32_t user_events;
-  uint32_t latest_poll_req_events;
-  uint32_t poll_req_count;
-  uint32_t flags;
 } ep_sock_t;
 
 EPOLL_INTERNAL ep_sock_t* ep_sock_new(_ep_port_data_t* port_data);

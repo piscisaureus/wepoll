@@ -19,77 +19,101 @@
 #define _EP_SOCK_LISTED 0x1
 #define _EP_SOCK_DELETED 0x2
 
-#define ATTN_LIST_ADD(p, s)                                   \
-  do {                                                        \
-    QUEUE_INSERT_TAIL(&(p)->update_queue, &(s)->queue_entry); \
-    (s)->flags |= _EP_SOCK_LISTED;                            \
+typedef struct _ep_sock_private {
+  ep_sock_t pub;
+  SOCKET afd_socket;
+  SOCKET driver_socket;
+  epoll_data_t user_data;
+  poll_req_t* latest_poll_req;
+  uint32_t user_events;
+  uint32_t latest_poll_req_events;
+  uint32_t poll_req_count;
+  uint32_t flags;
+} _ep_sock_private_t;
+
+#define ATTN_LIST_ADD(p, sock_info)                                   \
+  do {                                                                \
+    QUEUE_INSERT_TAIL(&(p)->update_queue, &(sock_info)->queue_entry); \
+    (_ep_sock_private(sock_info))->flags |= _EP_SOCK_LISTED;          \
   } while (0)
 
-static inline ep_sock_t* _ep_sock_alloc(void) {
-  ep_sock_t* sock_info = malloc(sizeof *sock_info);
-  if (sock_info == NULL)
-    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
-  return sock_info;
+static inline _ep_sock_private_t* _ep_sock_private(ep_sock_t* sock_info) {
+  return container_of(sock_info, _ep_sock_private_t, pub);
 }
 
-static inline void _ep_sock_free(ep_sock_t* sock_info) {
-  free(sock_info);
+static inline _ep_sock_private_t* _ep_sock_alloc(void) {
+  _ep_sock_private_t* sock_private = malloc(sizeof *sock_private);
+  if (sock_private == NULL)
+    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
+  return sock_private;
+}
+
+static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
+  free(sock_private);
 }
 
 ep_sock_t* ep_sock_new(_ep_port_data_t* port_data) {
-  ep_sock_t* sock_info = _ep_sock_alloc();
-  if (sock_info == NULL)
+  _ep_sock_private_t* sock_private = _ep_sock_alloc();
+  if (sock_private == NULL)
     return NULL;
 
   (void) port_data;
 
-  memset(sock_info, 0, sizeof *sock_info);
-  handle_tree_entry_init(&sock_info->tree_entry);
-  QUEUE_INIT(&sock_info->queue_entry);
+  memset(sock_private, 0, sizeof *sock_private);
+  handle_tree_entry_init(&sock_private->pub.tree_entry);
+  QUEUE_INIT(&sock_private->pub.queue_entry);
 
-  return sock_info;
+  return &sock_private->pub;
 }
 
 int ep_sock_delete(_ep_port_data_t* port_data, ep_sock_t* sock_info) {
+  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
+
   /* Remove SOCKET -> ep_sock mapping from port. */
-  if (!(sock_info->flags & _EP_SOCK_DELETED))
+  if (!(sock_private->flags & _EP_SOCK_DELETED))
     _ep_port_del_socket(port_data, &sock_info->tree_entry);
 
-  sock_info->flags |= _EP_SOCK_DELETED;
+  sock_private->flags |= _EP_SOCK_DELETED;
 
   /* Remove from attention list. */
-  if (sock_info->flags & _EP_SOCK_LISTED) {
+  if (sock_private->flags & _EP_SOCK_LISTED) {
     QUEUE_REMOVE(&sock_info->queue_entry);
-    sock_info->flags &= ~_EP_SOCK_LISTED;
+    sock_private->flags &= ~_EP_SOCK_LISTED;
   }
 
   /* The socket may still have pending overlapped requests that have yet to be
-   * reported by the completion port. If that's the case the structure can't be
-   * free'd yet; epoll_wait() will do it as it dequeues those requests.
+   * reported by the completion port. If that'sock_private the case the
+   * structure can't be free'd yet; epoll_wait() will do it as it dequeues
+   * those requests.
    */
-  if (sock_info->poll_req_count == 0)
-    _ep_sock_free(sock_info);
+  if (sock_private->poll_req_count == 0)
+    _ep_sock_free(sock_private);
 
   return 0;
 }
 
-static inline bool _ep_sock_delete_pending(ep_sock_t* sock_info) {
-  return sock_info->flags & _EP_SOCK_DELETED;
+static inline bool _ep_sock_delete_pending(_ep_sock_private_t* sock_private) {
+  return sock_private->flags & _EP_SOCK_DELETED;
 }
 
 void ep_sock_register_poll_req(_ep_port_data_t* port_data,
                                ep_sock_t* sock_info) {
-  assert(!_ep_sock_delete_pending(sock_info));
-  sock_info->poll_req_count++;
+  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
+
+  assert(!_ep_sock_delete_pending(sock_private));
+  sock_private->poll_req_count++;
   port_data->poll_req_count++;
 }
 
 void ep_sock_unregister_poll_req(_ep_port_data_t* port_data,
                                  ep_sock_t* sock_info) {
-  sock_info->poll_req_count--;
+  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
+
+  sock_private->poll_req_count--;
   port_data->poll_req_count--;
 
-  if (_ep_sock_delete_pending(sock_info) && sock_info->poll_req_count == 0)
+  if (_ep_sock_delete_pending(sock_private) &&
+      sock_private->poll_req_count == 0)
     ep_sock_delete(port_data, sock_info);
 }
 
@@ -130,15 +154,17 @@ static int _get_related_sockets(_ep_port_data_t* port_data,
 int ep_sock_set_socket(_ep_port_data_t* port_data,
                        ep_sock_t* sock_info,
                        SOCKET socket) {
+  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
+
   if (socket == 0 || socket == INVALID_SOCKET)
     return_error(-1, ERROR_INVALID_HANDLE);
-  if (sock_info->afd_socket != 0)
+  if (sock_private->afd_socket != 0)
     return_error(-1, ERROR_ALREADY_ASSIGNED);
 
   if (_get_related_sockets(port_data,
                            socket,
-                           &sock_info->afd_socket,
-                           &sock_info->driver_socket) < 0)
+                           &sock_private->afd_socket,
+                           &sock_private->driver_socket) < 0)
     return -1;
 
   if (_ep_port_add_socket(port_data, &sock_info->tree_entry, socket) < 0)
@@ -150,77 +176,80 @@ int ep_sock_set_socket(_ep_port_data_t* port_data,
 int ep_sock_set_event(_ep_port_data_t* port_data,
                       ep_sock_t* sock_info,
                       const struct epoll_event* ev) {
+  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
+
   /* EPOLLERR and EPOLLHUP are always reported, even when no sollicited. */
   uint32_t events = ev->events | EPOLLERR | EPOLLHUP;
 
-  sock_info->user_events = events;
-  sock_info->user_data = ev->data;
+  sock_private->user_events = events;
+  sock_private->user_data = ev->data;
 
-  if (events & _EP_EVENT_MASK & ~(sock_info->latest_poll_req_events)) {
+  if (events & _EP_EVENT_MASK & ~(sock_private->latest_poll_req_events)) {
     /* Add to attention list, if not already added. */
-    if (!(sock_info->flags & _EP_SOCK_LISTED)) {
+    if (!(sock_private->flags & _EP_SOCK_LISTED)) {
       QUEUE_INSERT_TAIL(&port_data->update_queue, &sock_info->queue_entry);
-      sock_info->flags |= _EP_SOCK_LISTED;
+      sock_private->flags |= _EP_SOCK_LISTED;
     }
   }
 
   return 0;
 }
 
-static inline bool _is_latest_poll_req(ep_sock_t* sock_info,
+static inline bool _is_latest_poll_req(_ep_sock_private_t* sock_private,
                                        poll_req_t* poll_req) {
-  return poll_req == sock_info->latest_poll_req;
+  return poll_req == sock_private->latest_poll_req;
 }
 
-static inline void _clear_latest_poll_req(ep_sock_t* sock_info) {
-  sock_info->latest_poll_req = NULL;
-  sock_info->latest_poll_req_events = 0;
+static inline void _clear_latest_poll_req(_ep_sock_private_t* sock_private) {
+  sock_private->latest_poll_req = NULL;
+  sock_private->latest_poll_req_events = 0;
 }
 
-static inline void _set_latest_poll_req(ep_sock_t* sock_info,
+static inline void _set_latest_poll_req(_ep_sock_private_t* sock_private,
                                         poll_req_t* poll_req,
                                         uint32_t epoll_events) {
-  sock_info->latest_poll_req = poll_req;
-  sock_info->latest_poll_req_events = epoll_events;
+  sock_private->latest_poll_req = poll_req;
+  sock_private->latest_poll_req_events = epoll_events;
 }
 
 static int _ep_submit_poll_req(_ep_port_data_t* port_data,
-                               ep_sock_t* sock_info) {
+                               _ep_sock_private_t* sock_private) {
   poll_req_t* poll_req;
-  uint32_t epoll_events = sock_info->user_events;
+  uint32_t epoll_events = sock_private->user_events;
 
-  poll_req = poll_req_new(port_data, sock_info);
+  poll_req = poll_req_new(port_data, &sock_private->pub);
   if (poll_req == NULL)
     return -1;
 
   if (poll_req_submit(poll_req,
                       epoll_events,
-                      sock_info->afd_socket,
-                      sock_info->driver_socket) < 0) {
-    poll_req_delete(port_data, sock_info, poll_req);
+                      sock_private->afd_socket,
+                      sock_private->driver_socket) < 0) {
+    poll_req_delete(port_data, &sock_private->pub, poll_req);
     return -1;
   }
 
-  _set_latest_poll_req(sock_info, poll_req, epoll_events);
+  _set_latest_poll_req(sock_private, poll_req, epoll_events);
 
   return 0;
 }
 
 int ep_sock_update(_ep_port_data_t* port_data, ep_sock_t* sock_info) {
+  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
   bool broken = false;
 
-  assert(sock_info->flags & _EP_SOCK_LISTED);
+  assert(sock_private->flags & _EP_SOCK_LISTED);
 
   /* Check if there are events registered that are not yet submitted. In
    * that case we need to submit another req.
    */
-  if ((sock_info->user_events & _EP_EVENT_MASK &
-       ~sock_info->latest_poll_req_events) == 0)
+  if ((sock_private->user_events & _EP_EVENT_MASK &
+       ~sock_private->latest_poll_req_events) == 0)
     /* All the events the user is interested in are already being monitored
      * by the latest poll request. */
     goto done;
 
-  if (_ep_submit_poll_req(port_data, sock_info) < 0) {
+  if (_ep_submit_poll_req(port_data, sock_private) < 0) {
     if (GetLastError() == ERROR_INVALID_HANDLE)
       /* The socket is broken. It will be dropped from the epoll set. */
       broken = true;
@@ -232,7 +261,7 @@ int ep_sock_update(_ep_port_data_t* port_data, ep_sock_t* sock_info) {
 done:
   /* Remove the socket from the update queue. */
   QUEUE_REMOVE(&sock_info->queue_entry);
-  sock_info->flags &= ~_EP_SOCK_LISTED;
+  sock_private->flags &= ~_EP_SOCK_LISTED;
 
   /* If we saw an ERROR_INVALID_HANDLE error, drop the socket. */
   if (broken)
@@ -245,13 +274,14 @@ int ep_sock_feed_event(_ep_port_data_t* port_data,
                        poll_req_t* poll_req,
                        struct epoll_event* ev) {
   ep_sock_t* sock_info = poll_req_get_sock_data(poll_req);
+  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
   uint32_t epoll_events;
   bool drop_socket;
   int ev_count = 0;
 
-  if (_ep_sock_delete_pending(sock_info) ||
-      !_is_latest_poll_req(sock_info, poll_req)) {
+  if (_ep_sock_delete_pending(sock_private) ||
+      !_is_latest_poll_req(sock_private, poll_req)) {
     /* Ignore completion for overlapped poll operation if it isn't
      * the the most recently posted one, or if the socket has been
      * deleted. */
@@ -259,21 +289,21 @@ int ep_sock_feed_event(_ep_port_data_t* port_data,
     return 0;
   }
 
-  _clear_latest_poll_req(sock_info);
+  _clear_latest_poll_req(sock_private);
 
   poll_req_complete(poll_req, &epoll_events, &drop_socket);
 
   /* Filter events that the user didn't ask for. */
-  epoll_events &= sock_info->user_events;
+  epoll_events &= sock_private->user_events;
 
   /* Drop the socket if the EPOLLONESHOT flag is set and there are any events
    * to report. */
-  if (epoll_events != 0 && (sock_info->user_events & EPOLLONESHOT))
+  if (epoll_events != 0 && (sock_private->user_events & EPOLLONESHOT))
     drop_socket = true;
 
   /* Fill the ev structure if there are any events to report. */
   if (epoll_events != 0) {
-    ev->data = sock_info->user_data;
+    ev->data = sock_private->user_data;
     ev->events = epoll_events;
     ev_count = 1;
   }
