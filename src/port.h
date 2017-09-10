@@ -6,7 +6,7 @@
 #include "handle-tree.h"
 #include "internal.h"
 #include "queue.h"
-#include "tree.h"
+#include "rb.h"
 #include "util.h"
 #include "win.h"
 

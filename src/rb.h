@@ -35,13 +35,13 @@
  * The maximum height of a red-black tree is 2lg (n+1).
  */
 
-#ifndef EPOLL_TREE_H_
-#define EPOLL_TREE_H_
+#ifndef EPOLL_RB_H_
+#define EPOLL_RB_H_
 
 #ifdef __clang__
-//#define TREE_UNUSED __attribute__((__unused__))
+#define RB_UNUSED __attribute__((__unused__))
 #else
-#define TREE_UNUSED /* empty */
+#define RB_UNUSED /* empty */
 #endif
 
 /* clang-format off */
@@ -123,7 +123,7 @@ struct {                                                                      \
 #define  RB_PROTOTYPE(name, type, field, cmp)                                 \
   RB_PROTOTYPE_INTERNAL(name, type, field, cmp,)
 #define  RB_PROTOTYPE_STATIC(name, type, field, cmp)                          \
-  RB_PROTOTYPE_INTERNAL(name, type, field, cmp, static TREE_UNUSED)
+  RB_PROTOTYPE_INTERNAL(name, type, field, cmp, static RB_UNUSED)
 #define RB_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)                   \
 attr void name##_RB_INSERT_COLOR(struct name *, struct type *);               \
 attr void name##_RB_REMOVE_COLOR(struct name *, struct type *, struct type *);\
@@ -142,7 +142,7 @@ attr struct type *name##_RB_MINMAX(struct name *, int);                       \
 #define  RB_GENERATE(name, type, field, cmp)                                  \
   RB_GENERATE_INTERNAL(name, type, field, cmp,)
 #define  RB_GENERATE_STATIC(name, type, field, cmp)                           \
-  RB_GENERATE_INTERNAL(name, type, field, cmp, static TREE_UNUSED)
+  RB_GENERATE_INTERNAL(name, type, field, cmp, static RB_UNUSED)
 #define RB_GENERATE_INTERNAL(name, type, field, cmp, attr)                    \
 attr void                                                                     \
 name##_RB_INSERT_COLOR(struct name *head, struct type *elm)                   \
@@ -498,4 +498,4 @@ name##_RB_MINMAX(struct name *head, int val)                                  \
 
 /* clang-format on */
 
-#endif /* EPOLL_TREE_H_ */
+#endif /* EPOLL_RB_H_ */

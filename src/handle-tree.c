@@ -2,7 +2,7 @@
 
 #include "error.h"
 #include "handle-tree.h"
-#include "tree.h"
+#include "rb.h"
 
 static inline int _handle_tree_compare(handle_tree_node_t* a,
                                        handle_tree_node_t* b) {

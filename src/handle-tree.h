@@ -2,7 +2,7 @@
 #define EPOLL_HANDLE_TREE_H_
 
 #include "internal.h"
-#include "tree.h"
+#include "rb.h"
 
 typedef RB_HEAD(handle_tree, handle_tree_node) handle_tree_t;
 
