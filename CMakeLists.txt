@@ -8,7 +8,7 @@ if(WIN32)
 endif()
 
 if(MSVC)
-	add_compile_options(/Wall /wd4201 /wd4242 /wd4711 /wd4820)
+	add_compile_options(/Wall /wd4201 /wd4242 /wd4710 /wd4711 /wd4820)
 else()
 	add_compile_options(-Wall)
 endif()
