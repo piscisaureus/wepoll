@@ -8,14 +8,14 @@
 #include "internal.h"
 #include "win.h"
 
-typedef struct _ep_port_data _ep_port_data_t;
+typedef struct ep_port ep_port_t;
 typedef struct ep_sock ep_sock_t;
 typedef struct poll_req poll_req_t;
 
-EPOLL_INTERNAL poll_req_t* poll_req_new(_ep_port_data_t* port_data,
+EPOLL_INTERNAL poll_req_t* poll_req_new(ep_port_t* port_info,
                                         ep_sock_t* sock_info);
 
-EPOLL_INTERNAL void poll_req_delete(_ep_port_data_t* port_data,
+EPOLL_INTERNAL void poll_req_delete(ep_port_t* port_info,
                                     ep_sock_t* sock_info,
                                     poll_req_t* poll_req);
 
