@@ -21,6 +21,9 @@ typedef struct ep_port {
   size_t poll_req_count;
 } ep_port_t;
 
+EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE iocp);
+EPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
+
 EPOLL_INTERNAL SOCKET ep_port_get_driver_socket(ep_port_t* port_info,
                                                 SOCKET socket);
 

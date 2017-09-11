@@ -195,42 +195,37 @@ int epoll_wait(epoll_t port_handle,
   return 0;
 }
 
-epoll_t epoll_create(void) {
-  ep_port_t* port_info;
-  HANDLE iocp;
-
-  if (init() < 0)
-    return NULL;
-
-  port_info = malloc(sizeof *port_info);
+static ep_port_t* _ep_port_alloc(void) {
+  ep_port_t* port_info = malloc(sizeof *port_info);
   if (port_info == NULL)
     return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
 
-  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-  if (iocp == INVALID_HANDLE_VALUE) {
-    free(port_info);
-    return_error(NULL);
-  }
-
-  port_info->iocp = iocp;
-  port_info->poll_req_count = 0;
-
-  queue_init(&port_info->update_queue);
-
-  memset(&port_info->driver_sockets, 0, sizeof port_info->driver_sockets);
-  tree_init(&port_info->sock_tree);
-
-  return (epoll_t) port_info;
+  return port_info;
 }
 
-int epoll_close(epoll_t port_handle) {
+static void _ep_port_free(ep_port_t* port) {
+  assert(port != NULL);
+  free(port);
+}
+
+ep_port_t* ep_port_new(HANDLE iocp) {
   ep_port_t* port_info;
+
+  port_info = _ep_port_alloc();
+  if (port_info == NULL)
+    return NULL;
+
+  memset(port_info, 0, sizeof *port_info);
+
+  port_info->iocp = iocp;
+  queue_init(&port_info->update_queue);
+  tree_init(&port_info->sock_tree);
+
+  return port_info;
+}
+
+int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
-
-  if (init() < 0)
-    return -1;
-
-  port_info = (ep_port_t*) port_handle;
 
   /* Close all peer sockets. This will make all pending io requests return. */
   for (size_t i = 0; i < array_count(port_info->driver_sockets); i++) {
