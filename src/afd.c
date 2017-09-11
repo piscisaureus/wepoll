@@ -12,7 +12,9 @@
 
 #define IOCTL_AFD_POLL _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
 
-int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped) {
+int afd_poll(SOCKET driver_socket,
+             AFD_POLL_INFO* poll_info,
+             OVERLAPPED* overlapped) {
   IO_STATUS_BLOCK iosb;
   IO_STATUS_BLOCK* iosb_ptr;
   HANDLE event = NULL;
@@ -42,16 +44,16 @@ int afd_poll(SOCKET socket, AFD_POLL_INFO* info, OVERLAPPED* overlapped) {
   }
 
   iosb_ptr->Status = STATUS_PENDING;
-  status = NtDeviceIoControlFile((HANDLE) socket,
+  status = NtDeviceIoControlFile((HANDLE) driver_socket,
                                  event,
                                  NULL,
                                  apc_context,
                                  iosb_ptr,
                                  IOCTL_AFD_POLL,
-                                 info,
-                                 sizeof *info,
-                                 info,
-                                 sizeof *info);
+                                 poll_info,
+                                 sizeof *poll_info,
+                                 poll_info,
+                                 sizeof *poll_info);
 
   if (overlapped == NULL) {
     /* If this is a blocking operation, wait for the event to become

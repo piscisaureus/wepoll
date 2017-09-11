@@ -51,8 +51,8 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
-EPOLL_INTERNAL int afd_poll(SOCKET socket,
-                            AFD_POLL_INFO* info,
+EPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
+                            AFD_POLL_INFO* poll_info,
                             OVERLAPPED* overlapped);
 
 /* clang-format off */
