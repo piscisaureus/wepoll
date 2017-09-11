@@ -26,7 +26,6 @@ typedef struct ep_sock ep_sock_t;
 static int _ep_initialize(void);
 static SOCKET _ep_create_driver_socket(HANDLE iocp,
                                        WSAPROTOCOL_INFOW* protocol_info);
-static int _ep_submit_poll_req(ep_port_t* port_info, ep_sock_t* sock_info);
 
 static int _ep_initialized = 0;
 
