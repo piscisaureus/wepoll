@@ -1,6 +1,8 @@
-var path = require('path');
+// This is a mess. I know.
 
+var path = require('path');
 var fs = require('fs');
+
 var included = {};
 
 function load(filename) {
@@ -72,6 +74,16 @@ function include_sys(line, filename) {
 }
 
 var source = [];
+
+source = source.concat('/*')
+             .concat(fs.readFileSync('LICENSE', 'utf8')
+                         .split(/\r?\n/g)
+                         .map(function(s) {
+                           return ' * ' + s;
+                         }))
+             .concat(' */')
+             .concat('');
+
 for (var i = 2; i < process.argv.length; i++) {
   var filename = process.argv[i];
   source = source.concat(include(null, filename));
