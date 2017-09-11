@@ -49,14 +49,9 @@ static int _ep_ctl_add(ep_port_t* port_info,
 static int _ep_ctl_mod(ep_port_t* port_info,
                        uintptr_t socket,
                        struct epoll_event* ev) {
-  tree_node_t* tree_node;
-  ep_sock_t* sock_info;
-
-  tree_node = tree_find(&port_info->sock_tree, socket);
-  if (tree_node == NULL)
+  ep_sock_t* sock_info = ep_sock_find(&port_info->sock_tree, socket);
+  if (sock_info == NULL)
     return -1;
-
-  sock_info = ep_sock_from_tree_node(tree_node);
 
   if (ep_sock_set_event(port_info, sock_info, ev) < 0)
     return -1;
@@ -65,14 +60,9 @@ static int _ep_ctl_mod(ep_port_t* port_info,
 }
 
 static int _ep_ctl_del(ep_port_t* port_info, uintptr_t socket) {
-  tree_node_t* tree_node;
-  ep_sock_t* sock_info;
-
-  tree_node = tree_find(&port_info->sock_tree, socket);
-  if (tree_node == NULL)
+  ep_sock_t* sock_info = ep_sock_find(&port_info->sock_tree, socket);
+  if (sock_info == NULL)
     return -1;
-
-  sock_info = ep_sock_from_tree_node(tree_node);
 
   if (ep_sock_delete(port_info, sock_info) < 0)
     return -1;
@@ -282,7 +272,7 @@ int epoll_close(epoll_t port_handle) {
 
   /* Remove all entries from the socket_state tree. */
   while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
-    ep_sock_t* sock_info = ep_sock_from_tree_node(tree_node);
+    ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
     ep_sock_delete(port_info, sock_info);
   }
 

@@ -88,6 +88,14 @@ int ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   return 0;
 }
 
+ep_sock_t* ep_sock_find(tree_t* tree, SOCKET socket) {
+  tree_node_t* tree_node = tree_find(tree, socket);
+  if (tree_node == NULL)
+    return NULL;
+
+  return container_of(tree, ep_sock_t, tree_node);
+}
+
 void ep_sock_register_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
@@ -301,9 +309,4 @@ int ep_sock_feed_event(ep_port_t* port_info,
     ep_port_request_socket_update(port_info, sock_info);
 
   return ev_count;
-}
-
-ep_sock_t* ep_sock_from_tree_node(tree_node_t* tree_node) {
-  assert(tree_node != NULL);
-  return container_of(tree_node, ep_sock_t, tree_node);
 }
