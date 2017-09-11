@@ -90,10 +90,11 @@ int main(int argc, char* argv[]) {
     ticks = GetTickCount();
 
     if (ticks >= ticks_last + 1000) {
-      printf("%lld pings (%f per sec), %lld sent\n",
+      printf("%lld pings (%0.0f per sec), %lld sent (%0.0f per sec)\n",
              pings,
-             (double) pings / (ticks - ticks_start) * 1000,
-             pings_sent);
+             (double) pings / (ticks - ticks_start) * 1000.0,
+             pings_sent,
+             (double) pings_sent / (ticks - ticks_start) * 1000.0);
       ticks_last = ticks;
 
       if (ticks - ticks_start > RUN_TIME)
