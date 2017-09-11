@@ -30,12 +30,11 @@ static SOCKET _ep_create_driver_socket(HANDLE iocp,
 static int _ep_ctl_add(ep_port_t* port_info,
                        uintptr_t socket,
                        struct epoll_event* ev) {
-  ep_sock_t* sock_info = ep_sock_new(port_info);
+  ep_sock_t* sock_info = ep_sock_new(port_info, socket);
   if (sock_info == NULL)
     return -1;
 
-  if (ep_sock_set_socket(port_info, sock_info, socket) < 0 ||
-      ep_sock_set_event(port_info, sock_info, ev) < 0) {
+  if (ep_sock_set_event(port_info, sock_info, ev) < 0) {
     ep_sock_delete(port_info, sock_info);
     return -1;
   }

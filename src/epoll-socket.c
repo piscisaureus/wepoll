@@ -49,7 +49,61 @@ static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
   free(sock_private);
 }
 
-ep_sock_t* ep_sock_new(ep_port_t* port_info) {
+static int _get_related_sockets(ep_port_t* port_info,
+                                SOCKET socket,
+                                SOCKET* afd_socket_out,
+                                SOCKET* driver_socket_out) {
+  SOCKET afd_socket, driver_socket;
+  DWORD bytes;
+
+  /* Try to obtain a base handle for the socket, so we can bypass LSPs
+   * that get in the way if we want to talk to the kernel directly. If
+   * it fails we try if we work with the original socket. Note that on
+   * windows XP/2k3 this will always fail since they don't support the
+   * SIO_BASE_HANDLE ioctl.
+   */
+  afd_socket = socket;
+  WSAIoctl(socket,
+           SIO_BASE_HANDLE,
+           NULL,
+           0,
+           &afd_socket,
+           sizeof afd_socket,
+           &bytes,
+           NULL,
+           NULL);
+
+  driver_socket = ep_port_get_driver_socket(port_info, afd_socket);
+  if (driver_socket == INVALID_SOCKET)
+    return -1;
+
+  *afd_socket_out = afd_socket;
+  *driver_socket_out = driver_socket;
+
+  return 0;
+}
+
+static int _ep_sock_set_socket(ep_port_t* port_info,
+                               _ep_sock_private_t* sock_private,
+                               SOCKET socket) {
+  if (socket == 0 || socket == INVALID_SOCKET)
+    return_error(-1, ERROR_INVALID_HANDLE);
+
+  assert(sock_private->afd_socket == 0);
+
+  if (_get_related_sockets(port_info,
+                           socket,
+                           &sock_private->afd_socket,
+                           &sock_private->driver_socket) < 0)
+    return -1;
+
+  if (ep_port_add_socket(port_info, &sock_private->pub.tree_node, socket) < 0)
+    return -1;
+
+  return 0;
+}
+
+ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   _ep_sock_private_t* sock_private = _ep_sock_alloc();
   if (sock_private == NULL)
     return NULL;
@@ -59,6 +113,11 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info) {
   memset(sock_private, 0, sizeof *sock_private);
   tree_node_init(&sock_private->pub.tree_node);
   queue_node_init(&sock_private->pub.queue_node);
+
+  if (_ep_sock_set_socket(port_info, sock_private, socket) < 0) {
+    _ep_sock_free(sock_private);
+    return NULL;
+  }
 
   return &sock_private->pub;
 }
@@ -112,62 +171,6 @@ void ep_sock_unregister_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
   sock_private->poll_req_count--;
 
   _ep_sock_maybe_free(sock_private);
-}
-
-static int _get_related_sockets(ep_port_t* port_info,
-                                SOCKET socket,
-                                SOCKET* afd_socket_out,
-                                SOCKET* driver_socket_out) {
-  SOCKET afd_socket, driver_socket;
-  DWORD bytes;
-
-  /* Try to obtain a base handle for the socket, so we can bypass LSPs
-   * that get in the way if we want to talk to the kernel directly. If
-   * it fails we try if we work with the original socket. Note that on
-   * windows XP/2k3 this will always fail since they don't support the
-   * SIO_BASE_HANDLE ioctl.
-   */
-  afd_socket = socket;
-  WSAIoctl(socket,
-           SIO_BASE_HANDLE,
-           NULL,
-           0,
-           &afd_socket,
-           sizeof afd_socket,
-           &bytes,
-           NULL,
-           NULL);
-
-  driver_socket = ep_port_get_driver_socket(port_info, afd_socket);
-  if (driver_socket == INVALID_SOCKET)
-    return -1;
-
-  *afd_socket_out = afd_socket;
-  *driver_socket_out = driver_socket;
-
-  return 0;
-}
-
-int ep_sock_set_socket(ep_port_t* port_info,
-                       ep_sock_t* sock_info,
-                       SOCKET socket) {
-  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-
-  if (socket == 0 || socket == INVALID_SOCKET)
-    return_error(-1, ERROR_INVALID_HANDLE);
-  if (sock_private->afd_socket != 0)
-    return_error(-1, ERROR_ALREADY_ASSIGNED);
-
-  if (_get_related_sockets(port_info,
-                           socket,
-                           &sock_private->afd_socket,
-                           &sock_private->driver_socket) < 0)
-    return -1;
-
-  if (ep_port_add_socket(port_info, &sock_info->tree_node, socket) < 0)
-    return -1;
-
-  return 0;
 }
 
 int ep_sock_set_event(ep_port_t* port_info,
