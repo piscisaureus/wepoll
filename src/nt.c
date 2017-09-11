@@ -8,7 +8,7 @@
 NTDLL_IMPORT_LIST(X)
 #undef X
 
-int nt_initialize(void) {
+int nt_init(void) {
   HMODULE ntdll;
 
   ntdll = GetModuleHandleW(L"ntdll.dll");

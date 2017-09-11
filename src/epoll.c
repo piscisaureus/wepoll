@@ -9,6 +9,7 @@
 #include "epoll-socket.h"
 #include "epoll.h"
 #include "error.h"
+#include "init.h"
 #include "nt.h"
 #include "poll-request.h"
 #include "port.h"
@@ -23,11 +24,8 @@ typedef struct ep_port ep_port_t;
 typedef struct poll_req poll_req_t;
 typedef struct ep_sock ep_sock_t;
 
-static int _ep_initialize(void);
 static SOCKET _ep_create_driver_socket(HANDLE iocp,
                                        WSAPROTOCOL_INFOW* protocol_info);
-
-static int _ep_initialized = 0;
 
 static int _ep_ctl_add(ep_port_t* port_info,
                        uintptr_t socket,
@@ -74,6 +72,9 @@ int epoll_ctl(epoll_t port_handle,
               uintptr_t socket,
               struct epoll_event* ev) {
   ep_port_t* port_info = (ep_port_t*) port_handle;
+
+  if (init() < 0)
+    return -1;
 
   switch (op) {
     case EPOLL_CTL_ADD:
@@ -134,6 +135,9 @@ int epoll_wait(epoll_t port_handle,
   ep_port_t* port_info;
   ULONGLONG due = 0;
   DWORD gqcs_timeout;
+
+  if (init() < 0)
+    return -1;
 
   port_info = (ep_port_t*) port_handle;
 
@@ -196,14 +200,8 @@ epoll_t epoll_create(void) {
   ep_port_t* port_info;
   HANDLE iocp;
 
-  /* If necessary, do global initialization first. This is totally not
-   * thread-safe at the moment.
-   */
-  if (!_ep_initialized) {
-    if (_ep_initialize() < 0)
-      return NULL;
-    _ep_initialized = 1;
-  }
+  if (init() < 0)
+    return NULL;
 
   port_info = malloc(sizeof *port_info);
   if (port_info == NULL)
@@ -229,6 +227,9 @@ epoll_t epoll_create(void) {
 int epoll_close(epoll_t port_handle) {
   ep_port_t* port_info;
   tree_node_t* tree_node;
+
+  if (init() < 0)
+    return -1;
 
   port_info = (ep_port_t*) port_handle;
 
@@ -281,20 +282,6 @@ int epoll_close(epoll_t port_handle) {
 
   /* Finally, remove the port data. */
   free(port_info);
-
-  return 0;
-}
-
-static int _ep_initialize(void) {
-  int r;
-  WSADATA wsa_data;
-
-  r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-  if (r != 0)
-    return_error(-1);
-
-  if (nt_initialize() < 0)
-    return -1;
 
   return 0;
 }
