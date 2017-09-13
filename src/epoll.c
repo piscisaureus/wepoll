@@ -239,8 +239,7 @@ int ep_port_delete(ep_port_t* port_info) {
       poll_group_allocator_delete(pga);
   }
 
-  /* Finally, remove the port data. */
-  free(port_info);
+  _ep_port_free(port_info);
 
   return 0;
 }
