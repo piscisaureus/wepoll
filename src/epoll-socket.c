@@ -149,7 +149,7 @@ ep_sock_t* ep_sock_find(tree_t* tree, SOCKET socket) {
   if (tree_node == NULL)
     return NULL;
 
-  return container_of(tree, ep_sock_t, tree_node);
+  return container_of(tree_node, ep_sock_t, tree_node);
 }
 
 void ep_sock_register_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
