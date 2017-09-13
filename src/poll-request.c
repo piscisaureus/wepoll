@@ -7,6 +7,7 @@
 #include "epoll-socket.h"
 #include "epoll.h"
 #include "error.h"
+#include "ntstatus.h"
 #include "poll-request.h"
 #include "util.h"
 #include "win.h"
@@ -122,6 +123,20 @@ int poll_req_submit(poll_req_t* poll_req,
   return 0;
 }
 
+int poll_req_cancel(poll_req_t* poll_req, SOCKET driver_socket) {
+  OVERLAPPED* overlapped = &poll_req->overlapped;
+
+  if (CancelIoEx((HANDLE) driver_socket, overlapped)) {
+    DWORD error = GetLastError();
+    if (error == ERROR_NOT_FOUND)
+      return 0; /* Already completed or canceled. */
+    else
+      return_error(-1);
+  }
+
+  return 0;
+}
+
 void poll_req_complete(const poll_req_t* poll_req,
                        uint32_t* epoll_events_out,
                        bool* socket_closed_out) {
@@ -130,9 +145,10 @@ void poll_req_complete(const poll_req_t* poll_req,
   uint32_t epoll_events = 0;
   bool socket_closed = false;
 
-  if (!NT_SUCCESS(overlapped->Internal)) {
-    /* The overlapped request itself failed, there are no events to consider.
-     */
+  if ((NTSTATUS) overlapped->Internal == STATUS_CANCELLED) {
+    /* The poll request was cancelled by CancelIoEx. */
+  } else if (!NT_SUCCESS(overlapped->Internal)) {
+    /* The overlapped request itself failed in an unexpected way. */
     epoll_events = EPOLLERR;
   } else if (poll_req->poll_info.NumberOfHandles < 1) {
     /* This overlapped request succeeded but didn't report any events. */

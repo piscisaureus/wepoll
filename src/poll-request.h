@@ -28,6 +28,7 @@ EPOLL_INTERNAL int poll_req_submit(poll_req_t* poll_req,
                                    SOCKET socket,
                                    SOCKET driver_socket);
 
+EPOLL_INTERNAL int poll_req_cancel(poll_req_t* poll_req, SOCKET group_socket);
 EPOLL_INTERNAL void poll_req_complete(const poll_req_t* poll_req,
                                       uint32_t* epoll_events_out,
                                       bool* socket_closed_out);
