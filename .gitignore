@@ -30,6 +30,7 @@
 /Debug/
 /ipch/
 /lib/
+/MinSizeRel/
 /out/
 /Release/
 /RelWithDebInfo/
