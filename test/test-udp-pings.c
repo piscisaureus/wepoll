@@ -6,6 +6,7 @@
 #include "error.h"
 #include "win.h"
 
+#define LISTEN_PORT 12345
 #define NUM_PINGERS 10000
 #define RUN_TIME 10000
 
@@ -15,9 +16,7 @@ int main(void) {
   epoll_t epoll_hnd;
   int r;
   u_long one = 1;
-  struct addrinfo hints;
-  struct addrinfo* addrinfo;
-  struct sockaddr_in addr;
+  struct sockaddr_in address;
   DWORD ticks_start, ticks_last;
   long long pings = 0, pings_sent = 0;
   int i;
@@ -27,27 +26,14 @@ int main(void) {
   epoll_hnd = epoll_create();
   assert(epoll_hnd && epoll_hnd != INVALID_HANDLE_VALUE);
 
-  memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_INET;
-  hints.ai_protocol = IPPROTO_UDP;
-
-  r = getaddrinfo("localhost", NULL, &hints, &addrinfo);
-  assert(r == 0);
-  assert(addrinfo->ai_addrlen <= sizeof addr);
-
-  memset(&addr, 0, sizeof addr);
-  memcpy(&addr, addrinfo->ai_addr, addrinfo->ai_addrlen);
-  addr.sin_port = htons(9123);
-
-  freeaddrinfo(addrinfo);
-
-  printf("resolved\n");
-
   srv = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   r = ioctlsocket(srv, FIONBIO, &one);
   assert(r == 0);
 
-  r = bind(srv, (struct sockaddr*) &addr, sizeof addr);
+  address.sin_family = AF_INET;
+  address.sin_port = htons(LISTEN_PORT);
+  address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  r = bind(srv, (struct sockaddr*) &address, sizeof address);
   assert(r == 0);
 
   ev.events = EPOLLIN | EPOLLERR;
@@ -65,7 +51,7 @@ int main(void) {
         sock, SOL_SOCKET, SO_REUSEADDR, (const char*) &one, sizeof one);
     assert(r == 0);
 
-    r = connect(sock, (struct sockaddr*) &addr, sizeof addr);
+    r = connect(sock, (struct sockaddr*) &address, sizeof address);
     /* Unlike unix, windows sets the error to EWOULDBLOCK when the connection
      * is being established in the background.
      */
