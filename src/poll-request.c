@@ -108,7 +108,7 @@ int poll_req_submit(poll_req_t* poll_req,
 
   memset(&poll_req->overlapped, 0, sizeof poll_req->overlapped);
 
-  poll_req->poll_info.Exclusive = TRUE;
+  poll_req->poll_info.Exclusive = FALSE;
   poll_req->poll_info.NumberOfHandles = 1;
   poll_req->poll_info.Timeout.QuadPart = INT64_MAX;
   poll_req->poll_info.Handles[0].Handle = (HANDLE) socket;
