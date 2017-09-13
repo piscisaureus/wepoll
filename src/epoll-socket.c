@@ -181,7 +181,7 @@ int ep_sock_set_event(ep_port_t* port_info,
   sock_private->user_events = events;
   sock_private->user_data = ev->data;
 
-  if (events & _EP_EVENT_MASK & ~(sock_private->latest_poll_req_events))
+  if ((events & _EP_EVENT_MASK & ~(sock_private->latest_poll_req_events)) != 0)
     ep_port_request_socket_update(port_info, sock_info);
 
   return 0;
