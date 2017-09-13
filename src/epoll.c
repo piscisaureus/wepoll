@@ -237,41 +237,14 @@ int ep_port_delete(ep_port_t* port_info) {
     }
   }
 
-  /* There is no list of io requests to free. And even if there was, just
-   * freeing them would be dangerous since the kernel might still alter
-   * the overlapped status contained in them. But since we are sure that
-   * all requests will soon return, just await them all.
-   */
-  while (port_info->poll_req_count > 0) {
-    OVERLAPPED_ENTRY entries[64];
-    DWORD result;
-    ULONG count, i;
-
-    result = GetQueuedCompletionStatusEx(port_info->iocp,
-                                         entries,
-                                         array_count(entries),
-                                         &count,
-                                         INFINITE,
-                                         FALSE);
-
-    if (!result)
-      return_error(-1);
-
-    for (i = 0; i < count; i++) {
-      poll_req_t* poll_req = overlapped_to_poll_req(entries[i].lpOverlapped);
-      poll_req_delete(port_info, poll_req_get_sock_data(poll_req), poll_req);
-    }
-  }
-
-  /* Remove all entries from the socket_state tree. */
-  while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
-    ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
-    ep_sock_delete(port_info, sock_info);
-  }
-
-  /* Close the I/O completion port. */
   if (!CloseHandle(port_info->iocp))
     return_error(-1);
+  port_info->iocp = NULL;
+
+  while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
+    ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
+    ep_sock_force_delete(port_info, sock_info);
+  }
 
   /* Finally, remove the port data. */
   free(port_info);
