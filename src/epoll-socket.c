@@ -28,6 +28,7 @@ typedef struct _ep_sock_private {
   uint32_t latest_poll_req_events;
   uint32_t poll_req_count;
   uint32_t flags;
+  bool poll_req_active;
 } _ep_sock_private_t;
 
 static inline _ep_sock_private_t* _ep_sock_private(ep_sock_t* sock_info) {
@@ -159,6 +160,7 @@ void ep_sock_register_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
 
   ep_port_add_req(port_info);
   sock_private->poll_req_count++;
+  assert(sock_private->poll_req_count == 1);
 }
 
 void ep_sock_unregister_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
@@ -166,6 +168,7 @@ void ep_sock_unregister_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
 
   ep_port_del_req(port_info);
   sock_private->poll_req_count--;
+  assert(sock_private->poll_req_count == 0);
 
   _ep_sock_maybe_free(sock_private);
 }
@@ -189,12 +192,15 @@ int ep_sock_set_event(ep_port_t* port_info,
 
 static inline bool _is_latest_poll_req(_ep_sock_private_t* sock_private,
                                        poll_req_t* poll_req) {
+  assert(sock_private->latest_poll_req == poll_req ||
+         sock_private->latest_poll_req == NULL);
   return poll_req == sock_private->latest_poll_req;
 }
 
 static inline void _clear_latest_poll_req(_ep_sock_private_t* sock_private) {
   sock_private->latest_poll_req = NULL;
   sock_private->latest_poll_req_events = 0;
+  sock_private->poll_req_active = false;
 }
 
 static inline void _set_latest_poll_req(_ep_sock_private_t* sock_private,
@@ -202,55 +208,61 @@ static inline void _set_latest_poll_req(_ep_sock_private_t* sock_private,
                                         uint32_t epoll_events) {
   sock_private->latest_poll_req = poll_req;
   sock_private->latest_poll_req_events = epoll_events;
-}
-
-static int _ep_submit_poll_req(ep_port_t* port_info,
-                               _ep_sock_private_t* sock_private) {
-  poll_req_t* poll_req;
-  uint32_t epoll_events = sock_private->user_events;
-
-  poll_req = poll_req_new(port_info, &sock_private->pub);
-  if (poll_req == NULL)
-    return -1;
-
-  if (poll_req_submit(poll_req,
-                      epoll_events,
-                      sock_private->afd_socket,
-                      sock_private->driver_socket) < 0) {
-    poll_req_delete(port_info, &sock_private->pub, poll_req);
-    return -1;
-  }
-
-  _set_latest_poll_req(sock_private, poll_req, epoll_events);
-
-  return 0;
+  sock_private->poll_req_active = true;
 }
 
 int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
   bool broken = false;
+  SOCKET driver_socket;
 
   assert(ep_port_is_socket_update_pending(port_info, sock_info));
+
+  driver_socket = sock_private->driver_socket;
 
   /* Check if there are events registered that are not yet submitted. In
    * that case we need to submit another req.
    */
   if ((sock_private->user_events & _EP_EVENT_MASK &
-       ~sock_private->latest_poll_req_events) == 0)
+       ~sock_private->latest_poll_req_events) == 0) {
     /* All the events the user is interested in are already being monitored
-     * by the latest poll request. */
-    goto done;
+     * by the latest poll request. It might spuriously complete because of an
+     * event that we're no longer interested in; if that happens we just
+     * submit another poll request with the right event mask.
+     */
+    assert(sock_private->latest_poll_req != NULL);
 
-  if (_ep_submit_poll_req(port_info, sock_private) < 0) {
-    if (GetLastError() == ERROR_INVALID_HANDLE)
-      /* The socket is broken. It will be dropped from the epoll set. */
-      broken = true;
-    else
-      /* Another error occurred, which is propagated to the caller. */
+  } else if (sock_private->latest_poll_req != NULL) {
+    /* A poll request is already pending. Cancel the old one first; when it
+     * completes, we'll submit the new one. */
+    if (sock_private->poll_req_active) {
+      poll_req_cancel(sock_private->latest_poll_req, driver_socket);
+      sock_private->poll_req_active = false;
+    }
+
+  } else {
+    poll_req_t* poll_req = poll_req_new(port_info, &sock_private->pub);
+    if (poll_req == NULL)
       return -1;
+
+    if (poll_req_submit(poll_req,
+                        sock_private->user_events,
+                        sock_private->afd_socket,
+                        driver_socket) < 0) {
+      poll_req_delete(port_info, &sock_private->pub, poll_req);
+
+      if (GetLastError() == ERROR_INVALID_HANDLE)
+        /* The socket is broken. It will be dropped from the epoll set. */
+        broken = true;
+      else
+        /* Another error occurred, which is propagated to the caller. */
+        return -1;
+    }
+
+    if (!broken)
+      _set_latest_poll_req(sock_private, poll_req, sock_private->user_events);
   }
 
-done:
   ep_port_clear_socket_update(port_info, sock_info);
 
   /* If we saw an ERROR_INVALID_HANDLE error, drop the socket. */
