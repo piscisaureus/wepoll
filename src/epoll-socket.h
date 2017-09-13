@@ -21,6 +21,8 @@ typedef struct ep_sock {
 
 EPOLL_INTERNAL ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket);
 EPOLL_INTERNAL void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info);
+EPOLL_INTERNAL void ep_sock_force_delete(ep_port_t* port_info,
+                                         ep_sock_t* sock_info);
 
 EPOLL_INTERNAL ep_sock_t* ep_sock_find(tree_t* tree, SOCKET socket);
 
