@@ -6,9 +6,10 @@
 #include "error.h"
 #include "win.h"
 
+#define NUM_PINGERS 10000
+#define RUN_TIME 10000
+
 static const char PING[] = "PING";
-static const int NUM_PINGERS = 10000;
-static const DWORD RUN_TIME = 10000;
 
 int main(void) {
   epoll_t epoll_hnd;
