@@ -286,10 +286,10 @@ int ep_sock_feed_event(ep_port_t* port_info,
   /* Filter events that the user didn't ask for. */
   epoll_events &= sock_private->user_events;
 
-  /* Drop the socket if the EPOLLONESHOT flag is set and there are any events
+  /* Clear the event mask if EPOLLONESHOT is set and there are any events
    * to report. */
   if (epoll_events != 0 && (sock_private->user_events & EPOLLONESHOT))
-    drop_socket = true;
+    sock_private->user_events = EPOLLERR | EPOLLHUP;
 
   /* Fill the ev structure if there are any events to report. */
   if (epoll_events != 0) {

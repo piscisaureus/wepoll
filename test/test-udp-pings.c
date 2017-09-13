@@ -165,7 +165,7 @@ int main(int argc, char* argv[]) {
         struct epoll_event e;
         e.data.sock = sock;
         e.events = rev;
-        if (epoll_ctl(epoll_hnd, EPOLL_CTL_ADD, sock, &e) < 0)
+        if (epoll_ctl(epoll_hnd, EPOLL_CTL_MOD, sock, &e) < 0)
           abort();
 
         continue;
