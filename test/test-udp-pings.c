@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "win.h"
-#include "error.h"
 #include "epoll.h"
+#include "error.h"
+#include "win.h"
 
 static const char PING[] = "PING";
 static const int NUM_PINGERS = 1000;
