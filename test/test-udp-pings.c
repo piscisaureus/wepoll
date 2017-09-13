@@ -10,7 +10,7 @@ static const char PING[] = "PING";
 static const int NUM_PINGERS = 10000;
 static const DWORD RUN_TIME = 10000;
 
-int main(int argc, char* argv[]) {
+int main(void) {
   epoll_t epoll_hnd;
   int r;
   u_long one = 1;
@@ -55,16 +55,13 @@ int main(int argc, char* argv[]) {
   assert(r == 0);
 
   for (i = 0; i < NUM_PINGERS; i++) {
-    SOCKET sock;
-    struct epoll_event ev;
-
-    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
     r = ioctlsocket(sock, FIONBIO, &one);
     assert(r == 0);
 
-    int one = 1;
-    r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
+    r = setsockopt(
+        sock, SOL_SOCKET, SO_REUSEADDR, (const char*) &one, sizeof one);
     assert(r == 0);
 
     r = connect(sock, (struct sockaddr*) &addr, sizeof addr);
@@ -73,7 +70,7 @@ int main(int argc, char* argv[]) {
      */
     assert(r == 0 || WSAGetLastError() == WSAEWOULDBLOCK);
 
-    ev.events = EPOLLOUT | EPOLLERR | EPOLLONESHOT;
+    ev.events = (uint32_t) EPOLLOUT | EPOLLERR | EPOLLONESHOT;
     ev.data.sock = sock;
     r = epoll_ctl(epoll_hnd, EPOLL_CTL_ADD, sock, &ev);
     assert(r == 0);
@@ -83,7 +80,7 @@ int main(int argc, char* argv[]) {
   ticks_last = ticks_start;
 
   for (;;) {
-    int i, count;
+    int count;
     struct epoll_event events[16];
     DWORD ticks;
 
@@ -109,7 +106,6 @@ int main(int argc, char* argv[]) {
 
       if (revents & EPOLLERR) {
         SOCKET sock = events[i].data.sock;
-        int r;
         int err = -1;
         int err_len = sizeof err;
 
@@ -127,7 +123,6 @@ int main(int argc, char* argv[]) {
         char buf[1024];
         WSABUF wsa_buf;
         DWORD flags, bytes;
-        int r;
 
         wsa_buf.buf = buf;
         wsa_buf.len = sizeof buf;
@@ -149,7 +144,6 @@ int main(int argc, char* argv[]) {
         SOCKET sock = events[i].data.sock;
         WSABUF wsa_buf;
         DWORD bytes;
-        int r;
 
         wsa_buf.buf = (char*) PING;
         wsa_buf.len = sizeof PING;
