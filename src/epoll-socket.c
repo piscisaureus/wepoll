@@ -132,7 +132,7 @@ void _ep_sock_maybe_free(_ep_sock_private_t* sock_private) {
     _ep_sock_free(sock_private);
 }
 
-int ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
+void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
   assert(!_ep_sock_is_deleted(sock_private));
@@ -143,8 +143,6 @@ int ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   sock_private->flags |= _EP_SOCK_DELETED;
 
   _ep_sock_maybe_free(sock_private);
-
-  return 0;
 }
 
 ep_sock_t* ep_sock_find(tree_t* tree, SOCKET socket) {

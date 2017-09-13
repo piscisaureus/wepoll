@@ -60,8 +60,7 @@ static int _ep_ctl_del(ep_port_t* port_info, uintptr_t socket) {
   if (sock_info == NULL)
     return -1;
 
-  if (ep_sock_delete(port_info, sock_info) < 0)
-    return -1;
+  ep_sock_delete(port_info, sock_info);
 
   return 0;
 }
