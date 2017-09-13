@@ -7,6 +7,7 @@
 #include "epoll-socket.h"
 #include "epoll.h"
 #include "error.h"
+#include "poll-group.h"
 #include "poll-request.h"
 #include "port.h"
 
@@ -21,7 +22,7 @@
 typedef struct _ep_sock_private {
   ep_sock_t pub;
   SOCKET afd_socket;
-  SOCKET driver_socket;
+  poll_group_t* poll_group;
   epoll_data_t user_data;
   poll_req_t* latest_poll_req;
   uint32_t user_events;
@@ -53,8 +54,9 @@ static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
 static int _get_related_sockets(ep_port_t* port_info,
                                 SOCKET socket,
                                 SOCKET* afd_socket_out,
-                                SOCKET* driver_socket_out) {
-  SOCKET afd_socket, driver_socket;
+                                poll_group_t** poll_group_out) {
+  SOCKET afd_socket;
+  poll_group_t* poll_group;
   DWORD bytes;
 
   /* Try to obtain a base handle for the socket, so we can bypass LSPs
@@ -74,12 +76,12 @@ static int _get_related_sockets(ep_port_t* port_info,
            NULL,
            NULL);
 
-  driver_socket = ep_port_get_driver_socket(port_info, afd_socket);
-  if (driver_socket == INVALID_SOCKET)
+  poll_group = ep_port_acquire_poll_group(port_info, afd_socket);
+  if (poll_group == NULL)
     return -1;
 
   *afd_socket_out = afd_socket;
-  *driver_socket_out = driver_socket;
+  *poll_group_out = poll_group;
 
   return 0;
 }
@@ -95,7 +97,7 @@ static int _ep_sock_set_socket(ep_port_t* port_info,
   if (_get_related_sockets(port_info,
                            socket,
                            &sock_private->afd_socket,
-                           &sock_private->driver_socket) < 0)
+                           &sock_private->poll_group) < 0)
     return -1;
 
   if (ep_port_add_socket(port_info, &sock_private->pub.tree_node, socket) < 0)
@@ -141,6 +143,8 @@ void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
 
   ep_port_del_socket(port_info, &sock_info->tree_node);
   ep_port_clear_socket_update(port_info, sock_info);
+  ep_port_release_poll_group(sock_private->poll_group);
+  sock_private->poll_group = NULL;
 
   _ep_sock_maybe_free(sock_private);
 }
@@ -226,7 +230,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
 
   assert(ep_port_is_socket_update_pending(port_info, sock_info));
 
-  driver_socket = sock_private->driver_socket;
+  driver_socket = poll_group_get_socket(sock_private->poll_group);
 
   /* Check if there are events registered that are not yet submitted. In
    * that case we need to submit another req.

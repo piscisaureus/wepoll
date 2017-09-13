@@ -11,6 +11,7 @@
 #include "error.h"
 #include "init.h"
 #include "nt.h"
+#include "poll-group.h"
 #include "poll-request.h"
 #include "port.h"
 #include "queue.h"
@@ -23,9 +24,6 @@
 typedef struct ep_port ep_port_t;
 typedef struct poll_req poll_req_t;
 typedef struct ep_sock ep_sock_t;
-
-static SOCKET _ep_create_driver_socket(HANDLE iocp,
-                                       WSAPROTOCOL_INFOW* protocol_info);
 
 static int _ep_ctl_add(ep_port_t* port_info,
                        uintptr_t socket,
@@ -226,17 +224,6 @@ ep_port_t* ep_port_new(HANDLE iocp) {
 int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
 
-  /* Close all peer sockets. This will make all pending io requests return. */
-  for (size_t i = 0; i < array_count(port_info->driver_sockets); i++) {
-    SOCKET driver_socket = port_info->driver_sockets[i];
-    if (driver_socket != 0 && driver_socket != INVALID_SOCKET) {
-      if (closesocket(driver_socket) != 0)
-        return_error(-1);
-
-      port_info->driver_sockets[i] = 0;
-    }
-  }
-
   if (!CloseHandle(port_info->iocp))
     return_error(-1);
   port_info->iocp = NULL;
@@ -244,6 +231,12 @@ int ep_port_delete(ep_port_t* port_info) {
   while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
     ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
     ep_sock_force_delete(port_info, sock_info);
+  }
+
+  for (size_t i = 0; i < array_count(port_info->poll_group_allocators); i++) {
+    poll_group_allocator_t* pga = port_info->poll_group_allocators[i];
+    if (pga != NULL)
+      poll_group_allocator_delete(pga);
   }
 
   /* Finally, remove the port data. */
@@ -270,12 +263,24 @@ void ep_port_del_req(ep_port_t* port_info) {
   port_info->poll_req_count--;
 }
 
-SOCKET ep_port_get_driver_socket(ep_port_t* port_info, SOCKET socket) {
+poll_group_allocator_t* _get_poll_group_allocator(
+    ep_port_t* port_info,
+    size_t index,
+    const WSAPROTOCOL_INFOW* protocol_info) {
+  poll_group_allocator_t** pga = &port_info->poll_group_allocators[index];
+
+  if (*pga == NULL)
+    *pga = poll_group_allocator_new(port_info, protocol_info);
+
+  return *pga;
+}
+
+poll_group_t* ep_port_acquire_poll_group(ep_port_t* port_info, SOCKET socket) {
   ssize_t index;
   size_t i;
-  SOCKET driver_socket;
   WSAPROTOCOL_INFOW protocol_info;
   int len;
+  poll_group_allocator_t* pga;
 
   /* Obtain protocol information about the socket. */
   len = sizeof protocol_info;
@@ -284,7 +289,7 @@ SOCKET ep_port_get_driver_socket(ep_port_t* port_info, SOCKET socket) {
                  SO_PROTOCOL_INFOW,
                  (char*) &protocol_info,
                  &len) != 0)
-    return_error(INVALID_SOCKET);
+    return_error(NULL);
 
   index = -1;
   for (i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
@@ -298,46 +303,15 @@ SOCKET ep_port_get_driver_socket(ep_port_t* port_info, SOCKET socket) {
 
   /* Check if the protocol uses an msafd socket. */
   if (index < 0)
-    return_error(INVALID_SOCKET, ERROR_NOT_SUPPORTED);
+    return_error(NULL, ERROR_NOT_SUPPORTED);
 
-  /* If we didn't (try) to create a peer socket yet, try to make one. Don't
-   * try again if the peer socket creation failed earlier for the same
-   * protocol.
-   */
-  driver_socket = port_info->driver_sockets[index];
-  if (driver_socket == 0) {
-    driver_socket = _ep_create_driver_socket(port_info->iocp, &protocol_info);
-    port_info->driver_sockets[index] = driver_socket;
-  }
+  pga = _get_poll_group_allocator(port_info, index, &protocol_info);
 
-  return driver_socket;
+  return poll_group_acquire(pga);
 }
 
-static SOCKET _ep_create_driver_socket(HANDLE iocp,
-                                       WSAPROTOCOL_INFOW* protocol_info) {
-  SOCKET socket = 0;
-
-  socket = WSASocketW(protocol_info->iAddressFamily,
-                      protocol_info->iSocketType,
-                      protocol_info->iProtocol,
-                      protocol_info,
-                      0,
-                      WSA_FLAG_OVERLAPPED);
-  if (socket == INVALID_SOCKET)
-    return_error(INVALID_SOCKET);
-
-  if (!SetHandleInformation((HANDLE) socket, HANDLE_FLAG_INHERIT, 0))
-    goto error;
-
-  if (CreateIoCompletionPort((HANDLE) socket, iocp, 0, 0) == NULL)
-    goto error;
-
-  return socket;
-
-error:;
-  DWORD error = GetLastError();
-  closesocket(socket);
-  return_error(INVALID_SOCKET, error);
+void ep_port_release_poll_group(poll_group_t* poll_group) {
+  poll_group_release(poll_group);
 }
 
 bool ep_port_is_socket_update_pending(ep_port_t* port_info,

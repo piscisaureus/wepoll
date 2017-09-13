@@ -4,6 +4,7 @@
 #include "afd.h"
 #include "epoll-socket.h"
 #include "internal.h"
+#include "poll-group.h"
 #include "queue.h"
 #include "rb.h"
 #include "tree.h"
@@ -15,7 +16,8 @@ typedef struct ep_sock ep_sock_t;
 
 typedef struct ep_port {
   HANDLE iocp;
-  SOCKET driver_sockets[array_count(AFD_PROVIDER_GUID_LIST)];
+  poll_group_allocator_t*
+      poll_group_allocators[array_count(AFD_PROVIDER_GUID_LIST)];
   tree_t sock_tree;
   queue_t update_queue;
   size_t poll_req_count;
@@ -24,8 +26,9 @@ typedef struct ep_port {
 EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE iocp);
 EPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
 
-EPOLL_INTERNAL SOCKET ep_port_get_driver_socket(ep_port_t* port_info,
-                                                SOCKET socket);
+EPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(ep_port_t* port_info,
+                                                        SOCKET socket);
+EPOLL_INTERNAL void ep_port_release_poll_group(poll_group_t* poll_group);
 
 EPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
                                       tree_node_t* tree_node,
