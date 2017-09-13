@@ -136,11 +136,10 @@ void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
   assert(!_ep_sock_is_deleted(sock_private));
+  sock_private->flags |= _EP_SOCK_DELETED;
 
   ep_port_del_socket(port_info, &sock_info->tree_node);
   ep_port_clear_socket_update(port_info, sock_info);
-
-  sock_private->flags |= _EP_SOCK_DELETED;
 
   _ep_sock_maybe_free(sock_private);
 }
