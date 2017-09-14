@@ -111,8 +111,6 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   if (sock_private == NULL)
     return NULL;
 
-  unused(port_info);
-
   memset(sock_private, 0, sizeof *sock_private);
   tree_node_init(&sock_private->pub.tree_node);
   queue_node_init(&sock_private->pub.queue_node);
