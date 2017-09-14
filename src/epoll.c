@@ -1,27 +1,46 @@
-#include <assert.h>
-#include <malloc.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "afd.h"
 #include "epoll-socket.h"
 #include "epoll.h"
 #include "error.h"
 #include "init.h"
-#include "nt.h"
-#include "poll-group.h"
 #include "port.h"
-#include "queue.h"
-#include "rb.h"
 #include "util.h"
 #include "win.h"
 
 #define _EP_COMPLETION_LIST_LENGTH 64
 
-typedef struct ep_port ep_port_t;
-typedef struct poll_req poll_req_t;
-typedef struct ep_sock ep_sock_t;
+epoll_t epoll_create(void) {
+  ep_port_t* port_info;
+  HANDLE iocp;
+
+  if (init() < 0)
+    return NULL;
+
+  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+  if (iocp == INVALID_HANDLE_VALUE)
+    return_error(NULL);
+
+  port_info = ep_port_new(iocp);
+  if (port_info == NULL) {
+    CloseHandle(iocp);
+    return NULL;
+  }
+
+  return (epoll_t) port_info;
+}
+
+int epoll_close(epoll_t port_handle) {
+  ep_port_t* port_info;
+
+  if (init() < 0)
+    return -1;
+
+  port_info = (ep_port_t*) port_handle;
+
+  return ep_port_delete(port_info);
+}
 
 static int _ep_ctl_add(ep_port_t* port_info,
                        uintptr_t socket,
