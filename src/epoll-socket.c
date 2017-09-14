@@ -248,6 +248,13 @@ void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   assert(!sock_private->deleted);
   sock_private->deleted = true;
 
+  if (sock_private->poll_status == _POLL_PENDING) {
+    _poll_req_cancel(&sock_private->poll_req,
+                     poll_group_get_socket(sock_private->poll_group));
+    sock_private->poll_status = _POLL_CANCELLED;
+    sock_private->pending_events = 0;
+  }
+
   ep_port_del_socket(port_info, &sock_info->tree_node);
   ep_port_clear_socket_update(port_info, sock_info);
   ep_port_release_poll_group(sock_private->poll_group);
