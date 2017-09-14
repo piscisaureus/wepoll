@@ -17,8 +17,6 @@
 
 #define _EP_EVENT_MASK 0xffff
 
-#define _EP_SOCK_DELETED 0x2
-
 enum _poll_status { _POLL_IDLE = 0, _POLL_PENDING, _POLL_CANCELLED };
 
 typedef struct _ep_sock_private {
@@ -29,16 +27,12 @@ typedef struct _ep_sock_private {
   epoll_data_t user_data;
   uint32_t user_events;
   uint32_t pending_events;
-  uint32_t flags;
   uint8_t poll_status;
+  unsigned deleted : 1;
 } _ep_sock_private_t;
 
 static inline _ep_sock_private_t* _ep_sock_private(ep_sock_t* sock_info) {
   return container_of(sock_info, _ep_sock_private_t, pub);
-}
-
-static inline bool _ep_sock_is_deleted(_ep_sock_private_t* sock_private) {
-  return sock_private->flags & _EP_SOCK_DELETED;
 }
 
 static inline _ep_sock_private_t* _ep_sock_alloc(void) {
@@ -136,16 +130,15 @@ void _ep_sock_maybe_free(_ep_sock_private_t* sock_private) {
    * released yet. It'll be released later as ep_sock_unregister_poll_req()
    * calls this function.
    */
-  if (_ep_sock_is_deleted(sock_private) &&
-      sock_private->poll_status == _POLL_IDLE)
+  if (sock_private->deleted && sock_private->poll_status == _POLL_IDLE)
     _ep_sock_free(sock_private);
 }
 
 void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
-  assert(!_ep_sock_is_deleted(sock_private));
-  sock_private->flags |= _EP_SOCK_DELETED;
+  assert(!sock_private->deleted);
+  sock_private->deleted = true;
 
   ep_port_del_socket(port_info, &sock_info->tree_node);
   ep_port_clear_socket_update(port_info, sock_info);
@@ -261,7 +254,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
   sock_private->poll_status = _POLL_IDLE;
   sock_private->pending_events = 0;
 
-  if (_ep_sock_is_deleted(sock_private)) {
+  if (sock_private->deleted) {
     /* Ignore completion for overlapped poll operation if the socket has been
      * deleted; instead, free the socket. */
     _ep_sock_free(sock_private);
