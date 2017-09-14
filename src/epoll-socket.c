@@ -181,39 +181,34 @@ int ep_sock_set_event(ep_port_t* port_info,
 
 int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
+  SOCKET driver_socket = poll_group_get_socket(sock_private->poll_group);
   bool broken = false;
-  SOCKET driver_socket;
 
   assert(ep_port_is_socket_update_pending(port_info, sock_info));
 
-  driver_socket = poll_group_get_socket(sock_private->poll_group);
-
-  /* Check if there are events registered that are not yet submitted. In
-   * that case we need to submit another req.
-   */
-  if ((sock_private->user_events & _EP_EVENT_MASK &
+  if (sock_private->poll_status == _POLL_PENDING &&
+      (sock_private->user_events & _EP_EVENT_MASK &
        ~sock_private->pending_events) == 0) {
     /* All the events the user is interested in are already being monitored
-     * by the latest poll request. It might spuriously complete because of an
+     * by the pending poll request. It might spuriously complete because of an
      * event that we're no longer interested in; if that happens we just
-     * submit another poll request with the right event mask.
-     */
-    assert(sock_private->poll_status != _POLL_IDLE);
-
-  } else if (sock_private->poll_status == _POLL_CANCELLED) {
-    /* The poll request has already been cancelled, we're still waiting for it
-     * to return. For now, there's nothing that can be done. */
+     * submit another poll request with the right event mask. */
 
   } else if (sock_private->poll_status == _POLL_PENDING) {
-    /* A poll request is already pending. Cancel the old one first; when it
-     * completes, we'll submit the new one. */
+    /* A poll request is already pending, but it's not monitoring for all the
+     * events that the user is interested in. Cancel the pending poll request;
+     * when it completes it will be submitted again with the correct event
+     * mask. */
     if (poll_req_cancel(sock_private->poll_req, driver_socket) < 0)
       return -1;
     sock_private->poll_status = _POLL_CANCELLED;
+    sock_private->pending_events = 0;
 
-  } else {
-    assert(sock_private->poll_status == _POLL_IDLE);
+  } else if (sock_private->poll_status == _POLL_CANCELLED) {
+    /* The poll request has already been cancelled, we're still waiting for it
+     * to return. For now, there's nothing that needs to be done. */
 
+  } else if (sock_private->poll_status == _POLL_IDLE) {
     if (poll_req_submit(sock_private->poll_req,
                         sock_private->user_events,
                         sock_private->afd_socket,
@@ -230,6 +225,9 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
       sock_private->poll_status = _POLL_PENDING;
       sock_private->pending_events = sock_private->user_events;
     }
+  } else {
+    /* Unreachable. */
+    assert(false);
   }
 
   ep_port_clear_socket_update(port_info, sock_info);
