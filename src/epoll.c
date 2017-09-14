@@ -252,7 +252,7 @@ int ep_port_del_socket(ep_port_t* port_info, tree_node_t* tree_node) {
   return tree_del(&port_info->sock_tree, tree_node);
 }
 
-poll_group_allocator_t* _get_poll_group_allocator(
+static poll_group_allocator_t* _get_poll_group_allocator(
     ep_port_t* port_info,
     size_t index,
     const WSAPROTOCOL_INFOW* protocol_info) {
