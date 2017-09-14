@@ -24,6 +24,8 @@ EPOLL_INTERNAL queue_node_t* queue_last(const queue_t* queue);
 
 EPOLL_INTERNAL void queue_prepend(queue_t* queue, queue_node_t* node);
 EPOLL_INTERNAL void queue_append(queue_t* queue, queue_node_t* node);
+EPOLL_INTERNAL void queue_move_first(queue_t* queue, queue_node_t* node);
+EPOLL_INTERNAL void queue_move_last(queue_t* queue, queue_node_t* node);
 EPOLL_INTERNAL void queue_remove(queue_node_t* node);
 
 EPOLL_INTERNAL bool queue_empty(const queue_t* queue);
