@@ -186,17 +186,6 @@ int ep_sock_set_event(ep_port_t* port_info,
   return 0;
 }
 
-static inline void _clear_latest_poll_req(_ep_sock_private_t* sock_private) {
-  sock_private->pending_events = 0;
-  sock_private->poll_status = _POLL_IDLE;
-}
-
-static inline void _set_latest_poll_req(_ep_sock_private_t* sock_private,
-                                        uint32_t epoll_events) {
-  sock_private->pending_events = epoll_events;
-  sock_private->poll_status = _POLL_PENDING;
-}
-
 int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
   bool broken = false;
@@ -245,7 +234,8 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
 
     } else {
       /* The poll request was successfully submitted. */
-      _set_latest_poll_req(sock_private, sock_private->user_events);
+      sock_private->poll_status = _POLL_PENDING;
+      sock_private->pending_events = sock_private->user_events;
     }
   }
 
@@ -268,7 +258,8 @@ int ep_sock_feed_event(ep_port_t* port_info,
   bool drop_socket;
   int ev_count = 0;
 
-  _clear_latest_poll_req(sock_private);
+  sock_private->poll_status = _POLL_IDLE;
+  sock_private->pending_events = 0;
 
   if (_ep_sock_is_deleted(sock_private)) {
     /* Ignore completion for overlapped poll operation if the socket has been
