@@ -126,7 +126,7 @@ int poll_req_submit(poll_req_t* poll_req,
 int poll_req_cancel(poll_req_t* poll_req, SOCKET driver_socket) {
   OVERLAPPED* overlapped = &poll_req->overlapped;
 
-  if (CancelIoEx((HANDLE) driver_socket, overlapped)) {
+  if (!CancelIoEx((HANDLE) driver_socket, overlapped)) {
     DWORD error = GetLastError();
     if (error == ERROR_NOT_FOUND)
       return 0; /* Already completed or canceled. */
