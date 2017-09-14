@@ -25,8 +25,8 @@ typedef struct _ep_sock_private {
   ep_sock_t pub;
   SOCKET afd_socket;
   poll_group_t* poll_group;
-  epoll_data_t user_data;
   poll_req_t* poll_req;
+  epoll_data_t user_data;
   uint32_t user_events;
   uint32_t latest_poll_req_events;
   uint32_t flags;
