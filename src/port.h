@@ -25,8 +25,10 @@ typedef struct ep_port {
 EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE iocp);
 EPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
 
-EPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(ep_port_t* port_info,
-                                                        SOCKET socket);
+EPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
+    ep_port_t* port_info,
+    size_t protocol_id,
+    const WSAPROTOCOL_INFOW* protocol_info);
 EPOLL_INTERNAL void ep_port_release_poll_group(poll_group_t* poll_group);
 
 EPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,

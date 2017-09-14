@@ -10,10 +10,6 @@
 #include "poll-group.h"
 #include "port.h"
 
-#ifndef SIO_BASE_HANDLE
-#define SIO_BASE_HANDLE 0x48000022
-#endif
-
 #define _EP_EVENT_MASK 0xffff
 
 typedef struct _poll_req {
@@ -160,76 +156,48 @@ static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
   free(sock_private);
 }
 
-static int _get_related_sockets(ep_port_t* port_info,
-                                SOCKET socket,
-                                SOCKET* afd_socket_out,
-                                poll_group_t** poll_group_out) {
-  SOCKET afd_socket;
-  poll_group_t* poll_group;
-  DWORD bytes;
-
-  /* Try to obtain a base handle for the socket, so we can bypass LSPs
-   * that get in the way if we want to talk to the kernel directly. If
-   * it fails we try if we work with the original socket. Note that on
-   * windows XP/2k3 this will always fail since they don't support the
-   * SIO_BASE_HANDLE ioctl.
-   */
-  afd_socket = socket;
-  WSAIoctl(socket,
-           SIO_BASE_HANDLE,
-           NULL,
-           0,
-           &afd_socket,
-           sizeof afd_socket,
-           &bytes,
-           NULL,
-           NULL);
-
-  poll_group = ep_port_acquire_poll_group(port_info, afd_socket);
-  if (poll_group == NULL)
-    return -1;
-
-  *afd_socket_out = afd_socket;
-  *poll_group_out = poll_group;
-
-  return 0;
-}
-
-static int _ep_sock_set_socket(ep_port_t* port_info,
-                               _ep_sock_private_t* sock_private,
-                               SOCKET socket) {
-  if (socket == 0 || socket == INVALID_SOCKET)
-    return_error(-1, ERROR_INVALID_HANDLE);
-
-  assert(sock_private->afd_socket == 0);
-
-  if (_get_related_sockets(port_info,
-                           socket,
-                           &sock_private->afd_socket,
-                           &sock_private->poll_group) < 0)
-    return -1;
-
-  if (ep_port_add_socket(port_info, &sock_private->pub.tree_node, socket) < 0)
-    return -1;
-
-  return 0;
-}
-
 ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
-  _ep_sock_private_t* sock_private = _ep_sock_alloc();
-  if (sock_private == NULL)
+  SOCKET afd_socket;
+  ssize_t protocol_id;
+  WSAPROTOCOL_INFOW protocol_info;
+  poll_group_t* poll_group;
+  _ep_sock_private_t* sock_private;
+
+  if (socket == 0 || socket == INVALID_SOCKET)
+    return_error(NULL, ERROR_INVALID_HANDLE);
+
+  protocol_id = afd_get_protocol(socket, &afd_socket, &protocol_info);
+  if (protocol_id < 0)
     return NULL;
 
+  poll_group =
+      ep_port_acquire_poll_group(port_info, protocol_id, &protocol_info);
+  if (poll_group == NULL)
+    return NULL;
+
+  sock_private = _ep_sock_alloc();
+  if (sock_private == NULL)
+    goto err1;
+
   memset(sock_private, 0, sizeof *sock_private);
+
+  sock_private->afd_socket = afd_socket;
+  sock_private->poll_group = poll_group;
+
   tree_node_init(&sock_private->pub.tree_node);
   queue_node_init(&sock_private->pub.queue_node);
 
-  if (_ep_sock_set_socket(port_info, sock_private, socket) < 0) {
-    _ep_sock_free(sock_private);
-    return NULL;
-  }
+  if (ep_port_add_socket(port_info, &sock_private->pub.tree_node, socket) < 0)
+    goto err2;
 
   return &sock_private->pub;
+
+err2:
+  _ep_sock_free(sock_private);
+err1:
+  ep_port_release_poll_group(poll_group);
+
+  return NULL;
 }
 
 void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {

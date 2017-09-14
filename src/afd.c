@@ -1,6 +1,7 @@
 #include "afd.h"
 #include "error.h"
 #include "nt.h"
+#include "util.h"
 #include "win.h"
 
 #define FILE_DEVICE_NETWORK 0x00000012
@@ -11,6 +12,10 @@
   ((FILE_DEVICE_NETWORK) << 12 | (operation << 2) | method)
 
 #define IOCTL_AFD_POLL _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
+
+#ifndef SIO_BASE_HANDLE
+#define SIO_BASE_HANDLE 0x48000022
+#endif
 
 int afd_poll(SOCKET driver_socket,
              AFD_POLL_INFO* poll_info,
@@ -80,4 +85,86 @@ int afd_poll(SOCKET driver_socket,
     return_error(-1, ERROR_IO_PENDING);
   else
     return_error(-1, we_map_ntstatus_to_win_error(status));
+}
+
+static SOCKET _afd_get_base_socket(SOCKET socket) {
+  SOCKET base_socket;
+  DWORD bytes;
+
+  if (WSAIoctl(socket,
+               SIO_BASE_HANDLE,
+               NULL,
+               0,
+               &base_socket,
+               sizeof base_socket,
+               &bytes,
+               NULL,
+               NULL) == SOCKET_ERROR)
+    return_error(INVALID_SOCKET);
+
+  return base_socket;
+}
+
+static ssize_t _afd_get_protocol_info(SOCKET socket,
+                                      WSAPROTOCOL_INFOW* protocol_info) {
+  ssize_t id;
+  int opt_len;
+
+  opt_len = sizeof *protocol_info;
+  if (getsockopt(socket,
+                 SOL_SOCKET,
+                 SO_PROTOCOL_INFOW,
+                 (char*) protocol_info,
+                 &opt_len) != 0)
+    return_error(-1);
+
+  id = -1;
+  for (size_t i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
+    if (memcmp(&protocol_info->ProviderId,
+               &AFD_PROVIDER_GUID_LIST[i],
+               sizeof protocol_info->ProviderId) == 0) {
+      id = i;
+      break;
+    }
+  }
+
+  /* Check if the protocol uses an msafd socket. */
+  if (id < 0)
+    return_error(-1, ERROR_NOT_SUPPORTED);
+
+  return id;
+}
+
+EPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
+                                        SOCKET* afd_socket_out,
+                                        WSAPROTOCOL_INFOW* protocol_info) {
+  ssize_t id;
+  SOCKET afd_socket;
+
+  /* Try to get protocol information, assuming that the given socket is an AFD
+   * socket. This should almost always be the case, and if it is, that saves us
+   * a call to WSAIoctl(). */
+  afd_socket = socket;
+  id = _afd_get_protocol_info(afd_socket, protocol_info);
+
+  if (id < 0) {
+    /* If getting protocol information failed, it might be due to the socket
+     * not being an AFD socket. If so, attempt to fetch the underlying base
+     * socket, then try again to obtain protocol information. If that also
+     * fails, return the *original* error. */
+    DWORD original_error = GetLastError();
+    if (original_error != ERROR_NOT_SUPPORTED)
+      return_error(-1);
+
+    afd_socket = _afd_get_base_socket(socket);
+    if (afd_socket == INVALID_SOCKET || afd_socket == socket)
+      return_error(-1, original_error);
+
+    id = _afd_get_protocol_info(afd_socket, protocol_info);
+    if (id < 0)
+      return_error(-1, original_error);
+  }
+
+  *afd_socket_out = afd_socket;
+  return id;
 }

@@ -254,48 +254,25 @@ int ep_port_del_socket(ep_port_t* port_info, tree_node_t* tree_node) {
 
 static poll_group_allocator_t* _get_poll_group_allocator(
     ep_port_t* port_info,
-    size_t index,
+    size_t protocol_id,
     const WSAPROTOCOL_INFOW* protocol_info) {
-  poll_group_allocator_t** pga = &port_info->poll_group_allocators[index];
+  poll_group_allocator_t** pga;
 
+  assert(protocol_id < array_count(port_info->poll_group_allocators));
+
+  pga = &port_info->poll_group_allocators[protocol_id];
   if (*pga == NULL)
     *pga = poll_group_allocator_new(port_info, protocol_info);
 
   return *pga;
 }
 
-poll_group_t* ep_port_acquire_poll_group(ep_port_t* port_info, SOCKET socket) {
-  ssize_t index;
-  size_t i;
-  WSAPROTOCOL_INFOW protocol_info;
-  int len;
-  poll_group_allocator_t* pga;
-
-  /* Obtain protocol information about the socket. */
-  len = sizeof protocol_info;
-  if (getsockopt(socket,
-                 SOL_SOCKET,
-                 SO_PROTOCOL_INFOW,
-                 (char*) &protocol_info,
-                 &len) != 0)
-    return_error(NULL);
-
-  index = -1;
-  for (i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
-    if (memcmp((void*) &protocol_info.ProviderId,
-               (void*) &AFD_PROVIDER_GUID_LIST[i],
-               sizeof protocol_info.ProviderId) == 0) {
-      index = i;
-      break;
-    }
-  }
-
-  /* Check if the protocol uses an msafd socket. */
-  if (index < 0)
-    return_error(NULL, ERROR_NOT_SUPPORTED);
-
-  pga = _get_poll_group_allocator(port_info, index, &protocol_info);
-
+poll_group_t* ep_port_acquire_poll_group(
+    ep_port_t* port_info,
+    size_t protocol_id,
+    const WSAPROTOCOL_INFOW* protocol_info) {
+  poll_group_allocator_t* pga =
+      _get_poll_group_allocator(port_info, protocol_id, protocol_info);
   return poll_group_acquire(pga);
 }
 

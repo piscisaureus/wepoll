@@ -3,6 +3,7 @@
 
 #include "internal.h"
 #include "ntstatus.h"
+#include "util.h"
 #include "win.h"
 
 /* clang-format off */
@@ -54,6 +55,10 @@ typedef struct _AFD_POLL_INFO {
 EPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
                             AFD_POLL_INFO* poll_info,
                             OVERLAPPED* overlapped);
+
+EPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
+                                        SOCKET* afd_socket_out,
+                                        WSAPROTOCOL_INFOW* protocol_info);
 
 /* clang-format off */
 
