@@ -20,7 +20,6 @@ typedef struct ep_port {
       poll_group_allocators[array_count(AFD_PROVIDER_GUID_LIST)];
   tree_t sock_tree;
   queue_t update_queue;
-  size_t poll_req_count;
 } ep_port_t;
 
 EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE iocp);
@@ -35,9 +34,6 @@ EPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
                                       SOCKET socket);
 EPOLL_INTERNAL int ep_port_del_socket(ep_port_t* port_info,
                                       tree_node_t* tree_node);
-
-EPOLL_INTERNAL void ep_port_add_req(ep_port_t* port_info);
-EPOLL_INTERNAL void ep_port_del_req(ep_port_t* port_info);
 
 EPOLL_INTERNAL void ep_port_request_socket_update(ep_port_t* port_info,
                                                   ep_sock_t* sock_info);

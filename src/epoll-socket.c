@@ -150,7 +150,7 @@ void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
 void ep_sock_force_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
   if (sock_private->latest_poll_req != NULL)
-    poll_req_delete(port_info, sock_info, sock_private->latest_poll_req);
+    poll_req_delete(sock_info, sock_private->latest_poll_req);
   assert(sock_private->poll_req_count == 0);
   ep_sock_delete(port_info, sock_info);
 }
@@ -163,20 +163,17 @@ ep_sock_t* ep_sock_find(tree_t* tree, SOCKET socket) {
   return container_of(tree_node, ep_sock_t, tree_node);
 }
 
-void ep_sock_register_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
+void ep_sock_register_poll_req(ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-
   assert(!_ep_sock_is_deleted(sock_private));
 
-  ep_port_add_req(port_info);
   sock_private->poll_req_count++;
   assert(sock_private->poll_req_count == 1);
 }
 
-void ep_sock_unregister_poll_req(ep_port_t* port_info, ep_sock_t* sock_info) {
+void ep_sock_unregister_poll_req(ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
-  ep_port_del_req(port_info);
   sock_private->poll_req_count--;
   assert(sock_private->poll_req_count == 0);
 
@@ -251,7 +248,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
     }
 
   } else {
-    poll_req_t* poll_req = poll_req_new(port_info, &sock_private->pub);
+    poll_req_t* poll_req = poll_req_new(&sock_private->pub);
     if (poll_req == NULL)
       return -1;
 
@@ -259,7 +256,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
                         sock_private->user_events,
                         sock_private->afd_socket,
                         driver_socket) < 0) {
-      poll_req_delete(port_info, &sock_private->pub, poll_req);
+      poll_req_delete(&sock_private->pub, poll_req);
 
       if (GetLastError() == ERROR_INVALID_HANDLE)
         /* The socket is broken. It will be dropped from the epoll set. */
@@ -297,7 +294,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
     /* Ignore completion for overlapped poll operation if it isn't
      * the the most recently posted one, or if the socket has been
      * deleted. */
-    poll_req_delete(port_info, sock_info, poll_req);
+    poll_req_delete(sock_info, poll_req);
     return 0;
   }
 
@@ -320,7 +317,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
     ev_count = 1;
   }
 
-  poll_req_delete(port_info, sock_info, poll_req);
+  poll_req_delete(sock_info, poll_req);
 
   if (drop_socket)
     /* Drop the socket from the epoll set. */

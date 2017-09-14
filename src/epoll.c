@@ -253,14 +253,6 @@ int ep_port_del_socket(ep_port_t* port_info, tree_node_t* tree_node) {
   return tree_del(&port_info->sock_tree, tree_node);
 }
 
-void ep_port_add_req(ep_port_t* port_info) {
-  port_info->poll_req_count++;
-}
-
-void ep_port_del_req(ep_port_t* port_info) {
-  port_info->poll_req_count--;
-}
-
 poll_group_allocator_t* _get_poll_group_allocator(
     ep_port_t* port_info,
     size_t index,
