@@ -121,11 +121,8 @@ poll_group_t* poll_group_acquire(poll_group_allocator_t* pga) {
   if (poll_group == NULL)
     return NULL;
 
-  if (++poll_group->group_size == _POLL_GROUP_MAX_SIZE) {
-    /* Move to the front of the queue. */
-    queue_remove(&poll_group->queue_node);
-    queue_prepend(&pga->poll_group_queue, &poll_group->queue_node);
-  }
+  if (++poll_group->group_size == _POLL_GROUP_MAX_SIZE)
+    queue_move_first(&pga->poll_group_queue, &poll_group->queue_node);
 
   return poll_group;
 }
@@ -136,9 +133,7 @@ void poll_group_release(poll_group_t* poll_group) {
   poll_group->group_size--;
   assert(poll_group->group_size < _POLL_GROUP_MAX_SIZE);
 
-  /* Move to the back of the queue. */
-  queue_remove(&poll_group->queue_node);
-  queue_append(&pga->poll_group_queue, &poll_group->queue_node);
+  queue_move_last(&pga->poll_group_queue, &poll_group->queue_node);
 
   /* TODO: free the poll_group_t* item at some point. */
 }
