@@ -41,9 +41,8 @@ poll_req_t* poll_req_new(ep_sock_t* sock_info) {
   return poll_req;
 }
 
-void poll_req_delete(ep_sock_t* sock_info, poll_req_t* poll_req) {
+void poll_req_delete(poll_req_t* poll_req) {
   assert(poll_req != NULL);
-
   _poll_req_free(poll_req);
 }
 

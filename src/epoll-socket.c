@@ -26,7 +26,7 @@ typedef struct _ep_sock_private {
   SOCKET afd_socket;
   poll_group_t* poll_group;
   epoll_data_t user_data;
-  poll_req_t* latest_poll_req;
+  poll_req_t* poll_req;
   uint32_t user_events;
   uint32_t latest_poll_req_events;
   uint32_t flags;
@@ -50,6 +50,7 @@ static inline _ep_sock_private_t* _ep_sock_alloc(void) {
 
 static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
   assert(sock_private->poll_status == _POLL_IDLE);
+  poll_req_delete(sock_private->poll_req);
   free(sock_private);
 }
 
@@ -122,6 +123,10 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
     return NULL;
   }
 
+  poll_req_t* poll_req = poll_req_new(&sock_private->pub);
+  assert(poll_req != NULL);
+  sock_private->poll_req = poll_req;
+
   return &sock_private->pub;
 }
 
@@ -152,8 +157,6 @@ void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
 
 void ep_sock_force_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-  if (sock_private->latest_poll_req != NULL)
-    poll_req_delete(sock_info, sock_private->latest_poll_req);
   sock_private->poll_status = _POLL_IDLE;
   ep_sock_delete(port_info, sock_info);
 }
@@ -184,15 +187,12 @@ int ep_sock_set_event(ep_port_t* port_info,
 }
 
 static inline void _clear_latest_poll_req(_ep_sock_private_t* sock_private) {
-  sock_private->latest_poll_req = NULL;
   sock_private->latest_poll_req_events = 0;
   sock_private->poll_status = _POLL_IDLE;
 }
 
 static inline void _set_latest_poll_req(_ep_sock_private_t* sock_private,
-                                        poll_req_t* poll_req,
                                         uint32_t epoll_events) {
-  sock_private->latest_poll_req = poll_req;
   sock_private->latest_poll_req_events = epoll_events;
   sock_private->poll_status = _POLL_PENDING;
 }
@@ -216,28 +216,26 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
      * event that we're no longer interested in; if that happens we just
      * submit another poll request with the right event mask.
      */
-    assert(sock_private->latest_poll_req != NULL);
+    assert(sock_private->poll_status != _POLL_IDLE);
 
-  } else if (sock_private->latest_poll_req != NULL) {
+  } else if (sock_private->poll_status == _POLL_CANCELLED) {
+    /* The poll request has already been cancelled, we're still waiting for it
+     * to return. For now, there's nothing that can be done. */
+
+  } else if (sock_private->poll_status == _POLL_PENDING) {
     /* A poll request is already pending. Cancel the old one first; when it
      * completes, we'll submit the new one. */
-    if (sock_private->poll_status == _POLL_PENDING) {
-      if (poll_req_cancel(sock_private->latest_poll_req, driver_socket) < 0)
-        return -1;
-      sock_private->poll_status = _POLL_CANCELLED;
-    }
+    if (poll_req_cancel(sock_private->poll_req, driver_socket) < 0)
+      return -1;
+    sock_private->poll_status = _POLL_CANCELLED;
 
   } else {
-    poll_req_t* poll_req = poll_req_new(&sock_private->pub);
-    if (poll_req == NULL)
-      return -1;
+    assert(sock_private->poll_status == _POLL_IDLE);
 
-    if (poll_req_submit(poll_req,
+    if (poll_req_submit(sock_private->poll_req,
                         sock_private->user_events,
                         sock_private->afd_socket,
                         driver_socket) < 0) {
-      poll_req_delete(&sock_private->pub, poll_req);
-
       if (GetLastError() == ERROR_INVALID_HANDLE)
         /* The socket is broken. It will be dropped from the epoll set. */
         broken = true;
@@ -247,7 +245,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
 
     } else {
       /* The poll request was successfully submitted. */
-      _set_latest_poll_req(sock_private, poll_req, sock_private->user_events);
+      _set_latest_poll_req(sock_private, sock_private->user_events);
     }
   }
 
@@ -274,8 +272,8 @@ int ep_sock_feed_event(ep_port_t* port_info,
 
   if (_ep_sock_is_deleted(sock_private)) {
     /* Ignore completion for overlapped poll operation if the socket has been
-     * deleted. */
-    poll_req_delete(sock_info, poll_req);
+     * deleted; instead, free the socket. */
+    _ep_sock_free(sock_private);
     return 0;
   }
 
@@ -295,8 +293,6 @@ int ep_sock_feed_event(ep_port_t* port_info,
     ev->events = epoll_events;
     ev_count = 1;
   }
-
-  poll_req_delete(sock_info, poll_req);
 
   if (drop_socket)
     /* Drop the socket from the epoll set. */
