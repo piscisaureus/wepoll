@@ -19,7 +19,7 @@ typedef struct poll_group {
   poll_group_allocator_t* allocator;
   queue_node_t queue_node;
   SOCKET socket;
-  size_t user_count;
+  size_t group_size;
 } poll_group_t;
 
 static int _poll_group_create_socket(poll_group_t* poll_group,
@@ -73,7 +73,7 @@ static poll_group_t* _poll_group_new(poll_group_allocator_t* pga) {
 }
 
 static void _poll_group_delete(poll_group_t* poll_group) {
-  assert(poll_group->user_count == 0);
+  assert(poll_group->group_size == 0);
   closesocket(poll_group->socket);
   queue_remove(&poll_group->queue_node);
   free(poll_group);
@@ -116,12 +116,12 @@ poll_group_t* poll_group_acquire(poll_group_allocator_t* pga) {
           ? container_of(queue_last(queue), poll_group_t, queue_node)
           : NULL;
 
-  if (poll_group == NULL || poll_group->user_count >= _POLL_GROUP_MAX_SIZE)
+  if (poll_group == NULL || poll_group->group_size >= _POLL_GROUP_MAX_SIZE)
     poll_group = _poll_group_new(pga);
   if (poll_group == NULL)
     return NULL;
 
-  if (++poll_group->user_count == _POLL_GROUP_MAX_SIZE) {
+  if (++poll_group->group_size == _POLL_GROUP_MAX_SIZE) {
     /* Move to the front of the queue. */
     queue_remove(&poll_group->queue_node);
     queue_prepend(&pga->poll_group_queue, &poll_group->queue_node);
@@ -133,8 +133,8 @@ poll_group_t* poll_group_acquire(poll_group_allocator_t* pga) {
 void poll_group_release(poll_group_t* poll_group) {
   poll_group_allocator_t* pga = poll_group->allocator;
 
-  poll_group->user_count--;
-  assert(poll_group->user_count < _POLL_GROUP_MAX_SIZE);
+  poll_group->group_size--;
+  assert(poll_group->group_size < _POLL_GROUP_MAX_SIZE);
 
   /* Move to the back of the queue. */
   queue_remove(&poll_group->queue_node);
