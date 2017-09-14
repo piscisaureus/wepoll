@@ -21,7 +21,11 @@ typedef struct _poll_req {
   AFD_POLL_INFO poll_info;
 } _poll_req_t;
 
-enum _poll_status { _POLL_IDLE = 0, _POLL_PENDING, _POLL_CANCELLED };
+typedef enum _poll_status {
+  _POLL_IDLE = 0,
+  _POLL_PENDING,
+  _POLL_CANCELLED
+} _poll_status_t;
 
 typedef struct _ep_sock_private {
   ep_sock_t pub;
@@ -31,7 +35,7 @@ typedef struct _ep_sock_private {
   epoll_data_t user_data;
   uint32_t user_events;
   uint32_t pending_events;
-  uint8_t poll_status;
+  _poll_status_t poll_status;
   unsigned deleted : 1;
 } _ep_sock_private_t;
 
