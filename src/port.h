@@ -44,6 +44,8 @@ EPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
                                       SOCKET socket);
 EPOLL_INTERNAL int ep_port_del_socket(ep_port_t* port_info,
                                       tree_node_t* tree_node);
+EPOLL_INTERNAL ep_sock_t* ep_port_find_socket(ep_port_t* port_info,
+                                              SOCKET socket);
 
 EPOLL_INTERNAL void ep_port_request_socket_update(ep_port_t* port_info,
                                                   ep_sock_t* sock_info);

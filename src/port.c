@@ -114,6 +114,10 @@ int ep_port_del_socket(ep_port_t* port_info, tree_node_t* tree_node) {
   return tree_del(&port_info->sock_tree, tree_node);
 }
 
+ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
+  return ep_sock_find_in_tree(&port_info->sock_tree, socket);
+}
+
 static poll_group_allocator_t* _ep_port_get_poll_group_allocator(
     ep_port_t* port_info,
     size_t protocol_id,
