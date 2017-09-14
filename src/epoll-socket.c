@@ -232,16 +232,6 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   return &sock_private->pub;
 }
 
-void _ep_sock_maybe_free(_ep_sock_private_t* sock_private) {
-  /* The socket may still have pending overlapped requests that have yet to be
-   * reported by the completion port. If that's the case the memory can't be
-   * released yet. It'll be released later as ep_sock_unregister_poll_req()
-   * calls this function.
-   */
-  if (sock_private->deleted && sock_private->poll_status == _POLL_IDLE)
-    _ep_sock_free(sock_private);
-}
-
 void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
@@ -260,7 +250,10 @@ void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   ep_port_release_poll_group(sock_private->poll_group);
   sock_private->poll_group = NULL;
 
-  _ep_sock_maybe_free(sock_private);
+  /* If the poll request still needs to complete, the ep_sock object can't
+   * be free()d yet. `ep_sock_feed_event` will take care of this later. */
+  if (sock_private->poll_status == _POLL_IDLE)
+    _ep_sock_free(sock_private);
 }
 
 void ep_sock_force_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
