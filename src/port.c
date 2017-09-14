@@ -105,13 +105,13 @@ size_t ep_port_feed_events(ep_port_t* port_info,
 }
 
 int ep_port_add_socket(ep_port_t* port_info,
-                       tree_node_t* tree_node,
+                       ep_sock_t* sock_info,
                        SOCKET socket) {
-  return tree_add(&port_info->sock_tree, tree_node, socket);
+  return tree_add(&port_info->sock_tree, &sock_info->tree_node, socket);
 }
 
-int ep_port_del_socket(ep_port_t* port_info, tree_node_t* tree_node) {
-  return tree_del(&port_info->sock_tree, tree_node);
+int ep_port_del_socket(ep_port_t* port_info, ep_sock_t* sock_info) {
+  return tree_del(&port_info->sock_tree, &sock_info->tree_node);
 }
 
 ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
