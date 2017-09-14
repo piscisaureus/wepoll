@@ -29,7 +29,6 @@ typedef struct _ep_sock_private {
   poll_req_t* latest_poll_req;
   uint32_t user_events;
   uint32_t latest_poll_req_events;
-  uint32_t poll_req_count;
   uint32_t flags;
   uint8_t poll_status;
 } _ep_sock_private_t;
@@ -50,6 +49,7 @@ static inline _ep_sock_private_t* _ep_sock_alloc(void) {
 }
 
 static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
+  assert(sock_private->poll_status == _POLL_IDLE);
   free(sock_private);
 }
 
@@ -131,7 +131,8 @@ void _ep_sock_maybe_free(_ep_sock_private_t* sock_private) {
    * released yet. It'll be released later as ep_sock_unregister_poll_req()
    * calls this function.
    */
-  if (_ep_sock_is_deleted(sock_private) && sock_private->poll_req_count == 0)
+  if (_ep_sock_is_deleted(sock_private) &&
+      sock_private->poll_status == _POLL_IDLE)
     _ep_sock_free(sock_private);
 }
 
@@ -153,7 +154,7 @@ void ep_sock_force_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
   if (sock_private->latest_poll_req != NULL)
     poll_req_delete(sock_info, sock_private->latest_poll_req);
-  assert(sock_private->poll_req_count == 0);
+  sock_private->poll_status = _POLL_IDLE;
   ep_sock_delete(port_info, sock_info);
 }
 
@@ -163,23 +164,6 @@ ep_sock_t* ep_sock_find(tree_t* tree, SOCKET socket) {
     return NULL;
 
   return container_of(tree_node, ep_sock_t, tree_node);
-}
-
-void ep_sock_register_poll_req(ep_sock_t* sock_info) {
-  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-  assert(!_ep_sock_is_deleted(sock_private));
-
-  sock_private->poll_req_count++;
-  assert(sock_private->poll_req_count == 1);
-}
-
-void ep_sock_unregister_poll_req(ep_sock_t* sock_info) {
-  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-
-  sock_private->poll_req_count--;
-  assert(sock_private->poll_req_count == 0);
-
-  _ep_sock_maybe_free(sock_private);
 }
 
 int ep_sock_set_event(ep_port_t* port_info,
@@ -286,14 +270,14 @@ int ep_sock_feed_event(ep_port_t* port_info,
   bool drop_socket;
   int ev_count = 0;
 
+  _clear_latest_poll_req(sock_private);
+
   if (_ep_sock_is_deleted(sock_private)) {
     /* Ignore completion for overlapped poll operation if the socket has been
      * deleted. */
     poll_req_delete(sock_info, poll_req);
     return 0;
   }
-
-  _clear_latest_poll_req(sock_private);
 
   poll_req_complete(poll_req, &epoll_events, &drop_socket);
 

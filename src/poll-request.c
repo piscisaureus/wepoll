@@ -38,15 +38,11 @@ poll_req_t* poll_req_new(ep_sock_t* sock_info) {
   memset(poll_req, 0, sizeof *poll_req);
   poll_req->sock_info = sock_info;
 
-  ep_sock_register_poll_req(sock_info);
-
   return poll_req;
 }
 
 void poll_req_delete(ep_sock_t* sock_info, poll_req_t* poll_req) {
   assert(poll_req != NULL);
-
-  ep_sock_unregister_poll_req(sock_info);
 
   _poll_req_free(poll_req);
 }

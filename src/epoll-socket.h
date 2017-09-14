@@ -35,7 +35,4 @@ EPOLL_INTERNAL int ep_sock_feed_event(ep_port_t* port_info,
                                       poll_req_t* poll_req,
                                       struct epoll_event* ev);
 
-EPOLL_INTERNAL void ep_sock_register_poll_req(ep_sock_t* sock_info);
-EPOLL_INTERNAL void ep_sock_unregister_poll_req(ep_sock_t* sock_info);
-
 #endif /* EPOLL_SOCK_DATA_H_ */
