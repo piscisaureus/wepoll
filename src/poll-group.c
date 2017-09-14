@@ -7,7 +7,7 @@
 #include "util.h"
 #include "win.h"
 
-static const size_t _DS_MAX_USERS = 32;
+static const size_t _POLL_GROUP_MAX_SIZE = 32;
 
 typedef struct poll_group_allocator {
   ep_port_t* port_info;
@@ -116,12 +116,12 @@ poll_group_t* poll_group_acquire(poll_group_allocator_t* pga) {
           ? container_of(queue_last(queue), poll_group_t, queue_node)
           : NULL;
 
-  if (poll_group == NULL || poll_group->user_count >= _DS_MAX_USERS)
+  if (poll_group == NULL || poll_group->user_count >= _POLL_GROUP_MAX_SIZE)
     poll_group = _poll_group_new(pga);
   if (poll_group == NULL)
     return NULL;
 
-  if (++poll_group->user_count == _DS_MAX_USERS) {
+  if (++poll_group->user_count == _POLL_GROUP_MAX_SIZE) {
     /* Move to the front of the queue. */
     queue_remove(&poll_group->queue_node);
     queue_prepend(&pga->poll_group_queue, &poll_group->queue_node);
@@ -134,7 +134,7 @@ void poll_group_release(poll_group_t* poll_group) {
   poll_group_allocator_t* pga = poll_group->allocator;
 
   poll_group->user_count--;
-  assert(poll_group->user_count < _DS_MAX_USERS);
+  assert(poll_group->user_count < _POLL_GROUP_MAX_SIZE);
 
   /* Move to the back of the queue. */
   queue_remove(&poll_group->queue_node);
