@@ -19,6 +19,8 @@
 
 #define _EP_SOCK_DELETED 0x2
 
+enum _poll_status { _POLL_IDLE = 0, _POLL_PENDING, _POLL_CANCELLED };
+
 typedef struct _ep_sock_private {
   ep_sock_t pub;
   SOCKET afd_socket;
@@ -29,7 +31,7 @@ typedef struct _ep_sock_private {
   uint32_t latest_poll_req_events;
   uint32_t poll_req_count;
   uint32_t flags;
-  bool poll_req_active;
+  uint8_t poll_status;
 } _ep_sock_private_t;
 
 static inline _ep_sock_private_t* _ep_sock_private(ep_sock_t* sock_info) {
@@ -200,7 +202,7 @@ int ep_sock_set_event(ep_port_t* port_info,
 static inline void _clear_latest_poll_req(_ep_sock_private_t* sock_private) {
   sock_private->latest_poll_req = NULL;
   sock_private->latest_poll_req_events = 0;
-  sock_private->poll_req_active = false;
+  sock_private->poll_status = _POLL_IDLE;
 }
 
 static inline void _set_latest_poll_req(_ep_sock_private_t* sock_private,
@@ -208,7 +210,7 @@ static inline void _set_latest_poll_req(_ep_sock_private_t* sock_private,
                                         uint32_t epoll_events) {
   sock_private->latest_poll_req = poll_req;
   sock_private->latest_poll_req_events = epoll_events;
-  sock_private->poll_req_active = true;
+  sock_private->poll_status = _POLL_PENDING;
 }
 
 int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
@@ -235,9 +237,10 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   } else if (sock_private->latest_poll_req != NULL) {
     /* A poll request is already pending. Cancel the old one first; when it
      * completes, we'll submit the new one. */
-    if (sock_private->poll_req_active) {
-      poll_req_cancel(sock_private->latest_poll_req, driver_socket);
-      sock_private->poll_req_active = false;
+    if (sock_private->poll_status == _POLL_PENDING) {
+      if (poll_req_cancel(sock_private->latest_poll_req, driver_socket) < 0)
+        return -1;
+      sock_private->poll_status = _POLL_CANCELLED;
     }
 
   } else {
