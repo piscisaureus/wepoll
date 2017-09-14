@@ -41,7 +41,7 @@ static int _ep_ctl_add(ep_port_t* port_info,
 static int _ep_ctl_mod(ep_port_t* port_info,
                        uintptr_t socket,
                        struct epoll_event* ev) {
-  ep_sock_t* sock_info = ep_sock_find(&port_info->sock_tree, socket);
+  ep_sock_t* sock_info = ep_sock_find_in_tree(&port_info->sock_tree, socket);
   if (sock_info == NULL)
     return -1;
 
@@ -52,7 +52,7 @@ static int _ep_ctl_mod(ep_port_t* port_info,
 }
 
 static int _ep_ctl_del(ep_port_t* port_info, uintptr_t socket) {
-  ep_sock_t* sock_info = ep_sock_find(&port_info->sock_tree, socket);
+  ep_sock_t* sock_info = ep_sock_find_in_tree(&port_info->sock_tree, socket);
   if (sock_info == NULL)
     return -1;
 

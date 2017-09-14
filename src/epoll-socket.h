@@ -24,7 +24,7 @@ EPOLL_INTERNAL void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info);
 EPOLL_INTERNAL void ep_sock_force_delete(ep_port_t* port_info,
                                          ep_sock_t* sock_info);
 
-EPOLL_INTERNAL ep_sock_t* ep_sock_find(tree_t* tree, SOCKET socket);
+EPOLL_INTERNAL ep_sock_t* ep_sock_find_in_tree(tree_t* tree, SOCKET socket);
 EPOLL_INTERNAL ep_sock_t* ep_sock_from_overlapped(OVERLAPPED* overlapped);
 
 EPOLL_INTERNAL int ep_sock_set_event(ep_port_t* port_info,

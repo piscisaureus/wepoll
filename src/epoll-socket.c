@@ -230,7 +230,7 @@ void ep_sock_force_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   ep_sock_delete(port_info, sock_info);
 }
 
-ep_sock_t* ep_sock_find(tree_t* tree, SOCKET socket) {
+ep_sock_t* ep_sock_find_in_tree(tree_t* tree, SOCKET socket) {
   tree_node_t* tree_node = tree_find(tree, socket);
   if (tree_node == NULL)
     return NULL;
