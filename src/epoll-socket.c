@@ -197,13 +197,6 @@ int ep_sock_set_event(ep_port_t* port_info,
   return 0;
 }
 
-static inline bool _is_latest_poll_req(_ep_sock_private_t* sock_private,
-                                       poll_req_t* poll_req) {
-  assert(sock_private->latest_poll_req == poll_req ||
-         sock_private->latest_poll_req == NULL);
-  return poll_req == sock_private->latest_poll_req;
-}
-
 static inline void _clear_latest_poll_req(_ep_sock_private_t* sock_private) {
   sock_private->latest_poll_req = NULL;
   sock_private->latest_poll_req_events = 0;
@@ -289,10 +282,8 @@ int ep_sock_feed_event(ep_port_t* port_info,
   bool drop_socket;
   int ev_count = 0;
 
-  if (_ep_sock_is_deleted(sock_private) ||
-      !_is_latest_poll_req(sock_private, poll_req)) {
-    /* Ignore completion for overlapped poll operation if it isn't
-     * the the most recently posted one, or if the socket has been
+  if (_ep_sock_is_deleted(sock_private)) {
+    /* Ignore completion for overlapped poll operation if the socket has been
      * deleted. */
     poll_req_delete(sock_info, poll_req);
     return 0;
