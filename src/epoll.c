@@ -11,7 +11,6 @@
 #include "init.h"
 #include "nt.h"
 #include "poll-group.h"
-#include "poll-request.h"
 #include "port.h"
 #include "queue.h"
 #include "rb.h"
@@ -114,10 +113,10 @@ static size_t _ep_port_feed_events(ep_port_t* port_info,
 
   for (size_t i = 0; i < completion_count; i++) {
     OVERLAPPED* overlapped = completion_list[i].lpOverlapped;
-    poll_req_t* poll_req = overlapped_to_poll_req(overlapped);
+    ep_sock_t* sock_info = ep_sock_from_overlapped(overlapped);
     struct epoll_event* ev = &event_list[event_count];
 
-    event_count += ep_sock_feed_event(port_info, poll_req, ev);
+    event_count += ep_sock_feed_event(port_info, sock_info, ev);
   }
 
   return event_count;

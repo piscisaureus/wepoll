@@ -8,7 +8,6 @@
 #include "epoll.h"
 #include "error.h"
 #include "poll-group.h"
-#include "poll-request.h"
 #include "port.h"
 
 #ifndef SIO_BASE_HANDLE
@@ -17,19 +16,129 @@
 
 #define _EP_EVENT_MASK 0xffff
 
+typedef struct _poll_req {
+  OVERLAPPED overlapped;
+  AFD_POLL_INFO poll_info;
+} _poll_req_t;
+
 enum _poll_status { _POLL_IDLE = 0, _POLL_PENDING, _POLL_CANCELLED };
 
 typedef struct _ep_sock_private {
   ep_sock_t pub;
-  SOCKET afd_socket;
+  _poll_req_t poll_req;
   poll_group_t* poll_group;
-  poll_req_t* poll_req;
+  SOCKET afd_socket;
   epoll_data_t user_data;
   uint32_t user_events;
   uint32_t pending_events;
   uint8_t poll_status;
   unsigned deleted : 1;
 } _ep_sock_private_t;
+
+static DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
+  DWORD afd_events;
+
+  /* These events should always be monitored. */
+  assert(epoll_events & EPOLLERR);
+  assert(epoll_events & EPOLLHUP);
+  afd_events = AFD_POLL_ABORT | AFD_POLL_CONNECT_FAIL | AFD_POLL_LOCAL_CLOSE;
+
+  if (epoll_events & (EPOLLIN | EPOLLRDNORM))
+    afd_events |= AFD_POLL_RECEIVE | AFD_POLL_ACCEPT;
+  if (epoll_events & (EPOLLPRI | EPOLLRDBAND))
+    afd_events |= AFD_POLL_RECEIVE_EXPEDITED;
+  if (epoll_events & (EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND))
+    afd_events |= AFD_POLL_SEND | AFD_POLL_CONNECT;
+
+  return afd_events;
+}
+
+static uint32_t _afd_events_to_epoll_events(DWORD afd_events) {
+  uint32_t epoll_events = 0;
+
+  if (afd_events & (AFD_POLL_RECEIVE | AFD_POLL_ACCEPT))
+    epoll_events |= EPOLLIN | EPOLLRDNORM;
+  if (afd_events & AFD_POLL_RECEIVE_EXPEDITED)
+    epoll_events |= EPOLLPRI | EPOLLRDBAND;
+  if (afd_events & AFD_POLL_SEND)
+    epoll_events |= EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND;
+  if ((afd_events & AFD_POLL_DISCONNECT) && !(afd_events & AFD_POLL_ABORT))
+    epoll_events |= EPOLLIN | EPOLLRDHUP;
+  if (afd_events & AFD_POLL_ABORT)
+    epoll_events |= EPOLLHUP;
+  if (afd_events & AFD_POLL_CONNECT)
+    epoll_events |= EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND;
+  if (afd_events & AFD_POLL_CONNECT_FAIL)
+    epoll_events |= EPOLLERR;
+
+  return epoll_events;
+}
+
+static int _poll_req_submit(_poll_req_t* poll_req,
+                            uint32_t epoll_events,
+                            SOCKET socket,
+                            SOCKET driver_socket) {
+  int r;
+
+  memset(&poll_req->overlapped, 0, sizeof poll_req->overlapped);
+
+  poll_req->poll_info.Exclusive = FALSE;
+  poll_req->poll_info.NumberOfHandles = 1;
+  poll_req->poll_info.Timeout.QuadPart = INT64_MAX;
+  poll_req->poll_info.Handles[0].Handle = (HANDLE) socket;
+  poll_req->poll_info.Handles[0].Status = 0;
+  poll_req->poll_info.Handles[0].Events =
+      _epoll_events_to_afd_events(epoll_events);
+
+  r = afd_poll(driver_socket, &poll_req->poll_info, &poll_req->overlapped);
+  if (r != 0 && GetLastError() != ERROR_IO_PENDING)
+    return_error(-1);
+
+  return 0;
+}
+
+static int _poll_req_cancel(_poll_req_t* poll_req, SOCKET driver_socket) {
+  OVERLAPPED* overlapped = &poll_req->overlapped;
+
+  if (!CancelIoEx((HANDLE) driver_socket, overlapped)) {
+    DWORD error = GetLastError();
+    if (error == ERROR_NOT_FOUND)
+      return 0; /* Already completed or canceled. */
+    else
+      return_error(-1);
+  }
+
+  return 0;
+}
+
+static void _poll_req_complete(const _poll_req_t* poll_req,
+                               uint32_t* epoll_events_out,
+                               bool* socket_closed_out) {
+  const OVERLAPPED* overlapped = &poll_req->overlapped;
+
+  uint32_t epoll_events = 0;
+  bool socket_closed = false;
+
+  if ((NTSTATUS) overlapped->Internal == STATUS_CANCELLED) {
+    /* The poll request was cancelled by CancelIoEx. */
+  } else if (!NT_SUCCESS(overlapped->Internal)) {
+    /* The overlapped request itself failed in an unexpected way. */
+    epoll_events = EPOLLERR;
+  } else if (poll_req->poll_info.NumberOfHandles < 1) {
+    /* This overlapped request succeeded but didn't report any events. */
+  } else {
+    /* Events related to our socket were reported. */
+    DWORD afd_events = poll_req->poll_info.Handles[0].Events;
+
+    if (afd_events & AFD_POLL_LOCAL_CLOSE)
+      socket_closed = true; /* Socket closed locally be silently dropped. */
+    else
+      epoll_events = _afd_events_to_epoll_events(afd_events);
+  }
+
+  *epoll_events_out = epoll_events;
+  *socket_closed_out = socket_closed;
+}
 
 static inline _ep_sock_private_t* _ep_sock_private(ep_sock_t* sock_info) {
   return container_of(sock_info, _ep_sock_private_t, pub);
@@ -44,7 +153,6 @@ static inline _ep_sock_private_t* _ep_sock_alloc(void) {
 
 static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
   assert(sock_private->poll_status == _POLL_IDLE);
-  poll_req_delete(sock_private->poll_req);
   free(sock_private);
 }
 
@@ -117,10 +225,6 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
     return NULL;
   }
 
-  poll_req_t* poll_req = poll_req_new(&sock_private->pub);
-  assert(poll_req != NULL);
-  sock_private->poll_req = poll_req;
-
   return &sock_private->pub;
 }
 
@@ -162,6 +266,12 @@ ep_sock_t* ep_sock_find(tree_t* tree, SOCKET socket) {
   return container_of(tree_node, ep_sock_t, tree_node);
 }
 
+ep_sock_t* ep_sock_from_overlapped(OVERLAPPED* overlapped) {
+  _ep_sock_private_t* sock_private =
+      container_of(overlapped, _ep_sock_private_t, poll_req.overlapped);
+  return &sock_private->pub;
+}
+
 int ep_sock_set_event(ep_port_t* port_info,
                       ep_sock_t* sock_info,
                       const struct epoll_event* ev) {
@@ -199,7 +309,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
      * events that the user is interested in. Cancel the pending poll request;
      * when it completes it will be submitted again with the correct event
      * mask. */
-    if (poll_req_cancel(sock_private->poll_req, driver_socket) < 0)
+    if (_poll_req_cancel(&sock_private->poll_req, driver_socket) < 0)
       return -1;
     sock_private->poll_status = _POLL_CANCELLED;
     sock_private->pending_events = 0;
@@ -209,10 +319,10 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
      * to return. For now, there's nothing that needs to be done. */
 
   } else if (sock_private->poll_status == _POLL_IDLE) {
-    if (poll_req_submit(sock_private->poll_req,
-                        sock_private->user_events,
-                        sock_private->afd_socket,
-                        driver_socket) < 0) {
+    if (_poll_req_submit(&sock_private->poll_req,
+                         sock_private->user_events,
+                         sock_private->afd_socket,
+                         driver_socket) < 0) {
       if (GetLastError() == ERROR_INVALID_HANDLE)
         /* The socket is broken. It will be dropped from the epoll set. */
         broken = true;
@@ -240,9 +350,8 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
 }
 
 int ep_sock_feed_event(ep_port_t* port_info,
-                       poll_req_t* poll_req,
+                       ep_sock_t* sock_info,
                        struct epoll_event* ev) {
-  ep_sock_t* sock_info = poll_req_get_sock_data(poll_req);
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
   uint32_t epoll_events;
@@ -259,7 +368,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
     return 0;
   }
 
-  poll_req_complete(poll_req, &epoll_events, &drop_socket);
+  _poll_req_complete(&sock_private->poll_req, &epoll_events, &drop_socket);
 
   /* Filter events that the user didn't ask for. */
   epoll_events &= sock_private->user_events;
