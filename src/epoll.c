@@ -9,7 +9,7 @@
 #include "util.h"
 #include "win.h"
 
-#define _EP_COMPLETION_LIST_LENGTH 64
+#define _EPOLL_MAX_COMPLETION_COUNT 64
 
 epoll_t epoll_create(void) {
   ep_port_t* port_info;
@@ -127,14 +127,14 @@ int epoll_wait(epoll_t port_handle,
   }
 
   /* Compute how much overlapped entries can be dequeued at most. */
-  if ((size_t) maxevents > _EP_COMPLETION_LIST_LENGTH)
-    maxevents = _EP_COMPLETION_LIST_LENGTH;
+  if ((size_t) maxevents > _EPOLL_MAX_COMPLETION_COUNT)
+    maxevents = _EPOLL_MAX_COMPLETION_COUNT;
 
   /* Dequeue completion packets until either at least one interesting event
    * has been discovered, or the timeout is reached.
    */
   do {
-    OVERLAPPED_ENTRY completion_list[_EP_COMPLETION_LIST_LENGTH];
+    OVERLAPPED_ENTRY completion_list[_EPOLL_MAX_COMPLETION_COUNT];
     ULONG completion_count;
     ssize_t event_count;
 
