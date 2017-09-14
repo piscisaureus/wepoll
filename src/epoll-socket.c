@@ -28,7 +28,7 @@ typedef struct _ep_sock_private {
   poll_req_t* poll_req;
   epoll_data_t user_data;
   uint32_t user_events;
-  uint32_t latest_poll_req_events;
+  uint32_t pending_events;
   uint32_t flags;
   uint8_t poll_status;
 } _ep_sock_private_t;
@@ -180,20 +180,20 @@ int ep_sock_set_event(ep_port_t* port_info,
   sock_private->user_events = events;
   sock_private->user_data = ev->data;
 
-  if ((events & _EP_EVENT_MASK & ~(sock_private->latest_poll_req_events)) != 0)
+  if ((events & _EP_EVENT_MASK & ~(sock_private->pending_events)) != 0)
     ep_port_request_socket_update(port_info, sock_info);
 
   return 0;
 }
 
 static inline void _clear_latest_poll_req(_ep_sock_private_t* sock_private) {
-  sock_private->latest_poll_req_events = 0;
+  sock_private->pending_events = 0;
   sock_private->poll_status = _POLL_IDLE;
 }
 
 static inline void _set_latest_poll_req(_ep_sock_private_t* sock_private,
                                         uint32_t epoll_events) {
-  sock_private->latest_poll_req_events = epoll_events;
+  sock_private->pending_events = epoll_events;
   sock_private->poll_status = _POLL_PENDING;
 }
 
@@ -210,7 +210,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
    * that case we need to submit another req.
    */
   if ((sock_private->user_events & _EP_EVENT_MASK &
-       ~sock_private->latest_poll_req_events) == 0) {
+       ~sock_private->pending_events) == 0) {
     /* All the events the user is interested in are already being monitored
      * by the latest poll request. It might spuriously complete because of an
      * event that we're no longer interested in; if that happens we just
