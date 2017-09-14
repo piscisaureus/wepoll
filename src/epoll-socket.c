@@ -257,10 +257,11 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
       else
         /* Another error occurred, which is propagated to the caller. */
         return -1;
-    }
 
-    if (!broken)
+    } else {
+      /* The poll request was successfully submitted. */
       _set_latest_poll_req(sock_private, poll_req, sock_private->user_events);
+    }
   }
 
   ep_port_clear_socket_update(port_info, sock_info);
