@@ -77,9 +77,13 @@ var source = [];
 
 source = source.concat('/*')
              .concat(fs.readFileSync('LICENSE', 'utf8')
+                         .replace(/^\s+|\s+$/g, '')
                          .split(/\r?\n/g)
                          .map(function(s) {
                            return ' * ' + s;
+                         })
+                         .map(function(s) {
+                           return s.replace(/\s+$/, '');
                          }))
              .concat(' */')
              .concat('');
