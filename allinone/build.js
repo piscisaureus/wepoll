@@ -114,4 +114,15 @@ restart: for (var lno = 0; lno < source.length;) {
   lno++;
 }
 
-console.log(source.join('\n'));
+var emptyOk = false;
+for (var i = 0; i < source.length; i++) {
+  var line = source[i].replace(/\s+$/, '');
+  if (line === '') {
+    if (emptyOk)
+      process.stdout.write('\n');
+    emptyOk = false;
+  } else {
+    process.stdout.write(line + '\n');
+    emptyOk = true;
+  }
+}
