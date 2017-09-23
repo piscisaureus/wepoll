@@ -15,4 +15,10 @@ typedef intptr_t ssize_t;
 
 #define unused(v) ((void) (v))
 
+#ifdef __clang__
+/* Polyfill static_assert() because clang doesn't support it. */
+#define static_assert(condition, message) typedef __attribute__( \
+    (unused)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
+#endif
+
 #endif /* EPOLL_UTIL_H_ */
