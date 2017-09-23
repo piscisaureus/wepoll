@@ -3,6 +3,7 @@
 #include "error.h"
 #include "init.h"
 #include "nt.h"
+#include "reflock.h"
 #include "win.h"
 
 static bool _initialized = false;
@@ -19,7 +20,7 @@ static int _init_winsock(void) {
 }
 
 static int _init_once(void) {
-  if (_init_winsock() < 0 || nt_init() < 0)
+  if (_init_winsock() < 0 || nt_init() < 0 || reflock_global_init() < 0)
     return -1;
 
   _initialized = true;
