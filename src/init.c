@@ -8,7 +8,7 @@
 
 static bool _initialized = false;
 
-static int _init_winsock(void) {
+static int _winsock_global_init(void) {
   int r;
   WSADATA wsa_data;
 
@@ -20,7 +20,8 @@ static int _init_winsock(void) {
 }
 
 static int _init_once(void) {
-  if (_init_winsock() < 0 || nt_init() < 0 || reflock_global_init() < 0)
+  if (_winsock_global_init() < 0 || nt_global_init() < 0 ||
+      reflock_global_init() < 0)
     return -1;
 
   _initialized = true;

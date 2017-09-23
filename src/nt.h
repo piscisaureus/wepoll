@@ -5,7 +5,7 @@
 #include "ntstatus.h"
 #include "win.h"
 
-EPOLL_INTERNAL int nt_init(void);
+EPOLL_INTERNAL int nt_global_init(void);
 
 typedef struct _IO_STATUS_BLOCK {
   union {
