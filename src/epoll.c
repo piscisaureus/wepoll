@@ -11,6 +11,10 @@
 
 #define _EPOLL_MAX_COMPLETION_COUNT 64
 
+int epoll_global_init(void) {
+  return 0;
+}
+
 epoll_t epoll_create(void) {
   ep_port_t* port_info;
   HANDLE iocp;
