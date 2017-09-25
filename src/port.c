@@ -321,15 +321,22 @@ int ep_port_ctl(ep_port_t* port_info,
 int ep_port_add_socket(ep_port_t* port_info,
                        ep_sock_t* sock_info,
                        SOCKET socket) {
-  return tree_add(&port_info->sock_tree, &sock_info->tree_node, socket);
+  if (tree_add(&port_info->sock_tree, &sock_info->tree_node, socket) < 0)
+    return_error(-1, ERROR_ALREADY_EXISTS);
+  return 0;
 }
 
 int ep_port_del_socket(ep_port_t* port_info, ep_sock_t* sock_info) {
-  return tree_del(&port_info->sock_tree, &sock_info->tree_node);
+  if (tree_del(&port_info->sock_tree, &sock_info->tree_node) < 0)
+    return_error(-1, ERROR_NOT_FOUND);
+  return 0;
 }
 
 ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
-  return ep_sock_find_in_tree(&port_info->sock_tree, socket);
+  ep_sock_t* sock_info = ep_sock_find_in_tree(&port_info->sock_tree, socket);
+  if (sock_info == NULL)
+    return_error(NULL, ERROR_NOT_FOUND);
+  return sock_info;
 }
 
 static poll_group_allocator_t* _ep_port_get_poll_group_allocator(

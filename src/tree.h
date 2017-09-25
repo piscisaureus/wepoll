@@ -4,6 +4,11 @@
 #include "internal.h"
 #include "rb.h"
 
+/* NB: the tree functions do not set errno or LastError when they fail. Each of
+ * the API functions has at most one failure mode. It is up to the caller to
+ * set an appropriate error code when necessary.
+ */
+
 typedef RB_HEAD(tree, tree_node) tree_t;
 
 typedef struct tree_node {

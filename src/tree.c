@@ -30,7 +30,7 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   existing_node = RB_INSERT(tree, tree, node);
 
   if (existing_node != NULL)
-    return_error(-1, ERROR_ALREADY_EXISTS);
+    return -1;
 
   return 0;
 }
@@ -41,7 +41,7 @@ int tree_del(tree_t* tree, tree_node_t* node) {
   removed_node = RB_REMOVE(tree, tree, node);
 
   if (removed_node == NULL)
-    return_error(-1, ERROR_NOT_FOUND);
+    return -1;
   else
     assert(removed_node == node);
 
@@ -49,17 +49,12 @@ int tree_del(tree_t* tree, tree_node_t* node) {
 }
 
 tree_node_t* tree_find(tree_t* tree, uintptr_t key) {
-  tree_node_t* node;
   tree_node_t lookup;
 
   memset(&lookup, 0, sizeof lookup);
   lookup.key = key;
 
-  node = RB_FIND(tree, tree, &lookup);
-  if (node == NULL)
-    return_error(NULL, ERROR_NOT_FOUND);
-
-  return node;
+  return RB_FIND(tree, tree, &lookup);
 }
 
 tree_node_t* tree_root(tree_t* tree) {
