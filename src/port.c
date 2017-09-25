@@ -42,7 +42,7 @@ ep_port_t* ep_port_new(HANDLE iocp) {
   return port_info;
 }
 
-int ep_port_close(ep_port_t* port_info) {
+static int _ep_port_close_iocp(ep_port_t* port_info) {
   HANDLE iocp = port_info->iocp;
   port_info->iocp = NULL;
 
@@ -52,12 +52,19 @@ int ep_port_close(ep_port_t* port_info) {
   return 0;
 }
 
+int ep_port_close(ep_port_t* port_info) {
+  int result;
+
+  result = _ep_port_close_iocp(port_info);
+
+  return result;
+}
+
 int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
 
-  if (port_info->iocp != NULL && !CloseHandle(port_info->iocp))
-    return_error(-1);
-  port_info->iocp = NULL;
+  if (port_info->iocp != NULL)
+    _ep_port_close_iocp(port_info);
 
   while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
     ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
