@@ -38,6 +38,7 @@ ep_port_t* ep_port_new(HANDLE iocp) {
   queue_init(&port_info->update_queue);
   tree_init(&port_info->sock_tree);
   reflock_tree_node_init(&port_info->handle_tree_node);
+  InitializeCriticalSection(&port_info->lock);
 
   return port_info;
 }
@@ -76,6 +77,8 @@ int ep_port_delete(ep_port_t* port_info) {
     if (pga != NULL)
       poll_group_allocator_delete(pga);
   }
+
+  DeleteCriticalSection(&port_info->lock);
 
   _ep_port_free(port_info);
 

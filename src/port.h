@@ -23,6 +23,7 @@ typedef struct ep_port {
   tree_t sock_tree;
   queue_t update_queue;
   reflock_tree_node_t handle_tree_node;
+  CRITICAL_SECTION lock;
 } ep_port_t;
 
 EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE iocp);
