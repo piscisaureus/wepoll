@@ -41,10 +41,20 @@ ep_port_t* ep_port_new(HANDLE iocp) {
   return port_info;
 }
 
+int ep_port_close(ep_port_t* port_info) {
+  HANDLE iocp = port_info->iocp;
+  port_info->iocp = NULL;
+
+  if (!CloseHandle(iocp))
+    return_error(-1);
+
+  return 0;
+}
+
 int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
 
-  if (!CloseHandle(port_info->iocp))
+  if (port_info->iocp != NULL && !CloseHandle(port_info->iocp))
     return_error(-1);
   port_info->iocp = NULL;
 

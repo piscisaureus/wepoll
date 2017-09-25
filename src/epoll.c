@@ -43,6 +43,8 @@ int epoll_close(epoll_t port_handle) {
 
   port_info = (ep_port_t*) port_handle;
 
+  ep_port_close(port_info);
+
   return ep_port_delete(port_info);
 }
 

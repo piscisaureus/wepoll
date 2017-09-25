@@ -24,6 +24,7 @@ typedef struct ep_port {
 } ep_port_t;
 
 EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE iocp);
+EPOLL_INTERNAL int ep_port_close(ep_port_t* port_info);
 EPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
 
 EPOLL_INTERNAL int ep_port_update_events(ep_port_t* port_info);
