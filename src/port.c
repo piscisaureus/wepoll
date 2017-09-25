@@ -12,7 +12,7 @@
 #include "util.h"
 #include "win.h"
 
-#define _EPOLL_MAX_COMPLETION_COUNT 64
+#define _PORT_MAX_ON_STACK_COMPLETIONS 256
 
 static ep_port_t* _ep_port_alloc(void) {
   ep_port_t* port_info = malloc(sizeof *port_info);
@@ -185,6 +185,8 @@ int ep_port_wait(ep_port_t* port_info,
                  struct epoll_event* events,
                  int maxevents,
                  int timeout) {
+  OVERLAPPED_ENTRY stack_iocp_events[_PORT_MAX_ON_STACK_COMPLETIONS];
+  OVERLAPPED_ENTRY* iocp_events;
   ULONGLONG due = 0;
   DWORD gqcs_timeout;
   int result;
@@ -193,9 +195,14 @@ int ep_port_wait(ep_port_t* port_info,
   if (maxevents <= 0)
     return_error(-1, ERROR_INVALID_PARAMETER);
 
-  /* Compute how much overlapped entries can be dequeued at most. */
-  if ((size_t) maxevents > _EPOLL_MAX_COMPLETION_COUNT)
-    maxevents = _EPOLL_MAX_COMPLETION_COUNT;
+  /* Decide whether the IOCP completion list can live on the stack, or allocate
+   * memory for it on the heap. */
+  if ((size_t) maxevents <= array_count(stack_iocp_events)) {
+    iocp_events = stack_iocp_events;
+  } else if ((iocp_events = malloc(maxevents * sizeof *iocp_events)) == NULL) {
+    iocp_events = stack_iocp_events;
+    maxevents = array_count(stack_iocp_events);
+  }
 
   /* Compute the timeout for GetQueuedCompletionStatus, and the wait end
    * time, if the user specified a timeout other than zero or infinite.
@@ -215,7 +222,6 @@ int ep_port_wait(ep_port_t* port_info,
    * has been discovered, or the timeout is reached.
    */
   do {
-    OVERLAPPED_ENTRY iocp_events[_EPOLL_MAX_COMPLETION_COUNT];
     ULONGLONG now;
 
     result =
@@ -238,6 +244,9 @@ int ep_port_wait(ep_port_t* port_info,
   _ep_port_update_events_if_polling(port_info);
 
   LeaveCriticalSection(&port_info->lock);
+
+  if (iocp_events != stack_iocp_events)
+    free(iocp_events);
 
   if (result >= 0)
     return result;
