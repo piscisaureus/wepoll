@@ -152,6 +152,14 @@ static int _ep_wait(ep_port_t* port_info,
   ULONGLONG due = 0;
   DWORD gqcs_timeout;
 
+  /* Check whether `maxevents` is in range. */
+  if (maxevents <= 0)
+    return_error(-1, ERROR_INVALID_PARAMETER);
+
+  /* Compute how much overlapped entries can be dequeued at most. */
+  if ((size_t) maxevents > _EPOLL_MAX_COMPLETION_COUNT)
+    maxevents = _EPOLL_MAX_COMPLETION_COUNT;
+
   /* Compute the timeout for GetQueuedCompletionStatus, and the wait end
    * time, if the user specified a timeout other than zero or infinite.
    */
@@ -163,10 +171,6 @@ static int _ep_wait(ep_port_t* port_info,
   } else {
     gqcs_timeout = INFINITE;
   }
-
-  /* Compute how much overlapped entries can be dequeued at most. */
-  if ((size_t) maxevents > _EPOLL_MAX_COMPLETION_COUNT)
-    maxevents = _EPOLL_MAX_COMPLETION_COUNT;
 
   /* Dequeue completion packets until either at least one interesting event
    * has been discovered, or the timeout is reached.
