@@ -5,9 +5,11 @@
 #include "init.h"
 #include "nt.h"
 #include "reflock.h"
+#include "util.h"
 #include "win.h"
 
 static bool _initialized = false;
+static INIT_ONCE _once = INIT_ONCE_STATIC_INIT;
 
 static int _winsock_global_init(void) {
   int r;
@@ -20,18 +22,25 @@ static int _winsock_global_init(void) {
   return 0;
 }
 
-static int _init_once(void) {
+static BOOL CALLBACK _init_once_callback(INIT_ONCE* once,
+                                         void* parameter,
+                                         void** context) {
+  unused(once);
+  unused(parameter);
+  unused(context);
+
   if (_winsock_global_init() < 0 || nt_global_init() < 0 ||
       reflock_global_init() < 0 || api_global_init() < 0)
-    return -1;
+    return FALSE;
 
   _initialized = true;
-  return 0;
+  return TRUE;
 }
 
 int init(void) {
-  if (_initialized)
-    return 0;
+  if (!_initialized &&
+      !InitOnceExecuteOnce(&_once, _init_once_callback, NULL, NULL))
+    return -1; /* LastError and errno aren't touched InitOnceExecuteOnce. */
 
-  return _init_once();
+  return 0;
 }
