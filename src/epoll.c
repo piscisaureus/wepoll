@@ -47,9 +47,9 @@ int epoll_close(epoll_t port_handle) {
 }
 
 static int _ep_ctl_add(ep_port_t* port_info,
-                       uintptr_t socket,
+                       SOCKET sock,
                        struct epoll_event* ev) {
-  ep_sock_t* sock_info = ep_sock_new(port_info, socket);
+  ep_sock_t* sock_info = ep_sock_new(port_info, sock);
   if (sock_info == NULL)
     return -1;
 
@@ -62,9 +62,9 @@ static int _ep_ctl_add(ep_port_t* port_info,
 }
 
 static int _ep_ctl_mod(ep_port_t* port_info,
-                       uintptr_t socket,
+                       SOCKET sock,
                        struct epoll_event* ev) {
-  ep_sock_t* sock_info = ep_port_find_socket(port_info, socket);
+  ep_sock_t* sock_info = ep_port_find_socket(port_info, sock);
   if (sock_info == NULL)
     return -1;
 
@@ -74,8 +74,8 @@ static int _ep_ctl_mod(ep_port_t* port_info,
   return 0;
 }
 
-static int _ep_ctl_del(ep_port_t* port_info, uintptr_t socket) {
-  ep_sock_t* sock_info = ep_port_find_socket(port_info, socket);
+static int _ep_ctl_del(ep_port_t* port_info, SOCKET sock) {
+  ep_sock_t* sock_info = ep_port_find_socket(port_info, sock);
   if (sock_info == NULL)
     return -1;
 
@@ -86,7 +86,7 @@ static int _ep_ctl_del(ep_port_t* port_info, uintptr_t socket) {
 
 int epoll_ctl(epoll_t port_handle,
               int op,
-              uintptr_t socket,
+              SOCKET sock,
               struct epoll_event* ev) {
   ep_port_t* port_info = (ep_port_t*) port_handle;
 
@@ -95,11 +95,11 @@ int epoll_ctl(epoll_t port_handle,
 
   switch (op) {
     case EPOLL_CTL_ADD:
-      return _ep_ctl_add(port_info, socket, ev);
+      return _ep_ctl_add(port_info, sock, ev);
     case EPOLL_CTL_MOD:
-      return _ep_ctl_mod(port_info, socket, ev);
+      return _ep_ctl_mod(port_info, sock, ev);
     case EPOLL_CTL_DEL:
-      return _ep_ctl_del(port_info, socket);
+      return _ep_ctl_del(port_info, sock);
   }
 
   return_error(-1, ERROR_INVALID_PARAMETER);
