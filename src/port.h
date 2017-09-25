@@ -30,12 +30,10 @@ EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE iocp);
 EPOLL_INTERNAL int ep_port_close(ep_port_t* port_info);
 EPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
 
-EPOLL_INTERNAL int ep_port_update_events(ep_port_t* port_info);
-EPOLL_INTERNAL int ep_port_feed_events(ep_port_t* port_info,
-                                       OVERLAPPED_ENTRY* completion_list,
-                                       int completion_count,
-                                       struct epoll_event* event_list,
-                                       int max_event_count);
+EPOLL_INTERNAL int ep_port_wait(ep_port_t* port_info,
+  struct epoll_event* events,
+  int maxevents,
+  int timeout);
 
 EPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
     ep_port_t* port_info,

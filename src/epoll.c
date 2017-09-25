@@ -10,8 +10,6 @@
 #include "util.h"
 #include "win.h"
 
-#define _EPOLL_MAX_COMPLETION_COUNT 64
-
 static reflock_tree_t _epoll_handle_tree;
 
 static inline ep_port_t* _handle_tree_node_to_port(
@@ -145,90 +143,6 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   return result;
 }
 
-static int _ep_port_poll(ep_port_t* port_info,
-                         struct epoll_event* epoll_events,
-                         OVERLAPPED_ENTRY* iocp_events,
-                         int maxevents,
-                         DWORD timeout) {
-  ULONG completion_count;
-
-  if (ep_port_update_events(port_info) < 0)
-    return -1;
-
-  BOOL r = GetQueuedCompletionStatusEx(port_info->iocp,
-                                       iocp_events,
-                                       maxevents,
-                                       &completion_count,
-                                       timeout,
-                                       FALSE);
-
-  if (!r)
-    return_error(-1);
-
-  return ep_port_feed_events(
-      port_info, iocp_events, completion_count, epoll_events, maxevents);
-}
-
-static int _ep_port_wait(ep_port_t* port_info,
-                         struct epoll_event* events,
-                         int maxevents,
-                         int timeout) {
-  ULONGLONG due = 0;
-  DWORD gqcs_timeout;
-  int result;
-
-  /* Check whether `maxevents` is in range. */
-  if (maxevents <= 0)
-    return_error(-1, ERROR_INVALID_PARAMETER);
-
-  /* Compute how much overlapped entries can be dequeued at most. */
-  if ((size_t) maxevents > _EPOLL_MAX_COMPLETION_COUNT)
-    maxevents = _EPOLL_MAX_COMPLETION_COUNT;
-
-  /* Compute the timeout for GetQueuedCompletionStatus, and the wait end
-   * time, if the user specified a timeout other than zero or infinite.
-   */
-  if (timeout > 0) {
-    due = GetTickCount64() + timeout;
-    gqcs_timeout = (DWORD) timeout;
-  } else if (timeout == 0) {
-    gqcs_timeout = 0;
-  } else {
-    gqcs_timeout = INFINITE;
-  }
-
-  /* Dequeue completion packets until either at least one interesting event
-   * has been discovered, or the timeout is reached.
-   */
-  do {
-    OVERLAPPED_ENTRY iocp_events[_EPOLL_MAX_COMPLETION_COUNT];
-    ULONGLONG now;
-
-    result =
-        _ep_port_poll(port_info, events, iocp_events, maxevents, gqcs_timeout);
-    if (result < 0 || result > 0)
-      break; /* Result, error, or time-out. */
-
-    if (timeout < 0)
-      continue; /* _ep_port_wait() never times out. */
-
-    /* Check for time-out. */
-    now = GetTickCount64();
-    if (now >= due)
-      break;
-
-    /* Recompute timeout. */
-    gqcs_timeout = (DWORD)(due - now);
-  } while (gqcs_timeout > 0);
-
-  if (result >= 0)
-    return result;
-  else if (GetLastError() == WAIT_TIMEOUT)
-    return 0;
-  else
-    return -1;
-}
-
 int epoll_wait(HANDLE ephnd,
                struct epoll_event* events,
                int maxevents,
@@ -246,7 +160,7 @@ int epoll_wait(HANDLE ephnd,
     return_error(-1, ERROR_INVALID_HANDLE);
   port_info = _handle_tree_node_to_port(tree_node);
 
-  result = _ep_port_wait(port_info, events, maxevents, timeout);
+  result = ep_port_wait(port_info, events, maxevents, timeout);
 
   reflock_tree_node_unref(tree_node);
 
