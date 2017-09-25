@@ -24,29 +24,23 @@ int epoll_global_init(void) {
 
 HANDLE epoll_create(void) {
   ep_port_t* port_info;
-  HANDLE iocp;
+  HANDLE ephnd;
 
   if (init() < 0)
     return NULL;
 
-  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-  if (iocp == INVALID_HANDLE_VALUE)
-    return_error(NULL);
-
-  port_info = ep_port_new(iocp);
-  if (port_info == NULL) {
-    CloseHandle(iocp);
+  port_info = ep_port_new(&ephnd);
+  if (port_info == NULL)
     return NULL;
-  }
 
   if (reflock_tree_add(&_epoll_handle_tree,
                        &port_info->handle_tree_node,
-                       (uintptr_t) iocp) < 0) {
+                       (uintptr_t) ephnd) < 0) {
     ep_port_delete(port_info);
     return_error(INVALID_HANDLE_VALUE, ERROR_ALREADY_EXISTS);
   }
 
-  return iocp;
+  return ephnd;
 }
 
 int epoll_close(HANDLE ephnd) {

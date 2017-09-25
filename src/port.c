@@ -27,12 +27,17 @@ static void _ep_port_free(ep_port_t* port) {
   free(port);
 }
 
-ep_port_t* ep_port_new(HANDLE iocp) {
+ep_port_t* ep_port_new(HANDLE* iocp_out) {
   ep_port_t* port_info;
+  HANDLE iocp;
 
   port_info = _ep_port_alloc();
   if (port_info == NULL)
-    return NULL;
+    goto err1;
+
+  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+  if (iocp == INVALID_HANDLE_VALUE)
+    goto err2;
 
   memset(port_info, 0, sizeof *port_info);
 
@@ -42,7 +47,13 @@ ep_port_t* ep_port_new(HANDLE iocp) {
   reflock_tree_node_init(&port_info->handle_tree_node);
   InitializeCriticalSection(&port_info->lock);
 
+  *iocp_out = iocp;
   return port_info;
+
+err2:
+  _ep_port_free(port_info);
+err1:
+  return NULL;
 }
 
 static int _ep_port_close_iocp(ep_port_t* port_info) {
