@@ -64,6 +64,8 @@ int ep_port_close(ep_port_t* port_info) {
 int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
 
+  EnterCriticalSection(&port_info->lock);
+
   if (port_info->iocp != NULL)
     _ep_port_close_iocp(port_info);
 
@@ -77,6 +79,8 @@ int ep_port_delete(ep_port_t* port_info) {
     if (pga != NULL)
       poll_group_allocator_delete(pga);
   }
+
+  LeaveCriticalSection(&port_info->lock);
 
   DeleteCriticalSection(&port_info->lock);
 
