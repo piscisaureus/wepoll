@@ -110,17 +110,17 @@ int ep_port_update_events(ep_port_t* port_info) {
   return 0;
 }
 
-size_t ep_port_feed_events(ep_port_t* port_info,
-                           OVERLAPPED_ENTRY* completion_list,
-                           size_t completion_count,
-                           struct epoll_event* event_list,
-                           size_t max_event_count) {
+int ep_port_feed_events(ep_port_t* port_info,
+                        OVERLAPPED_ENTRY* completion_list,
+                        int completion_count,
+                        struct epoll_event* event_list,
+                        int max_event_count) {
   if (completion_count > max_event_count)
     abort();
 
-  size_t event_count = 0;
+  int event_count = 0;
 
-  for (size_t i = 0; i < completion_count; i++) {
+  for (int i = 0; i < completion_count; i++) {
     OVERLAPPED* overlapped = completion_list[i].lpOverlapped;
     ep_sock_t* sock_info = ep_sock_from_overlapped(overlapped);
     struct epoll_event* ev = &event_list[event_count];

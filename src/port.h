@@ -31,11 +31,11 @@ EPOLL_INTERNAL int ep_port_close(ep_port_t* port_info);
 EPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
 
 EPOLL_INTERNAL int ep_port_update_events(ep_port_t* port_info);
-EPOLL_INTERNAL size_t ep_port_feed_events(ep_port_t* port_info,
-                                          OVERLAPPED_ENTRY* completion_list,
-                                          size_t completion_count,
-                                          struct epoll_event* event_list,
-                                          size_t max_event_count);
+EPOLL_INTERNAL int ep_port_feed_events(ep_port_t* port_info,
+                                       OVERLAPPED_ENTRY* completion_list,
+                                       int completion_count,
+                                       struct epoll_event* event_list,
+                                       int max_event_count);
 
 EPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
     ep_port_t* port_info,
