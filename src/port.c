@@ -123,6 +123,11 @@ static int _ep_port_update_events(ep_port_t* port_info) {
   return 0;
 }
 
+static void _ep_port_update_events_if_polling(ep_port_t* port_info) {
+  if (port_info->active_poll_count > 0)
+    _ep_port_update_events(port_info);
+}
+
 static int _ep_port_feed_events(ep_port_t* port_info,
                                 OVERLAPPED_ENTRY* completion_list,
                                 int completion_count,
@@ -154,6 +159,8 @@ static int _ep_port_poll(ep_port_t* port_info,
   if (_ep_port_update_events(port_info) < 0)
     return -1;
 
+  port_info->active_poll_count++;
+
   LeaveCriticalSection(&port_info->lock);
 
   BOOL r = GetQueuedCompletionStatusEx(port_info->iocp,
@@ -164,6 +171,8 @@ static int _ep_port_poll(ep_port_t* port_info,
                                        FALSE);
 
   EnterCriticalSection(&port_info->lock);
+
+  port_info->active_poll_count--;
 
   if (!r)
     return_error(-1);
@@ -226,6 +235,8 @@ int ep_port_wait(ep_port_t* port_info,
     gqcs_timeout = (DWORD)(due - now);
   } while (gqcs_timeout > 0);
 
+  _ep_port_update_events_if_polling(port_info);
+
   LeaveCriticalSection(&port_info->lock);
 
   if (result >= 0)
@@ -248,6 +259,8 @@ static int _ep_port_ctl_add(ep_port_t* port_info,
     return -1;
   }
 
+  _ep_port_update_events_if_polling(port_info);
+
   return 0;
 }
 
@@ -260,6 +273,8 @@ static int _ep_port_ctl_mod(ep_port_t* port_info,
 
   if (ep_sock_set_event(port_info, sock_info, ev) < 0)
     return -1;
+
+  _ep_port_update_events_if_polling(port_info);
 
   return 0;
 }
