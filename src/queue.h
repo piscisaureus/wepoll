@@ -1,5 +1,5 @@
-#ifndef QUEUE_H_
-#define QUEUE_H_
+#ifndef EPOLL_QUEUE_H_
+#define EPOLL_QUEUE_H_
 
 #include <stdbool.h>
 
@@ -31,4 +31,4 @@ EPOLL_INTERNAL void queue_remove(queue_node_t* node);
 EPOLL_INTERNAL bool queue_empty(const queue_t* queue);
 EPOLL_INTERNAL bool queue_enqueued(const queue_node_t* node);
 
-#endif /* QUEUE_H_ */
+#endif /* EPOLL_QUEUE_H_ */

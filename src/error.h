@@ -1,5 +1,5 @@
-#ifndef ERROR_H_
-#define ERROR_H_
+#ifndef EPOLL_ERROR_H_
+#define EPOLL_ERROR_H_
 
 #include <errno.h>
 
@@ -21,4 +21,4 @@ EPOLL_INTERNAL void we_set_win_error(DWORD error);
 
 #define return_error(value, ...) _return_error_helper(__VA_ARGS__ + 0, value)
 
-#endif /* ERROR_H_ */
+#endif /* EPOLL_ERROR_H_ */

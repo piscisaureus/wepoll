@@ -1,5 +1,5 @@
-#ifndef REFLOCK_H_
-#define REFLOCK_H_
+#ifndef EPOLL_REFLOCK_H_
+#define EPOLL_REFLOCK_H_
 
 /* The reflock is a special kind of lock that normally prevents a chunk of
  * memory from being freed, but does allow the chunk of memory to eventually be
@@ -34,4 +34,4 @@ EPOLL_INTERNAL void reflock_ref(reflock_t* reflock);
 EPOLL_INTERNAL void reflock_unref(reflock_t* reflock);
 EPOLL_INTERNAL void reflock_unref_and_destroy(reflock_t* reflock);
 
-#endif /* REFLOCK_H_ */
+#endif /* EPOLL_REFLOCK_H_ */

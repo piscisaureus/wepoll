@@ -1,5 +1,5 @@
-#ifndef REFLOCK_TREE_H_
-#define REFLOCK_TREE_H_
+#ifndef EPOLL_REFLOCK_TREE_H_
+#define EPOLL_REFLOCK_TREE_H_
 
 #include <stdint.h>
 

@@ -1,5 +1,5 @@
-#ifndef ERROR_MAP_H_
-#define ERROR_MAP_H_
+#ifndef EPOLL_ERROR_MAP_H_
+#define EPOLL_ERROR_MAP_H_
 
 /* clang-format off */
 
@@ -598,4 +598,4 @@
 
 /* clang-format on */
 
-#endif /* ERROR_MAP_H_ */
+#endif /* EPOLL_ERROR_MAP_H_ */
