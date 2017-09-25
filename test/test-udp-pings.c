@@ -23,7 +23,7 @@ int main(void) {
   SOCKET srv;
   struct epoll_event ev;
 
-  epoll_hnd = epoll_create();
+  epoll_hnd = epoll_create1(0);
   assert(epoll_hnd && epoll_hnd != INVALID_HANDLE_VALUE);
 
   srv = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);

@@ -46,7 +46,7 @@ int main(void) {
   r = init();
   assert(r == 0);
 
-  epfd = epoll_create();
+  epfd = epoll_create1(0);
   assert(epfd != NULL);
 
   for (size_t i = 0; i < NUM_SOCKETS; i++)

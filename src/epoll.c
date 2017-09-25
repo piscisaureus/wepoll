@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "epoll-socket.h"
 #include "epoll.h"
 #include "error.h"
 #include "init.h"
@@ -22,7 +21,7 @@ int epoll_global_init(void) {
   return 0;
 }
 
-HANDLE epoll_create(void) {
+static HANDLE _epoll_create(void) {
   ep_port_t* port_info;
   HANDLE ephnd;
 
@@ -41,6 +40,20 @@ HANDLE epoll_create(void) {
   }
 
   return ephnd;
+}
+
+HANDLE epoll_create(int size) {
+  if (size <= 0)
+    return_error(INVALID_HANDLE_VALUE, ERROR_INVALID_PARAMETER);
+
+  return _epoll_create();
+}
+
+HANDLE epoll_create1(int flags) {
+  if (flags != 0)
+    return_error(INVALID_HANDLE_VALUE, ERROR_INVALID_PARAMETER);
+
+  return _epoll_create();
 }
 
 int epoll_close(HANDLE ephnd) {

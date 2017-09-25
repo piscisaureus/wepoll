@@ -60,7 +60,8 @@ struct epoll_event {
 extern "C" {
 #endif
 
-EPOLL_EXTERN HANDLE epoll_create(void);
+EPOLL_EXTERN HANDLE epoll_create(int size);
+EPOLL_EXTERN HANDLE epoll_create1(int flags);
 
 EPOLL_EXTERN int epoll_close(HANDLE ephnd);
 

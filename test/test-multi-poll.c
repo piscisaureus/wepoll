@@ -70,7 +70,7 @@ static unsigned int __stdcall poll_thread(void* arg) {
 
   sock = (SOCKET) arg;
 
-  epfd = epoll_create();
+  epfd = epoll_create1(0);
   assert(epfd != NULL);
 
   ev_in.events = EPOLLIN;
