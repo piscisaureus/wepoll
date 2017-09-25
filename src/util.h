@@ -12,11 +12,11 @@ typedef intptr_t ssize_t;
 
 #define array_count(a) (sizeof(a) / (sizeof((a)[0])))
 
-#define safe_container_of(ptr, type, member) \
-  ((type*) _util_safe_container_of_helper((ptr), offsetof(type, member)))
-
 #define container_of(ptr, type, member) \
   ((type*) ((char*) (ptr) -offsetof(type, member)))
+
+#define safe_container_of(ptr, type, member) \
+  ((type*) _util_safe_container_of_helper((ptr), offsetof(type, member)))
 
 #define unused(v) ((void) (v))
 
