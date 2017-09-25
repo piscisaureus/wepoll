@@ -145,12 +145,37 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   return result;
 }
 
-static int _ep_wait(ep_port_t* port_info,
-                    struct epoll_event* events,
-                    int maxevents,
-                    int timeout) {
+static int _ep_port_poll(ep_port_t* port_info,
+                         struct epoll_event* epoll_events,
+                         OVERLAPPED_ENTRY* iocp_events,
+                         int maxevents,
+                         DWORD timeout) {
+  ULONG completion_count;
+
+  if (ep_port_update_events(port_info) < 0)
+    return -1;
+
+  BOOL r = GetQueuedCompletionStatusEx(port_info->iocp,
+                                       iocp_events,
+                                       maxevents,
+                                       &completion_count,
+                                       timeout,
+                                       FALSE);
+
+  if (!r)
+    return_error(-1);
+
+  return ep_port_feed_events(
+      port_info, iocp_events, completion_count, epoll_events, maxevents);
+}
+
+static int _ep_port_wait(ep_port_t* port_info,
+                         struct epoll_event* events,
+                         int maxevents,
+                         int timeout) {
   ULONGLONG due = 0;
   DWORD gqcs_timeout;
+  int result;
 
   /* Check whether `maxevents` is in range. */
   if (maxevents <= 0)
@@ -176,39 +201,32 @@ static int _ep_wait(ep_port_t* port_info,
    * has been discovered, or the timeout is reached.
    */
   do {
-    OVERLAPPED_ENTRY completion_list[_EPOLL_MAX_COMPLETION_COUNT];
-    ULONG completion_count;
-    ssize_t event_count;
+    OVERLAPPED_ENTRY iocp_events[_EPOLL_MAX_COMPLETION_COUNT];
+    ULONGLONG now;
 
-    if (ep_port_update_events(port_info) < 0)
-      return -1;
+    result =
+        _ep_port_poll(port_info, events, iocp_events, maxevents, gqcs_timeout);
+    if (result < 0 || result > 0)
+      break; /* Result, error, or time-out. */
 
-    BOOL r = GetQueuedCompletionStatusEx(port_info->iocp,
-                                         completion_list,
-                                         maxevents,
-                                         &completion_count,
-                                         gqcs_timeout,
-                                         FALSE);
-    if (!r) {
-      if (GetLastError() == WAIT_TIMEOUT)
-        return 0;
-      else
-        return_error(-1);
-    }
+    if (timeout < 0)
+      continue; /* _ep_port_wait() never times out. */
 
-    event_count = ep_port_feed_events(
-        port_info, completion_list, completion_count, events, maxevents);
-    if (event_count > 0)
-      return (int) event_count;
+    /* Check for time-out. */
+    now = GetTickCount64();
+    if (now >= due)
+      break;
 
-    /* Events were dequeued, but none were relevant. Recompute timeout. */
-    if (timeout > 0) {
-      ULONGLONG now = GetTickCount64();
-      gqcs_timeout = (now < due) ? (DWORD)(due - now) : 0;
-    }
+    /* Recompute timeout. */
+    gqcs_timeout = (DWORD)(due - now);
   } while (gqcs_timeout > 0);
 
-  return 0;
+  if (result >= 0)
+    return result;
+  else if (GetLastError() == WAIT_TIMEOUT)
+    return 0;
+  else
+    return -1;
 }
 
 int epoll_wait(HANDLE ephnd,
@@ -228,7 +246,7 @@ int epoll_wait(HANDLE ephnd,
     return_error(-1, ERROR_INVALID_HANDLE);
   port_info = _handle_tree_node_to_port(tree_node);
 
-  result = _ep_wait(port_info, events, maxevents, timeout);
+  result = _ep_port_wait(port_info, events, maxevents, timeout);
 
   reflock_tree_node_unref(tree_node);
 
