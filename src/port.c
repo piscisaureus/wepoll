@@ -143,12 +143,16 @@ static int _ep_port_poll(ep_port_t* port_info,
   if (_ep_port_update_events(port_info) < 0)
     return -1;
 
+  LeaveCriticalSection(&port_info->lock);
+
   BOOL r = GetQueuedCompletionStatusEx(port_info->iocp,
     iocp_events,
     maxevents,
     &completion_count,
     timeout,
     FALSE);
+
+  EnterCriticalSection(&port_info->lock);
 
   if (!r)
     return_error(-1);
@@ -187,6 +191,8 @@ int ep_port_wait(ep_port_t* port_info,
     gqcs_timeout = INFINITE;
   }
 
+  EnterCriticalSection(&port_info->lock);
+
   /* Dequeue completion packets until either at least one interesting event
   * has been discovered, or the timeout is reached.
   */
@@ -210,6 +216,8 @@ int ep_port_wait(ep_port_t* port_info,
     /* Recompute timeout. */
     gqcs_timeout = (DWORD)(due - now);
   } while (gqcs_timeout > 0);
+
+  LeaveCriticalSection(&port_info->lock);
 
   if (result >= 0)
     return result;
