@@ -56,7 +56,9 @@ static int _ep_port_close_iocp(ep_port_t* port_info) {
 int ep_port_close(ep_port_t* port_info) {
   int result;
 
+  EnterCriticalSection(&port_info->lock);
   result = _ep_port_close_iocp(port_info);
+  LeaveCriticalSection(&port_info->lock);
 
   return result;
 }
