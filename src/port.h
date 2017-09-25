@@ -31,9 +31,14 @@ EPOLL_INTERNAL int ep_port_close(ep_port_t* port_info);
 EPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
 
 EPOLL_INTERNAL int ep_port_wait(ep_port_t* port_info,
-  struct epoll_event* events,
-  int maxevents,
-  int timeout);
+                                struct epoll_event* events,
+                                int maxevents,
+                                int timeout);
+
+EPOLL_INTERNAL int ep_port_ctl(ep_port_t* port_info,
+                               int op,
+                               SOCKET sock,
+                               struct epoll_event* ev);
 
 EPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
     ep_port_t* port_info,

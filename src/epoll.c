@@ -68,60 +68,6 @@ int epoll_close(HANDLE ephnd) {
   return ep_port_delete(port_info);
 }
 
-static int _ep_ctl_add(ep_port_t* port_info,
-                       SOCKET sock,
-                       struct epoll_event* ev) {
-  ep_sock_t* sock_info = ep_sock_new(port_info, sock);
-  if (sock_info == NULL)
-    return -1;
-
-  if (ep_sock_set_event(port_info, sock_info, ev) < 0) {
-    ep_sock_delete(port_info, sock_info);
-    return -1;
-  }
-
-  return 0;
-}
-
-static int _ep_ctl_mod(ep_port_t* port_info,
-                       SOCKET sock,
-                       struct epoll_event* ev) {
-  ep_sock_t* sock_info = ep_port_find_socket(port_info, sock);
-  if (sock_info == NULL)
-    return -1;
-
-  if (ep_sock_set_event(port_info, sock_info, ev) < 0)
-    return -1;
-
-  return 0;
-}
-
-static int _ep_ctl_del(ep_port_t* port_info, SOCKET sock) {
-  ep_sock_t* sock_info = ep_port_find_socket(port_info, sock);
-  if (sock_info == NULL)
-    return -1;
-
-  ep_sock_delete(port_info, sock_info);
-
-  return 0;
-}
-
-static int _ep_ctl(ep_port_t* port_info,
-                   int op,
-                   SOCKET sock,
-                   struct epoll_event* ev) {
-  switch (op) {
-    case EPOLL_CTL_ADD:
-      return _ep_ctl_add(port_info, sock, ev);
-    case EPOLL_CTL_MOD:
-      return _ep_ctl_mod(port_info, sock, ev);
-    case EPOLL_CTL_DEL:
-      return _ep_ctl_del(port_info, sock);
-    default:
-      return_error(-1, ERROR_INVALID_PARAMETER);
-  }
-}
-
 int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   reflock_tree_node_t* tree_node;
   ep_port_t* port_info;
@@ -136,7 +82,7 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
     return_error(-1, ERROR_INVALID_HANDLE);
   port_info = _handle_tree_node_to_port(tree_node);
 
-  result = _ep_ctl(port_info, op, sock, ev);
+  result = ep_port_ctl(port_info, op, sock, ev);
 
   reflock_tree_node_unref(tree_node);
 

@@ -113,10 +113,10 @@ static int _ep_port_update_events(ep_port_t* port_info) {
 }
 
 static int _ep_port_feed_events(ep_port_t* port_info,
-                        OVERLAPPED_ENTRY* completion_list,
-                        int completion_count,
-                        struct epoll_event* event_list,
-                        int max_event_count) {
+                                OVERLAPPED_ENTRY* completion_list,
+                                int completion_count,
+                                struct epoll_event* event_list,
+                                int max_event_count) {
   if (completion_count > max_event_count)
     abort();
 
@@ -134,10 +134,10 @@ static int _ep_port_feed_events(ep_port_t* port_info,
 }
 
 static int _ep_port_poll(ep_port_t* port_info,
-  struct epoll_event* epoll_events,
-  OVERLAPPED_ENTRY* iocp_events,
-  int maxevents,
-  DWORD timeout) {
+                         struct epoll_event* epoll_events,
+                         OVERLAPPED_ENTRY* iocp_events,
+                         int maxevents,
+                         DWORD timeout) {
   ULONG completion_count;
 
   if (_ep_port_update_events(port_info) < 0)
@@ -146,11 +146,11 @@ static int _ep_port_poll(ep_port_t* port_info,
   LeaveCriticalSection(&port_info->lock);
 
   BOOL r = GetQueuedCompletionStatusEx(port_info->iocp,
-    iocp_events,
-    maxevents,
-    &completion_count,
-    timeout,
-    FALSE);
+                                       iocp_events,
+                                       maxevents,
+                                       &completion_count,
+                                       timeout,
+                                       FALSE);
 
   EnterCriticalSection(&port_info->lock);
 
@@ -158,13 +158,13 @@ static int _ep_port_poll(ep_port_t* port_info,
     return_error(-1);
 
   return _ep_port_feed_events(
-    port_info, iocp_events, completion_count, epoll_events, maxevents);
+      port_info, iocp_events, completion_count, epoll_events, maxevents);
 }
 
 int ep_port_wait(ep_port_t* port_info,
-  struct epoll_event* events,
-  int maxevents,
-  int timeout) {
+                 struct epoll_event* events,
+                 int maxevents,
+                 int timeout) {
   ULONGLONG due = 0;
   DWORD gqcs_timeout;
   int result;
@@ -174,41 +174,39 @@ int ep_port_wait(ep_port_t* port_info,
     return_error(-1, ERROR_INVALID_PARAMETER);
 
   /* Compute how much overlapped entries can be dequeued at most. */
-  if ((size_t)maxevents > _EPOLL_MAX_COMPLETION_COUNT)
+  if ((size_t) maxevents > _EPOLL_MAX_COMPLETION_COUNT)
     maxevents = _EPOLL_MAX_COMPLETION_COUNT;
 
   /* Compute the timeout for GetQueuedCompletionStatus, and the wait end
-  * time, if the user specified a timeout other than zero or infinite.
-  */
+   * time, if the user specified a timeout other than zero or infinite.
+   */
   if (timeout > 0) {
     due = GetTickCount64() + timeout;
-    gqcs_timeout = (DWORD)timeout;
-  }
-  else if (timeout == 0) {
+    gqcs_timeout = (DWORD) timeout;
+  } else if (timeout == 0) {
     gqcs_timeout = 0;
-  }
-  else {
+  } else {
     gqcs_timeout = INFINITE;
   }
 
   EnterCriticalSection(&port_info->lock);
 
   /* Dequeue completion packets until either at least one interesting event
-  * has been discovered, or the timeout is reached.
-  */
+   * has been discovered, or the timeout is reached.
+   */
   do {
     OVERLAPPED_ENTRY iocp_events[_EPOLL_MAX_COMPLETION_COUNT];
     ULONGLONG now;
 
     result =
-      _ep_port_poll(port_info, events, iocp_events, maxevents, gqcs_timeout);
+        _ep_port_poll(port_info, events, iocp_events, maxevents, gqcs_timeout);
     if (result < 0 || result > 0)
       break; /* Result, error, or time-out. */
 
     if (timeout < 0)
       continue; /* _ep_port_wait() never times out. */
 
-                /* Check for time-out. */
+    /* Check for time-out. */
     now = GetTickCount64();
     if (now >= due)
       break;
@@ -225,6 +223,71 @@ int ep_port_wait(ep_port_t* port_info,
     return 0;
   else
     return -1;
+}
+
+static int _ep_port_ctl_add(ep_port_t* port_info,
+                            SOCKET sock,
+                            struct epoll_event* ev) {
+  ep_sock_t* sock_info = ep_sock_new(port_info, sock);
+  if (sock_info == NULL)
+    return -1;
+
+  if (ep_sock_set_event(port_info, sock_info, ev) < 0) {
+    ep_sock_delete(port_info, sock_info);
+    return -1;
+  }
+
+  return 0;
+}
+
+static int _ep_port_ctl_mod(ep_port_t* port_info,
+                            SOCKET sock,
+                            struct epoll_event* ev) {
+  ep_sock_t* sock_info = ep_port_find_socket(port_info, sock);
+  if (sock_info == NULL)
+    return -1;
+
+  if (ep_sock_set_event(port_info, sock_info, ev) < 0)
+    return -1;
+
+  return 0;
+}
+
+static int _ep_port_ctl_del(ep_port_t* port_info, SOCKET sock) {
+  ep_sock_t* sock_info = ep_port_find_socket(port_info, sock);
+  if (sock_info == NULL)
+    return -1;
+
+  ep_sock_delete(port_info, sock_info);
+
+  return 0;
+}
+
+static int _ep_port_ctl_op(ep_port_t* port_info,
+                           int op,
+                           SOCKET sock,
+                           struct epoll_event* ev) {
+  switch (op) {
+    case EPOLL_CTL_ADD:
+      return _ep_port_ctl_add(port_info, sock, ev);
+    case EPOLL_CTL_MOD:
+      return _ep_port_ctl_mod(port_info, sock, ev);
+    case EPOLL_CTL_DEL:
+      return _ep_port_ctl_del(port_info, sock);
+    default:
+      return_error(-1, ERROR_INVALID_PARAMETER);
+  }
+}
+
+int ep_port_ctl(ep_port_t* port_info,
+                int op,
+                SOCKET sock,
+                struct epoll_event* ev) {
+  int result;
+
+  result = _ep_port_ctl_op(port_info, op, sock, ev);
+
+  return result;
 }
 
 int ep_port_add_socket(ep_port_t* port_info,
