@@ -37,6 +37,7 @@ ep_port_t* ep_port_new(HANDLE iocp) {
   port_info->iocp = iocp;
   queue_init(&port_info->update_queue);
   tree_init(&port_info->sock_tree);
+  reflock_tree_node_init(&port_info->handle_tree_node);
 
   return port_info;
 }

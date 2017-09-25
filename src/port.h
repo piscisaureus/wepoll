@@ -8,6 +8,7 @@
 #include "poll-group.h"
 #include "queue.h"
 #include "rb.h"
+#include "reflock-tree.h"
 #include "tree.h"
 #include "util.h"
 #include "win.h"
@@ -21,6 +22,7 @@ typedef struct ep_port {
       poll_group_allocators[array_count(AFD_PROVIDER_GUID_LIST)];
   tree_t sock_tree;
   queue_t update_queue;
+  reflock_tree_node_t handle_tree_node;
 } ep_port_t;
 
 EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE iocp);

@@ -13,7 +13,7 @@
 static const char PING[] = "PING";
 
 int main(void) {
-  epoll_t epoll_hnd;
+  HANDLE epoll_hnd;
   int r;
   u_long one = 1;
   struct sockaddr_in address;

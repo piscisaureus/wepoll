@@ -41,7 +41,6 @@ enum EPOLL_EVENTS {
 
 typedef void* HANDLE;
 typedef uintptr_t SOCKET;
-typedef void* epoll_t;
 
 typedef union epoll_data {
   void* ptr;
@@ -61,16 +60,16 @@ struct epoll_event {
 extern "C" {
 #endif
 
-EPOLL_EXTERN epoll_t epoll_create(void);
+EPOLL_EXTERN HANDLE epoll_create(void);
 
-EPOLL_EXTERN int epoll_close(epoll_t epoll_hnd);
+EPOLL_EXTERN int epoll_close(HANDLE ephnd);
 
-EPOLL_EXTERN int epoll_ctl(epoll_t epoll_hnd,
+EPOLL_EXTERN int epoll_ctl(HANDLE ephnd,
                            int op,
                            SOCKET sock,
                            struct epoll_event* event);
 
-EPOLL_EXTERN int epoll_wait(epoll_t epoll_hnd,
+EPOLL_EXTERN int epoll_wait(HANDLE ephnd,
                             struct epoll_event* events,
                             int maxevents,
                             int timeout);

@@ -15,7 +15,7 @@
 #define RUN_TIME 10000
 #define PRINT_INTERVAL 500
 
-static SOCKET create_and_add_socket(epoll_t epfd) {
+static SOCKET create_and_add_socket(HANDLE epfd) {
   SOCKET sock;
   unsigned long one;
   int r;
@@ -41,7 +41,7 @@ int main(void) {
   uint64_t start_time, last_print_time, now, total_time;
   SOCKET sockets[NUM_SOCKETS];
   int r;
-  epoll_t epfd;
+  HANDLE epfd;
 
   r = init();
   assert(r == 0);

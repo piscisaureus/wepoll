@@ -62,7 +62,7 @@ static void send_message(SOCKET sock, unsigned short port) {
 }
 
 static unsigned int __stdcall poll_thread(void* arg) {
-  epoll_t epfd;
+  HANDLE epfd;
   SOCKET sock;
   struct epoll_event ev_in;
   struct epoll_event ev_out;
