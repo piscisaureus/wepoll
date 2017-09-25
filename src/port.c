@@ -129,24 +129,20 @@ static void _ep_port_update_events_if_polling(ep_port_t* port_info) {
 }
 
 static int _ep_port_feed_events(ep_port_t* port_info,
-                                OVERLAPPED_ENTRY* completion_list,
-                                int completion_count,
-                                struct epoll_event* event_list,
-                                int max_event_count) {
-  if (completion_count > max_event_count)
-    abort();
+                                struct epoll_event* epoll_events,
+                                OVERLAPPED_ENTRY* iocp_events,
+                                int iocp_event_count) {
+  int epoll_event_count = 0;
 
-  int event_count = 0;
-
-  for (int i = 0; i < completion_count; i++) {
-    OVERLAPPED* overlapped = completion_list[i].lpOverlapped;
+  for (int i = 0; i < iocp_event_count; i++) {
+    OVERLAPPED* overlapped = iocp_events[i].lpOverlapped;
     ep_sock_t* sock_info = ep_sock_from_overlapped(overlapped);
-    struct epoll_event* ev = &event_list[event_count];
+    struct epoll_event* ev = &epoll_events[epoll_event_count];
 
-    event_count += ep_sock_feed_event(port_info, sock_info, ev);
+    epoll_event_count += ep_sock_feed_event(port_info, sock_info, ev);
   }
 
-  return event_count;
+  return epoll_event_count;
 }
 
 static int _ep_port_poll(ep_port_t* port_info,
@@ -178,7 +174,7 @@ static int _ep_port_poll(ep_port_t* port_info,
     return_error(-1);
 
   return _ep_port_feed_events(
-      port_info, iocp_events, completion_count, epoll_events, maxevents);
+      port_info, epoll_events, iocp_events, completion_count);
 }
 
 int ep_port_wait(ep_port_t* port_info,
