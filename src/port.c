@@ -285,7 +285,9 @@ int ep_port_ctl(ep_port_t* port_info,
                 struct epoll_event* ev) {
   int result;
 
+  EnterCriticalSection(&port_info->lock);
   result = _ep_port_ctl_op(port_info, op, sock, ev);
+  LeaveCriticalSection(&port_info->lock);
 
   return result;
 }
