@@ -2,12 +2,12 @@
 #include <malloc.h>
 #include <stdlib.h>
 
-#include "epoll-socket.h"
 #include "epoll.h"
 #include "error.h"
 #include "poll-group.h"
 #include "port.h"
 #include "queue.h"
+#include "sock.h"
 #include "tree.h"
 #include "util.h"
 #include "win.h"

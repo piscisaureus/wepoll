@@ -1,5 +1,5 @@
-#ifndef EPOLL_SOCK_DATA_H_
-#define EPOLL_SOCK_DATA_H_
+#ifndef EPOLL_SOCK_H_
+#define EPOLL_SOCK_H_
 
 #include <stdint.h>
 
@@ -36,4 +36,4 @@ EPOLL_INTERNAL int ep_sock_feed_event(ep_port_t* port_info,
                                       ep_sock_t* sock_info,
                                       struct epoll_event* ev);
 
-#endif /* EPOLL_SOCK_DATA_H_ */
+#endif /* EPOLL_SOCK_H_ */
