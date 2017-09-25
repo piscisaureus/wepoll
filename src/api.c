@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "api.h"
 #include "epoll.h"
 #include "error.h"
 #include "init.h"
@@ -16,7 +17,7 @@ static inline ep_port_t* _handle_tree_node_to_port(
   return container_of(tree_node, ep_port_t, handle_tree_node);
 }
 
-int epoll_global_init(void) {
+int api_global_init(void) {
   reflock_tree_init(&_epoll_handle_tree);
   return 0;
 }

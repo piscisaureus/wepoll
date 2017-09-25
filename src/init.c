@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-#include "epoll-init.h"
+#include "api.h"
 #include "error.h"
 #include "init.h"
 #include "nt.h"
@@ -22,7 +22,7 @@ static int _winsock_global_init(void) {
 
 static int _init_once(void) {
   if (_winsock_global_init() < 0 || nt_global_init() < 0 ||
-      reflock_global_init() < 0 || epoll_global_init() < 0)
+      reflock_global_init() < 0 || api_global_init() < 0)
     return -1;
 
   _initialized = true;
