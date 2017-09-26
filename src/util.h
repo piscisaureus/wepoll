@@ -16,7 +16,7 @@ typedef intptr_t ssize_t;
   ((type*) ((char*) (ptr) -offsetof(type, member)))
 
 #define safe_container_of(ptr, type, member) \
-  ((type*) _util_safe_container_of_helper((ptr), offsetof(type, member)))
+  ((type*) util_safe_container_of_helper((ptr), offsetof(type, member)))
 
 #define unused(v) ((void) (v))
 
@@ -26,6 +26,6 @@ typedef intptr_t ssize_t;
     (unused)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
 #endif
 
-EPOLL_INTERNAL void* _util_safe_container_of_helper(void* ptr, size_t offset);
+EPOLL_INTERNAL void* util_safe_container_of_helper(void* ptr, size_t offset);
 
 #endif /* EPOLL_UTIL_H_ */

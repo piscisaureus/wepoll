@@ -3,7 +3,7 @@
 
 #include "util.h"
 
-void* _util_safe_container_of_helper(void* ptr, size_t offset) {
+void* util_safe_container_of_helper(void* ptr, size_t offset) {
   if (ptr == NULL)
     return NULL;
   else
