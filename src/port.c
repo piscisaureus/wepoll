@@ -136,10 +136,9 @@ static int _ep_port_feed_events(ep_port_t* port_info,
 
   for (int i = 0; i < iocp_event_count; i++) {
     OVERLAPPED* overlapped = iocp_events[i].lpOverlapped;
-    ep_sock_t* sock_info = ep_sock_from_overlapped(overlapped);
     struct epoll_event* ev = &epoll_events[epoll_event_count];
 
-    epoll_event_count += ep_sock_feed_event(port_info, sock_info, ev);
+    epoll_event_count += ep_sock_feed_event(port_info, overlapped, ev);
   }
 
   return epoll_event_count;

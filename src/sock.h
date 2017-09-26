@@ -24,15 +24,13 @@ EPOLL_INTERNAL void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info);
 EPOLL_INTERNAL void ep_sock_force_delete(ep_port_t* port_info,
                                          ep_sock_t* sock_info);
 
-EPOLL_INTERNAL ep_sock_t* ep_sock_from_overlapped(OVERLAPPED* overlapped);
-
 EPOLL_INTERNAL int ep_sock_set_event(ep_port_t* port_info,
                                      ep_sock_t* sock_info,
                                      const struct epoll_event* ev);
 
 EPOLL_INTERNAL int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info);
 EPOLL_INTERNAL int ep_sock_feed_event(ep_port_t* port_info,
-                                      ep_sock_t* sock_info,
+                                      OVERLAPPED* overlapped,
                                       struct epoll_event* ev);
 
 #endif /* EPOLL_SOCK_H_ */

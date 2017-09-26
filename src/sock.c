@@ -230,12 +230,6 @@ void ep_sock_force_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   ep_sock_delete(port_info, sock_info);
 }
 
-ep_sock_t* ep_sock_from_overlapped(OVERLAPPED* overlapped) {
-  _ep_sock_private_t* sock_private =
-      container_of(overlapped, _ep_sock_private_t, poll_req.overlapped);
-  return &sock_private->pub;
-}
-
 int ep_sock_set_event(ep_port_t* port_info,
                       ep_sock_t* sock_info,
                       const struct epoll_event* ev) {
@@ -314,10 +308,11 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
 }
 
 int ep_sock_feed_event(ep_port_t* port_info,
-                       ep_sock_t* sock_info,
+                       OVERLAPPED* overlapped,
                        struct epoll_event* ev) {
-  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-
+  _ep_sock_private_t* sock_private =
+      container_of(overlapped, _ep_sock_private_t, poll_req.overlapped);
+  ep_sock_t* sock_info = &sock_private->pub;
   uint32_t epoll_events;
   bool drop_socket;
   int ev_count = 0;
