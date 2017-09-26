@@ -69,8 +69,8 @@ typedef struct _OBJECT_ATTRIBUTES {
     NtReleaseKeyedEvent,                                                     \
     (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout))
 
-#define X(return_type, declarators, name, parameters) \
-  EPOLL_INTERNAL_EXTERN return_type(declarators* name) parameters;
+#define X(return_type, attributes, name, parameters) \
+  EPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
 NTDLL_IMPORT_LIST(X)
 #undef X
 

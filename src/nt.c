@@ -3,8 +3,8 @@
 #include "nt.h"
 #include "win.h"
 
-#define X(return_type, declarators, name, parameters) \
-  EPOLL_INTERNAL return_type(declarators* name) parameters = NULL;
+#define X(return_type, attributes, name, parameters) \
+  EPOLL_INTERNAL return_type(attributes* name) parameters = NULL;
 NTDLL_IMPORT_LIST(X)
 #undef X
 
@@ -15,9 +15,9 @@ int nt_global_init(void) {
   if (ntdll == NULL)
     return -1;
 
-#define X(return_type, declarators, name, parameters)                         \
-  name = (return_type(declarators*) parameters) GetProcAddress(ntdll, #name); \
-  if (name == NULL)                                                           \
+#define X(return_type, attributes, name, parameters)                         \
+  name = (return_type(attributes*) parameters) GetProcAddress(ntdll, #name); \
+  if (name == NULL)                                                          \
     return -1;
   NTDLL_IMPORT_LIST(X)
 #undef X
