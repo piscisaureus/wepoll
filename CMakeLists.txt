@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 2.8.0)
 project(epoll)
 
-add_definitions(-DHAVE_CONFIG_H)
-
 if(WIN32)
 	link_libraries(ws2_32)
 endif()
