@@ -84,7 +84,7 @@ int afd_poll(SOCKET driver_socket,
   else if (status == STATUS_PENDING)
     return_error(-1, ERROR_IO_PENDING);
   else
-    return_error(-1, we_map_ntstatus_to_win_error(status));
+    return_error(-1, RtlNtStatusToDosError(status));
 }
 
 static SOCKET _afd_get_base_socket(SOCKET socket) {
