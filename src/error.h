@@ -6,11 +6,10 @@
 #include "internal.h"
 #include "ntstatus.h"
 
-#define _return_error_helper(error, value)         \
-  do {                                             \
-    err_set_win_error(error);                      \
-    /* { printf("%d\n", error); DebugBreak(); } */ \
-    return (value);                                \
+#define _return_error_helper(error, value) \
+  do {                                     \
+    err_set_win_error(error);              \
+    return (value);                        \
   } while (0)
 
 #define return_error(value, ...) _return_error_helper(__VA_ARGS__ + 0, value)
