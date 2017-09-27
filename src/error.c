@@ -101,7 +101,7 @@
   X(WSAETIMEDOUT, ETIMEDOUT)                 \
   X(WSAEWOULDBLOCK, EWOULDBLOCK)
 
-errno_t we_map_win_error_to_errno(DWORD error) {
+errno_t err_map_win_error_to_errno(DWORD error) {
   switch (error) {
 #define X(error_sym, errno_sym) \
   case error_sym:               \
@@ -112,10 +112,10 @@ errno_t we_map_win_error_to_errno(DWORD error) {
   return EINVAL;
 }
 
-void we_set_win_error(DWORD error) {
+void err_set_win_error(DWORD error) {
   if (error == 0)
     error = GetLastError();
   else
     SetLastError(error);
-  errno = we_map_win_error_to_errno(error);
+  errno = err_map_win_error_to_errno(error);
 }
