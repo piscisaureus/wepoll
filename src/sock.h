@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 
-#include "epoll.h"
 #include "internal.h"
 #include "queue.h"
 #include "rb.h"
 #include "tree.h"
 #include "util.h"
+#include "wepoll.h"
 #include "win.h"
 
 typedef struct ep_port ep_port_t;

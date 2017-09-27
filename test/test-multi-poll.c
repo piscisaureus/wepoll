@@ -3,9 +3,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "epoll.h"
 #include "init.h"
 #include "util.h"
+#include "wepoll.h"
 #include "win.h"
 
 #include <WS2tcpip.h>

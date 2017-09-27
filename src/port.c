@@ -2,7 +2,6 @@
 #include <malloc.h>
 #include <stdlib.h>
 
-#include "epoll.h"
 #include "error.h"
 #include "poll-group.h"
 #include "port.h"
@@ -10,6 +9,7 @@
 #include "sock.h"
 #include "tree.h"
 #include "util.h"
+#include "wepoll.h"
 #include "win.h"
 
 #define _PORT_MAX_ON_STACK_COMPLETIONS 256

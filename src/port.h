@@ -2,7 +2,6 @@
 #define EPOLL_PORT_DATA_H_
 
 #include "afd.h"
-#include "epoll.h"
 #include "internal.h"
 #include "poll-group.h"
 #include "queue.h"
@@ -11,6 +10,7 @@
 #include "sock.h"
 #include "tree.h"
 #include "util.h"
+#include "wepoll.h"
 #include "win.h"
 
 typedef struct ep_port ep_port_t;

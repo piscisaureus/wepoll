@@ -4,11 +4,11 @@
 #include <stdint.h>
 
 #include "afd.h"
-#include "epoll.h"
 #include "error.h"
 #include "poll-group.h"
 #include "port.h"
 #include "sock.h"
+#include "wepoll.h"
 
 #define _EP_EVENT_MASK 0xffff
 
