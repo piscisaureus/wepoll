@@ -11,8 +11,10 @@ else()
 	add_compile_options(-Wall)
 endif()
 
-file(GLOB_RECURSE SOURCES_SRC src/*.c src/*.h)
-file(GLOB_RECURSE SOURCES_SRC_C src/*.c)
+file(GLOB SOURCES_SRC src/*.c src/*.h)
+file(GLOB SOURCES_SRC_C src/*.c)
+file(GLOB SOURCES_SRC_REGULAR src/regular/*.c src/regular/*.h)
+file(GLOB SOURCES_SRC_ALL_IN_ONE src/all-in-one/*.c src/all-in-one/*.h)
 file(GLOB_RECURSE SOURCES_INCLUDE include/*.h)
 file(GLOB SOURCES_TEST test/*.c)
 file(GLOB_RECURSE SOURCES_TEST_SHARED test/shared/*.c test/shared/*.h)
@@ -25,7 +27,7 @@ source_group(test/shared FILES ${SOURCES_TEST_SHARED})
 foreach(TEST_SOURCE ${SOURCES_TEST})
 	get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
 	add_executable(${TEST_NAME} ${TEST_SOURCE} ${SOURCES_SRC} ${SOURCES_TEST_SHARED})
-	target_include_directories(${TEST_NAME} PUBLIC include src)
+	target_include_directories(${TEST_NAME} PUBLIC include src src/regular)
 endforeach(TEST_SOURCE ${SOURCES_TEST})
 
 foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
@@ -36,7 +38,7 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
 	set(ALLINONE_SRC_C "allinone/${HEADER_NAME}-all-in-one.c")
 	add_custom_command(
 		OUTPUT ${ALLINONE_SRC_C}
-		COMMAND node allinone/build.js -Iinclude -Isrc ${HEADER_SOURCE} ${SOURCES_SRC_C} > ${ALLINONE_SRC_C}
+		COMMAND node allinone/build.js -Iinclude -Isrc -Isrc/all-in-one ${HEADER_SOURCE} ${SOURCES_SRC_C} > ${ALLINONE_SRC_C}
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		IMPLICIT_DEPENDS c ${SOURCES_INCLUDE} ${SOURCES_SRC}
 	)
@@ -57,7 +59,7 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
 	set(DLL_NAME "${HEADER_NAME}.dll")
 	set(DLL_OUTPUT "${HEADER_NAME}")
 	add_library(${DLL_NAME} SHARED ${HEADER_SOURCE} ${SOURCES_SRC})
-	target_include_directories(${DLL_NAME} PUBLIC include)
+	target_include_directories(${DLL_NAME} PUBLIC include src/regular)
 	if(MSVC)
 		target_compile_options(${DLL_NAME} PUBLIC "-FI${HEADER_SOURCE}")
 		target_compile_definitions(${DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__declspec(dllexport)" )
