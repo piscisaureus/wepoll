@@ -135,7 +135,6 @@ int main(void) {
         wsa_buf.buf = (char*) PING;
         wsa_buf.len = sizeof PING;
         r = WSASend(sock, &wsa_buf, 1, &bytes, 0, NULL, NULL);
-        we_set_win_error(0);
         assert(r >= 0);
         assert(bytes == sizeof PING);
 
