@@ -54,7 +54,6 @@ static unsigned int __stdcall test_thread(void* arg) {
   ReleaseSRWLockShared(&context->srwlock);
 
   assert(lock_count > 100); /* Hopefully much more. */
-  printf("%llu\n", lock_count);
 
   return 0;
 }
