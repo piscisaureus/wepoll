@@ -1,5 +1,5 @@
-#ifndef EPOLL_UTIL_H_
-#define EPOLL_UTIL_H_
+#ifndef WEPOLL_UTIL_H_
+#define WEPOLL_UTIL_H_
 
 #include <stddef.h>
 
@@ -26,6 +26,6 @@ typedef intptr_t ssize_t;
     (unused)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
 #endif
 
-EPOLL_INTERNAL void* util_safe_container_of_helper(void* ptr, size_t offset);
+WEPOLL_INTERNAL void* util_safe_container_of_helper(void* ptr, size_t offset);
 
-#endif /* EPOLL_UTIL_H_ */
+#endif /* WEPOLL_UTIL_H_ */

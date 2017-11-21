@@ -1,11 +1,11 @@
-#ifndef EPOLL_NT_H_
-#define EPOLL_NT_H_
+#ifndef WEPOLL_NT_H_
+#define WEPOLL_NT_H_
 
 #include "internal.h"
 #include "ntstatus.h"
 #include "win.h"
 
-EPOLL_INTERNAL int nt_global_init(void);
+WEPOLL_INTERNAL int nt_global_init(void);
 
 typedef struct _IO_STATUS_BLOCK {
   union {
@@ -70,8 +70,8 @@ typedef struct _OBJECT_ATTRIBUTES {
     (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout))
 
 #define X(return_type, attributes, name, parameters) \
-  EPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
+  WEPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
 NTDLL_IMPORT_LIST(X)
 #undef X
 
-#endif /* EPOLL_NT_H_ */
+#endif /* WEPOLL_NT_H_ */

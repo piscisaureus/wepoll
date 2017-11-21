@@ -1,8 +1,8 @@
-#ifndef EPOLL_API_H_
-#define EPOLL_API_H_
+#ifndef WEPOLL_API_H_
+#define WEPOLL_API_H_
 
 #include "internal.h"
 
-EPOLL_INTERNAL int api_global_init(void);
+WEPOLL_INTERNAL int api_global_init(void);
 
-#endif /* EPOLL_API_H_ */
+#endif /* WEPOLL_API_H_ */

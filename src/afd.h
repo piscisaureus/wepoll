@@ -1,5 +1,5 @@
-#ifndef EPOLL_AFD_H_
-#define EPOLL_AFD_H_
+#ifndef WEPOLL_AFD_H_
+#define WEPOLL_AFD_H_
 
 #include "internal.h"
 #include "ntstatus.h"
@@ -52,13 +52,13 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
-EPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
-                            AFD_POLL_INFO* poll_info,
-                            OVERLAPPED* overlapped);
+WEPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
+                             AFD_POLL_INFO* poll_info,
+                             OVERLAPPED* overlapped);
 
-EPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
-                                        SOCKET* afd_socket_out,
-                                        WSAPROTOCOL_INFOW* protocol_info);
+WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
+                                         SOCKET* afd_socket_out,
+                                         WSAPROTOCOL_INFOW* protocol_info);
 
 /* clang-format off */
 
@@ -78,4 +78,4 @@ static const GUID AFD_PROVIDER_GUID_LIST[] = {
 
 /* clang-format on */
 
-#endif /* EPOLL_AFD_H_ */
+#endif /* WEPOLL_AFD_H_ */

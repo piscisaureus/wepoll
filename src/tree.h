@@ -1,5 +1,5 @@
-#ifndef EPOLL_TREE_H_
-#define EPOLL_TREE_H_
+#ifndef WEPOLL_TREE_H_
+#define WEPOLL_TREE_H_
 
 #include "internal.h"
 #include "rb.h"
@@ -16,13 +16,13 @@ typedef struct tree_node {
   uintptr_t key;
 } tree_node_t;
 
-EPOLL_INTERNAL void tree_init(tree_t* tree);
-EPOLL_INTERNAL void tree_node_init(tree_node_t* node);
+WEPOLL_INTERNAL void tree_init(tree_t* tree);
+WEPOLL_INTERNAL void tree_node_init(tree_node_t* node);
 
-EPOLL_INTERNAL int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key);
-EPOLL_INTERNAL int tree_del(tree_t* tree, tree_node_t* node);
+WEPOLL_INTERNAL int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key);
+WEPOLL_INTERNAL int tree_del(tree_t* tree, tree_node_t* node);
 
-EPOLL_INTERNAL tree_node_t* tree_find(tree_t* tree, uintptr_t key);
-EPOLL_INTERNAL tree_node_t* tree_root(tree_t* tree);
+WEPOLL_INTERNAL tree_node_t* tree_find(tree_t* tree, uintptr_t key);
+WEPOLL_INTERNAL tree_node_t* tree_root(tree_t* tree);
 
-#endif /* EPOLL_TREE_H_ */
+#endif /* WEPOLL_TREE_H_ */

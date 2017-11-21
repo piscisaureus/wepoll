@@ -1,2 +1,2 @@
-#define EPOLL_INTERNAL static
-#define EPOLL_INTERNAL_EXTERN static
+#define WEPOLL_INTERNAL static
+#define WEPOLL_INTERNAL_EXTERN static

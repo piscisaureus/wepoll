@@ -1,5 +1,5 @@
-#ifndef EPOLL_NTSTATUS_H_
-#define EPOLL_NTSTATUS_H_
+#ifndef WEPOLL_NTSTATUS_H_
+#define WEPOLL_NTSTATUS_H_
 
 #include "win.h"
 
@@ -88,4 +88,4 @@ typedef NTSTATUS* PNTSTATUS;
 #define STATUS_SEVERITY_ERROR 0x3
 #endif
 
-#endif /* EPOLL_NTSTATUS_H_ */
+#endif /* WEPOLL_NTSTATUS_H_ */

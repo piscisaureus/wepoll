@@ -1,5 +1,5 @@
-#ifndef EPOLL_REFLOCK_H_
-#define EPOLL_REFLOCK_H_
+#ifndef WEPOLL_REFLOCK_H_
+#define WEPOLL_REFLOCK_H_
 
 /* The reflock is a special kind of lock that normally prevents a chunk of
  * memory from being freed, but does allow the chunk of memory to eventually be
@@ -27,11 +27,11 @@ typedef struct reflock {
   uint32_t state;
 } reflock_t;
 
-EPOLL_INTERNAL int reflock_global_init(void);
+WEPOLL_INTERNAL int reflock_global_init(void);
 
-EPOLL_INTERNAL void reflock_init(reflock_t* reflock);
-EPOLL_INTERNAL void reflock_ref(reflock_t* reflock);
-EPOLL_INTERNAL void reflock_unref(reflock_t* reflock);
-EPOLL_INTERNAL void reflock_unref_and_destroy(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_init(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_ref(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_unref(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_unref_and_destroy(reflock_t* reflock);
 
-#endif /* EPOLL_REFLOCK_H_ */
+#endif /* WEPOLL_REFLOCK_H_ */

@@ -135,9 +135,9 @@ static ssize_t _afd_get_protocol_info(SOCKET socket,
   return id;
 }
 
-EPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
-                                        SOCKET* afd_socket_out,
-                                        WSAPROTOCOL_INFOW* protocol_info) {
+WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
+                                         SOCKET* afd_socket_out,
+                                         WSAPROTOCOL_INFOW* protocol_info) {
   ssize_t id;
   SOCKET afd_socket;
 

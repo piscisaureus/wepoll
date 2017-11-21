@@ -1,5 +1,5 @@
-#ifndef EPOLL_ERROR_H_
-#define EPOLL_ERROR_H_
+#ifndef WEPOLL_ERROR_H_
+#define WEPOLL_ERROR_H_
 
 #include <errno.h>
 
@@ -14,7 +14,7 @@
 
 #define return_error(value, ...) _return_error_helper(__VA_ARGS__ + 0, value)
 
-EPOLL_INTERNAL errno_t err_map_win_error_to_errno(DWORD error);
-EPOLL_INTERNAL void err_set_win_error(DWORD error);
+WEPOLL_INTERNAL errno_t err_map_win_error_to_errno(DWORD error);
+WEPOLL_INTERNAL void err_set_win_error(DWORD error);
 
-#endif /* EPOLL_ERROR_H_ */
+#endif /* WEPOLL_ERROR_H_ */

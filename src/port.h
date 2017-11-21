@@ -1,5 +1,5 @@
-#ifndef EPOLL_PORT_DATA_H_
-#define EPOLL_PORT_DATA_H_
+#ifndef WEPOLL_PORT_H_
+#define WEPOLL_PORT_H_
 
 #include "afd.h"
 #include "internal.h"
@@ -27,39 +27,39 @@ typedef struct ep_port {
   size_t active_poll_count;
 } ep_port_t;
 
-EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE* iocp_out);
-EPOLL_INTERNAL int ep_port_close(ep_port_t* port_info);
-EPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
+WEPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE* iocp_out);
+WEPOLL_INTERNAL int ep_port_close(ep_port_t* port_info);
+WEPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
 
-EPOLL_INTERNAL int ep_port_wait(ep_port_t* port_info,
-                                struct epoll_event* events,
-                                int maxevents,
-                                int timeout);
+WEPOLL_INTERNAL int ep_port_wait(ep_port_t* port_info,
+                                 struct epoll_event* events,
+                                 int maxevents,
+                                 int timeout);
 
-EPOLL_INTERNAL int ep_port_ctl(ep_port_t* port_info,
-                               int op,
-                               SOCKET sock,
-                               struct epoll_event* ev);
+WEPOLL_INTERNAL int ep_port_ctl(ep_port_t* port_info,
+                                int op,
+                                SOCKET sock,
+                                struct epoll_event* ev);
 
-EPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
+WEPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
     ep_port_t* port_info,
     size_t protocol_id,
     const WSAPROTOCOL_INFOW* protocol_info);
-EPOLL_INTERNAL void ep_port_release_poll_group(poll_group_t* poll_group);
+WEPOLL_INTERNAL void ep_port_release_poll_group(poll_group_t* poll_group);
 
-EPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
-                                      ep_sock_t* sock_info,
-                                      SOCKET socket);
-EPOLL_INTERNAL int ep_port_del_socket(ep_port_t* port_info,
-                                      ep_sock_t* sock_info);
-EPOLL_INTERNAL ep_sock_t* ep_port_find_socket(ep_port_t* port_info,
-                                              SOCKET socket);
+WEPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
+                                       ep_sock_t* sock_info,
+                                       SOCKET socket);
+WEPOLL_INTERNAL int ep_port_del_socket(ep_port_t* port_info,
+                                       ep_sock_t* sock_info);
+WEPOLL_INTERNAL ep_sock_t* ep_port_find_socket(ep_port_t* port_info,
+                                               SOCKET socket);
 
-EPOLL_INTERNAL void ep_port_request_socket_update(ep_port_t* port_info,
-                                                  ep_sock_t* sock_info);
-EPOLL_INTERNAL void ep_port_clear_socket_update(ep_port_t* port_info,
-                                                ep_sock_t* sock_info);
-EPOLL_INTERNAL bool ep_port_is_socket_update_pending(ep_port_t* port_info,
-                                                     ep_sock_t* sock_info);
+WEPOLL_INTERNAL void ep_port_request_socket_update(ep_port_t* port_info,
+                                                   ep_sock_t* sock_info);
+WEPOLL_INTERNAL void ep_port_clear_socket_update(ep_port_t* port_info,
+                                                 ep_sock_t* sock_info);
+WEPOLL_INTERNAL bool ep_port_is_socket_update_pending(ep_port_t* port_info,
+                                                      ep_sock_t* sock_info);
 
-#endif /* EPOLL_PORT_DATA_H_ */
+#endif /* WEPOLL_PORT_H_ */

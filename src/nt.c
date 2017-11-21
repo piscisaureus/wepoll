@@ -4,7 +4,7 @@
 #include "win.h"
 
 #define X(return_type, attributes, name, parameters) \
-  EPOLL_INTERNAL return_type(attributes* name) parameters = NULL;
+  WEPOLL_INTERNAL return_type(attributes* name) parameters = NULL;
 NTDLL_IMPORT_LIST(X)
 #undef X
 

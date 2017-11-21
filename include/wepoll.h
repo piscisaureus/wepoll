@@ -1,8 +1,8 @@
-#ifndef EPOLL_H_
-#define EPOLL_H_
+#ifndef WEPOLL_H_
+#define WEPOLL_H_
 
-#ifndef EPOLL_EXTERN
-#define EPOLL_EXTERN
+#ifndef WEPOLL_EXPORT
+#define WEPOLL_EXPORT
 #endif
 
 #include <stdint.h>
@@ -60,17 +60,17 @@ struct epoll_event {
 extern "C" {
 #endif
 
-EPOLL_EXTERN HANDLE epoll_create(int size);
-EPOLL_EXTERN HANDLE epoll_create1(int flags);
+WEPOLL_EXPORT HANDLE epoll_create(int size);
+WEPOLL_EXPORT HANDLE epoll_create1(int flags);
 
-EPOLL_EXTERN int epoll_close(HANDLE ephnd);
+WEPOLL_EXPORT int epoll_close(HANDLE ephnd);
 
-EPOLL_EXTERN int epoll_ctl(HANDLE ephnd,
+WEPOLL_EXPORT int epoll_ctl(HANDLE ephnd,
                            int op,
                            SOCKET sock,
                            struct epoll_event* event);
 
-EPOLL_EXTERN int epoll_wait(HANDLE ephnd,
+WEPOLL_EXPORT int epoll_wait(HANDLE ephnd,
                             struct epoll_event* events,
                             int maxevents,
                             int timeout);
@@ -79,4 +79,4 @@ EPOLL_EXTERN int epoll_wait(HANDLE ephnd,
 } /* extern "C" */
 #endif
 
-#endif /* EPOLL_H_ */
+#endif /* WEPOLL_H_ */

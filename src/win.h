@@ -1,5 +1,5 @@
-#ifndef EPOLL_WIN_H_
-#define EPOLL_WIN_H_
+#ifndef WEPOLL_WIN_H_
+#define WEPOLL_WIN_H_
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
