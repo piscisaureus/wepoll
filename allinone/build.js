@@ -42,6 +42,9 @@ function strip_guards(filename, source) {
     source = source.replace(trail_guards_re, '');
   }
 
+  // Add back a trailing newline.
+  source += '\n';
+
   return source;
 }
 
@@ -118,7 +121,7 @@ var emptyOk = false;
 for (var i = 0; i < source.length; i++) {
   var line = source[i].replace(/\s+$/, '');
   if (line === '') {
-    if (emptyOk)
+    if (emptyOk && i < source.length - 1)
       process.stdout.write('\n');
     emptyOk = false;
   } else {
