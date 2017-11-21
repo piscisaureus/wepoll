@@ -3,13 +3,25 @@
 var path = require('path');
 var fs = require('fs');
 
+var files = [];
+var include_dirs = [];
+
+for (var i = 2; i < process.argv.length; i++) {
+  var arg = process.argv[i];
+  var match = /^-I(.*)$/.exec(arg);
+  if (match)
+    include_dirs.push(match[1]);
+  else
+    files.push(arg);
+}
+
 var included = {};
 
 function load(filename) {
   if (/[\/\\]/.test(filename))
     return fs.readFileSync(filename, 'utf8');
 
-  var PATH = ['.', 'include', 'src'];
+  var PATH = ['.'].concat(include_dirs);
   for (;;) {
     var dir = PATH.shift();
     try {
@@ -91,8 +103,8 @@ source = source.concat('/*')
              .concat(' */')
              .concat('');
 
-for (var i = 2; i < process.argv.length; i++) {
-  var filename = process.argv[i];
+for (var i = 0; i < files.length; i++) {
+  var filename = files[i];
   source = source.concat(include(null, filename));
 }
 
