@@ -15,7 +15,7 @@ file(GLOB SOURCES_SRC src/*.c src/*.h)
 file(GLOB SOURCES_SRC_C src/*.c)
 file(GLOB SOURCES_SRC_REGULAR src/regular/*.c src/regular/*.h)
 file(GLOB SOURCES_SRC_ALL_IN_ONE src/all-in-one/*.c src/all-in-one/*.h)
-file(GLOB_RECURSE SOURCES_INCLUDE include/*.h)
+file(GLOB SOURCES_INCLUDE include/*.h)
 file(GLOB SOURCES_TEST test/*.c)
 file(GLOB_RECURSE SOURCES_TEST_SHARED test/shared/*.c test/shared/*.h)
 
