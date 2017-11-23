@@ -60,14 +60,12 @@ static uint32_t _afd_events_to_epoll_events(DWORD afd_events) {
     epoll_events |= EPOLLIN | EPOLLRDNORM;
   if (afd_events & AFD_POLL_RECEIVE_EXPEDITED)
     epoll_events |= EPOLLPRI | EPOLLRDBAND;
-  if (afd_events & AFD_POLL_SEND)
+  if (afd_events & (AFD_POLL_SEND | AFD_POLL_CONNECT))
     epoll_events |= EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND;
   if ((afd_events & AFD_POLL_DISCONNECT) && !(afd_events & AFD_POLL_ABORT))
     epoll_events |= EPOLLIN | EPOLLRDHUP;
   if (afd_events & AFD_POLL_ABORT)
     epoll_events |= EPOLLHUP;
-  if (afd_events & AFD_POLL_CONNECT)
-    epoll_events |= EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND;
   if (afd_events & AFD_POLL_CONNECT_FAIL)
     epoll_events |= EPOLLERR;
 
