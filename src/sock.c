@@ -335,7 +335,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
   /* Clear the event mask if EPOLLONESHOT is set and there are any events
    * to report. */
   if (epoll_events != 0 && (sock_private->user_events & EPOLLONESHOT))
-    sock_private->user_events = EPOLLERR | EPOLLHUP;
+    sock_private->user_events = 0;
 
   /* Fill the ev structure if there are any events to report. */
   if (epoll_events != 0) {
@@ -347,7 +347,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
   if (drop_socket)
     /* Drop the socket from the epoll set. */
     ep_sock_delete(port_info, sock_info);
-  else
+  else if (sock_private->user_events != 0)
     /* Put the socket back onto the attention list so a new poll request will
      * be submitted. */
     ep_port_request_socket_update(port_info, sock_info);
