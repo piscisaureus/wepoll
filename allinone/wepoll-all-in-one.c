@@ -28,10 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define EPOLL_INTERNAL static
-#define EPOLL_INTERNAL_EXTERN static
-#ifndef EPOLL_EXTERN
-#define EPOLL_EXTERN
+#ifndef WEPOLL_EXPORT
+#define WEPOLL_EXPORT
 #endif
 
 #include <stdint.h>
@@ -89,17 +87,17 @@ struct epoll_event {
 extern "C" {
 #endif
 
-EPOLL_EXTERN HANDLE epoll_create(int size);
-EPOLL_EXTERN HANDLE epoll_create1(int flags);
+WEPOLL_EXPORT HANDLE epoll_create(int size);
+WEPOLL_EXPORT HANDLE epoll_create1(int flags);
 
-EPOLL_EXTERN int epoll_close(HANDLE ephnd);
+WEPOLL_EXPORT int epoll_close(HANDLE ephnd);
 
-EPOLL_EXTERN int epoll_ctl(HANDLE ephnd,
+WEPOLL_EXPORT int epoll_ctl(HANDLE ephnd,
                            int op,
                            SOCKET sock,
                            struct epoll_event* event);
 
-EPOLL_EXTERN int epoll_wait(HANDLE ephnd,
+WEPOLL_EXPORT int epoll_wait(HANDLE ephnd,
                             struct epoll_event* events,
                             int maxevents,
                             int timeout);
@@ -108,10 +106,8 @@ EPOLL_EXTERN int epoll_wait(HANDLE ephnd,
 } /* extern "C" */
 #endif
 
-#ifndef EPOLL_INTERNAL
-#define EPOLL_INTERNAL
-#define EPOLL_INTERNAL_EXTERN extern
-#endif
+#define WEPOLL_INTERNAL static
+#define WEPOLL_INTERNAL_EXTERN static
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -190,22 +186,6 @@ typedef NTSTATUS* PNTSTATUS;
 #define STATUS_CANCELLED ((NTSTATUS) 0xC0000120L)
 #endif
 
-#ifndef STATUS_SEVERITY_SUCCESS
-#define STATUS_SEVERITY_SUCCESS 0x0
-#endif
-
-#ifndef STATUS_SEVERITY_INFORMATIONAL
-#define STATUS_SEVERITY_INFORMATIONAL 0x1
-#endif
-
-#ifndef STATUS_SEVERITY_WARNING
-#define STATUS_SEVERITY_WARNING 0x2
-#endif
-
-#ifndef STATUS_SEVERITY_ERROR
-#define STATUS_SEVERITY_ERROR 0x3
-#endif
-
 #include <stddef.h>
 
 #ifndef _SSIZE_T_DEFINED
@@ -229,7 +209,7 @@ typedef intptr_t ssize_t;
     (unused)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
 #endif
 
-EPOLL_INTERNAL void* util_safe_container_of_helper(void* ptr, size_t offset);
+WEPOLL_INTERNAL void* util_safe_container_of_helper(void* ptr, size_t offset);
 
 /* clang-format off */
 
@@ -277,13 +257,13 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
-EPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
-                            AFD_POLL_INFO* poll_info,
-                            OVERLAPPED* overlapped);
+WEPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
+                             AFD_POLL_INFO* poll_info,
+                             OVERLAPPED* overlapped);
 
-EPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
-                                        SOCKET* afd_socket_out,
-                                        WSAPROTOCOL_INFOW* protocol_info);
+WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
+                                         SOCKET* afd_socket_out,
+                                         WSAPROTOCOL_INFOW* protocol_info);
 
 /* clang-format off */
 
@@ -313,10 +293,10 @@ static const GUID AFD_PROVIDER_GUID_LIST[] = {
 
 #define return_error(value, ...) _return_error_helper(__VA_ARGS__ + 0, value)
 
-EPOLL_INTERNAL errno_t err_map_win_error_to_errno(DWORD error);
-EPOLL_INTERNAL void err_set_win_error(DWORD error);
+WEPOLL_INTERNAL errno_t err_map_win_error_to_errno(DWORD error);
+WEPOLL_INTERNAL void err_set_win_error(DWORD error);
 
-EPOLL_INTERNAL int nt_global_init(void);
+WEPOLL_INTERNAL int nt_global_init(void);
 
 typedef struct _IO_STATUS_BLOCK {
   union {
@@ -381,7 +361,7 @@ typedef struct _OBJECT_ATTRIBUTES {
     (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout))
 
 #define X(return_type, attributes, name, parameters) \
-  EPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
+  WEPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
 NTDLL_IMPORT_LIST(X)
 #undef X
 
@@ -516,9 +496,9 @@ static ssize_t _afd_get_protocol_info(SOCKET socket,
   return id;
 }
 
-EPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
-                                        SOCKET* afd_socket_out,
-                                        WSAPROTOCOL_INFOW* protocol_info) {
+WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
+                                         SOCKET* afd_socket_out,
+                                         WSAPROTOCOL_INFOW* protocol_info) {
   ssize_t id;
   SOCKET afd_socket;
 
@@ -552,9 +532,9 @@ EPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
 
 #include <stdlib.h>
 
-EPOLL_INTERNAL int api_global_init(void);
+WEPOLL_INTERNAL int api_global_init(void);
 
-EPOLL_INTERNAL int init(void);
+WEPOLL_INTERNAL int init(void);
 
 #include <stdbool.h>
 
@@ -569,33 +549,33 @@ typedef struct queue {
   queue_node_t head;
 } queue_t;
 
-EPOLL_INTERNAL void queue_init(queue_t* queue);
-EPOLL_INTERNAL void queue_node_init(queue_node_t* node);
+WEPOLL_INTERNAL void queue_init(queue_t* queue);
+WEPOLL_INTERNAL void queue_node_init(queue_node_t* node);
 
-EPOLL_INTERNAL queue_node_t* queue_first(const queue_t* queue);
-EPOLL_INTERNAL queue_node_t* queue_last(const queue_t* queue);
+WEPOLL_INTERNAL queue_node_t* queue_first(const queue_t* queue);
+WEPOLL_INTERNAL queue_node_t* queue_last(const queue_t* queue);
 
-EPOLL_INTERNAL void queue_prepend(queue_t* queue, queue_node_t* node);
-EPOLL_INTERNAL void queue_append(queue_t* queue, queue_node_t* node);
-EPOLL_INTERNAL void queue_move_first(queue_t* queue, queue_node_t* node);
-EPOLL_INTERNAL void queue_move_last(queue_t* queue, queue_node_t* node);
-EPOLL_INTERNAL void queue_remove(queue_node_t* node);
+WEPOLL_INTERNAL void queue_prepend(queue_t* queue, queue_node_t* node);
+WEPOLL_INTERNAL void queue_append(queue_t* queue, queue_node_t* node);
+WEPOLL_INTERNAL void queue_move_first(queue_t* queue, queue_node_t* node);
+WEPOLL_INTERNAL void queue_move_last(queue_t* queue, queue_node_t* node);
+WEPOLL_INTERNAL void queue_remove(queue_node_t* node);
 
-EPOLL_INTERNAL bool queue_empty(const queue_t* queue);
-EPOLL_INTERNAL bool queue_enqueued(const queue_node_t* node);
+WEPOLL_INTERNAL bool queue_empty(const queue_t* queue);
+WEPOLL_INTERNAL bool queue_enqueued(const queue_node_t* node);
 
 typedef struct ep_port ep_port_t;
 typedef struct poll_group_allocator poll_group_allocator_t;
 typedef struct poll_group poll_group_t;
 
-EPOLL_INTERNAL poll_group_allocator_t* poll_group_allocator_new(
+WEPOLL_INTERNAL poll_group_allocator_t* poll_group_allocator_new(
     ep_port_t* port_info, const WSAPROTOCOL_INFOW* protocol_info);
-EPOLL_INTERNAL void poll_group_allocator_delete(poll_group_allocator_t* pga);
+WEPOLL_INTERNAL void poll_group_allocator_delete(poll_group_allocator_t* pga);
 
-EPOLL_INTERNAL poll_group_t* poll_group_acquire(poll_group_allocator_t* pga);
-EPOLL_INTERNAL void poll_group_release(poll_group_t* ds);
+WEPOLL_INTERNAL poll_group_t* poll_group_acquire(poll_group_allocator_t* pga);
+WEPOLL_INTERNAL void poll_group_release(poll_group_t* ds);
 
-EPOLL_INTERNAL SOCKET poll_group_get_socket(poll_group_t* poll_group);
+WEPOLL_INTERNAL SOCKET poll_group_get_socket(poll_group_t* poll_group);
 
 #ifdef __clang__
 #define RB_UNUSED __attribute__((__unused__))
@@ -1079,12 +1059,12 @@ typedef struct reflock {
   uint32_t state;
 } reflock_t;
 
-EPOLL_INTERNAL int reflock_global_init(void);
+WEPOLL_INTERNAL int reflock_global_init(void);
 
-EPOLL_INTERNAL void reflock_init(reflock_t* reflock);
-EPOLL_INTERNAL void reflock_ref(reflock_t* reflock);
-EPOLL_INTERNAL void reflock_unref(reflock_t* reflock);
-EPOLL_INTERNAL void reflock_unref_and_destroy(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_init(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_ref(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_unref(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_unref_and_destroy(reflock_t* reflock);
 
 /* NB: the tree functions do not set errno or LastError when they fail. Each of
  * the API functions has at most one failure mode. It is up to the caller to
@@ -1098,14 +1078,14 @@ typedef struct tree_node {
   uintptr_t key;
 } tree_node_t;
 
-EPOLL_INTERNAL void tree_init(tree_t* tree);
-EPOLL_INTERNAL void tree_node_init(tree_node_t* node);
+WEPOLL_INTERNAL void tree_init(tree_t* tree);
+WEPOLL_INTERNAL void tree_node_init(tree_node_t* node);
 
-EPOLL_INTERNAL int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key);
-EPOLL_INTERNAL int tree_del(tree_t* tree, tree_node_t* node);
+WEPOLL_INTERNAL int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key);
+WEPOLL_INTERNAL int tree_del(tree_t* tree, tree_node_t* node);
 
-EPOLL_INTERNAL tree_node_t* tree_find(tree_t* tree, uintptr_t key);
-EPOLL_INTERNAL tree_node_t* tree_root(tree_t* tree);
+WEPOLL_INTERNAL tree_node_t* tree_find(tree_t* tree, uintptr_t key);
+WEPOLL_INTERNAL tree_node_t* tree_root(tree_t* tree);
 
 typedef struct reflock_tree {
   tree_t tree;
@@ -1117,20 +1097,20 @@ typedef struct reflock_tree_node {
   reflock_t reflock;
 } reflock_tree_node_t;
 
-EPOLL_INTERNAL void reflock_tree_init(reflock_tree_t* rtl);
-EPOLL_INTERNAL void reflock_tree_node_init(reflock_tree_node_t* node);
+WEPOLL_INTERNAL void reflock_tree_init(reflock_tree_t* rtl);
+WEPOLL_INTERNAL void reflock_tree_node_init(reflock_tree_node_t* node);
 
-EPOLL_INTERNAL int reflock_tree_add(reflock_tree_t* rlt,
-                                    reflock_tree_node_t* node,
-                                    uintptr_t key);
+WEPOLL_INTERNAL int reflock_tree_add(reflock_tree_t* rlt,
+                                     reflock_tree_node_t* node,
+                                     uintptr_t key);
 
-EPOLL_INTERNAL reflock_tree_node_t* reflock_tree_del_and_ref(
+WEPOLL_INTERNAL reflock_tree_node_t* reflock_tree_del_and_ref(
     reflock_tree_t* rlt, uintptr_t key);
-EPOLL_INTERNAL reflock_tree_node_t* reflock_tree_find_and_ref(
+WEPOLL_INTERNAL reflock_tree_node_t* reflock_tree_find_and_ref(
     reflock_tree_t* rlt, uintptr_t key);
 
-EPOLL_INTERNAL void reflock_tree_node_unref(reflock_tree_node_t* node);
-EPOLL_INTERNAL void reflock_tree_node_unref_and_destroy(
+WEPOLL_INTERNAL void reflock_tree_node_unref(reflock_tree_node_t* node);
+WEPOLL_INTERNAL void reflock_tree_node_unref_and_destroy(
     reflock_tree_node_t* node);
 
 typedef struct ep_port ep_port_t;
@@ -1141,19 +1121,20 @@ typedef struct ep_sock {
   queue_node_t queue_node;
 } ep_sock_t;
 
-EPOLL_INTERNAL ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket);
-EPOLL_INTERNAL void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info);
-EPOLL_INTERNAL void ep_sock_force_delete(ep_port_t* port_info,
-                                         ep_sock_t* sock_info);
+WEPOLL_INTERNAL ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket);
+WEPOLL_INTERNAL void ep_sock_delete(ep_port_t* port_info,
+                                    ep_sock_t* sock_info);
+WEPOLL_INTERNAL void ep_sock_force_delete(ep_port_t* port_info,
+                                          ep_sock_t* sock_info);
 
-EPOLL_INTERNAL int ep_sock_set_event(ep_port_t* port_info,
-                                     ep_sock_t* sock_info,
-                                     const struct epoll_event* ev);
+WEPOLL_INTERNAL int ep_sock_set_event(ep_port_t* port_info,
+                                      ep_sock_t* sock_info,
+                                      const struct epoll_event* ev);
 
-EPOLL_INTERNAL int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info);
-EPOLL_INTERNAL int ep_sock_feed_event(ep_port_t* port_info,
-                                      OVERLAPPED* overlapped,
-                                      struct epoll_event* ev);
+WEPOLL_INTERNAL int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info);
+WEPOLL_INTERNAL int ep_sock_feed_event(ep_port_t* port_info,
+                                       OVERLAPPED* overlapped,
+                                       struct epoll_event* ev);
 
 typedef struct ep_port ep_port_t;
 typedef struct ep_sock ep_sock_t;
@@ -1169,40 +1150,40 @@ typedef struct ep_port {
   size_t active_poll_count;
 } ep_port_t;
 
-EPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE* iocp_out);
-EPOLL_INTERNAL int ep_port_close(ep_port_t* port_info);
-EPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
+WEPOLL_INTERNAL ep_port_t* ep_port_new(HANDLE* iocp_out);
+WEPOLL_INTERNAL int ep_port_close(ep_port_t* port_info);
+WEPOLL_INTERNAL int ep_port_delete(ep_port_t* port_info);
 
-EPOLL_INTERNAL int ep_port_wait(ep_port_t* port_info,
-                                struct epoll_event* events,
-                                int maxevents,
-                                int timeout);
+WEPOLL_INTERNAL int ep_port_wait(ep_port_t* port_info,
+                                 struct epoll_event* events,
+                                 int maxevents,
+                                 int timeout);
 
-EPOLL_INTERNAL int ep_port_ctl(ep_port_t* port_info,
-                               int op,
-                               SOCKET sock,
-                               struct epoll_event* ev);
+WEPOLL_INTERNAL int ep_port_ctl(ep_port_t* port_info,
+                                int op,
+                                SOCKET sock,
+                                struct epoll_event* ev);
 
-EPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
+WEPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
     ep_port_t* port_info,
     size_t protocol_id,
     const WSAPROTOCOL_INFOW* protocol_info);
-EPOLL_INTERNAL void ep_port_release_poll_group(poll_group_t* poll_group);
+WEPOLL_INTERNAL void ep_port_release_poll_group(poll_group_t* poll_group);
 
-EPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
-                                      ep_sock_t* sock_info,
-                                      SOCKET socket);
-EPOLL_INTERNAL int ep_port_del_socket(ep_port_t* port_info,
-                                      ep_sock_t* sock_info);
-EPOLL_INTERNAL ep_sock_t* ep_port_find_socket(ep_port_t* port_info,
-                                              SOCKET socket);
+WEPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
+                                       ep_sock_t* sock_info,
+                                       SOCKET socket);
+WEPOLL_INTERNAL int ep_port_del_socket(ep_port_t* port_info,
+                                       ep_sock_t* sock_info);
+WEPOLL_INTERNAL ep_sock_t* ep_port_find_socket(ep_port_t* port_info,
+                                               SOCKET socket);
 
-EPOLL_INTERNAL void ep_port_request_socket_update(ep_port_t* port_info,
-                                                  ep_sock_t* sock_info);
-EPOLL_INTERNAL void ep_port_clear_socket_update(ep_port_t* port_info,
-                                                ep_sock_t* sock_info);
-EPOLL_INTERNAL bool ep_port_is_socket_update_pending(ep_port_t* port_info,
-                                                     ep_sock_t* sock_info);
+WEPOLL_INTERNAL void ep_port_request_socket_update(ep_port_t* port_info,
+                                                   ep_sock_t* sock_info);
+WEPOLL_INTERNAL void ep_port_clear_socket_update(ep_port_t* port_info,
+                                                 ep_sock_t* sock_info);
+WEPOLL_INTERNAL bool ep_port_is_socket_update_pending(ep_port_t* port_info,
+                                                      ep_sock_t* sock_info);
 
 static reflock_tree_t _epoll_handle_tree;
 
@@ -1468,7 +1449,7 @@ int init(void) {
 }
 
 #define X(return_type, attributes, name, parameters) \
-  EPOLL_INTERNAL return_type(attributes* name) parameters = NULL;
+  WEPOLL_INTERNAL return_type(attributes* name) parameters = NULL;
 NTDLL_IMPORT_LIST(X)
 #undef X
 
@@ -1488,6 +1469,7 @@ int nt_global_init(void) {
 
   return 0;
 }
+
 #include <assert.h>
 #include <malloc.h>
 
@@ -2255,6 +2237,8 @@ static DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
     afd_events |= AFD_POLL_RECEIVE_EXPEDITED;
   if (epoll_events & (EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND))
     afd_events |= AFD_POLL_SEND | AFD_POLL_CONNECT;
+  if (epoll_events & (EPOLLIN | EPOLLRDNORM | EPOLLRDHUP))
+    afd_events |= AFD_POLL_DISCONNECT;
 
   return afd_events;
 }
@@ -2266,14 +2250,12 @@ static uint32_t _afd_events_to_epoll_events(DWORD afd_events) {
     epoll_events |= EPOLLIN | EPOLLRDNORM;
   if (afd_events & AFD_POLL_RECEIVE_EXPEDITED)
     epoll_events |= EPOLLPRI | EPOLLRDBAND;
-  if (afd_events & AFD_POLL_SEND)
+  if (afd_events & (AFD_POLL_SEND | AFD_POLL_CONNECT))
     epoll_events |= EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND;
-  if ((afd_events & AFD_POLL_DISCONNECT) && !(afd_events & AFD_POLL_ABORT))
-    epoll_events |= EPOLLIN | EPOLLRDHUP;
+  if (afd_events & AFD_POLL_DISCONNECT)
+    epoll_events |= EPOLLIN | EPOLLRDNORM | EPOLLRDHUP;
   if (afd_events & AFD_POLL_ABORT)
     epoll_events |= EPOLLHUP;
-  if (afd_events & AFD_POLL_CONNECT)
-    epoll_events |= EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND;
   if (afd_events & AFD_POLL_CONNECT_FAIL)
     epoll_events |= EPOLLERR;
 
@@ -2541,7 +2523,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
   /* Clear the event mask if EPOLLONESHOT is set and there are any events
    * to report. */
   if (epoll_events != 0 && (sock_private->user_events & EPOLLONESHOT))
-    sock_private->user_events = EPOLLERR | EPOLLHUP;
+    sock_private->user_events = 0;
 
   /* Fill the ev structure if there are any events to report. */
   if (epoll_events != 0) {
@@ -2553,7 +2535,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
   if (drop_socket)
     /* Drop the socket from the epoll set. */
     ep_sock_delete(port_info, sock_info);
-  else
+  else if (sock_private->user_events != 0)
     /* Put the socket back onto the attention list so a new poll request will
      * be submitted. */
     ep_port_request_socket_update(port_info, sock_info);
