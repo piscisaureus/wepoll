@@ -5,12 +5,15 @@ var fs = require('fs');
 
 var files = [];
 var include_dirs = [];
+var opt_strip_guards = false;
 
 for (var i = 2; i < process.argv.length; i++) {
   var arg = process.argv[i];
-  var match = /^-I(.*)$/.exec(arg);
-  if (match)
+  var match;
+  if (match = /^-I(.*)$/.exec(arg))
     include_dirs.push(match[1]);
+  else if (arg === '--strip-guards')
+    opt_strip_guards = true;
   else
     files.push(arg);
 }
@@ -60,9 +63,9 @@ function strip_guards(filename, source) {
   return source;
 }
 
-function lines(filename) {
+function lines(filename, strip) {
   var source = load(filename);
-  source = strip_guards(filename, source);
+  if (strip) source = strip_guards(filename, source);
   return source.split(/\r?\n/g);
 }
 
@@ -76,7 +79,14 @@ function include(line, filename) {
     return comment(line);
   console.error('Including: ' + key);
   included[key] = true;
-  return lines(filename);
+  return lines(filename, true);
+}
+
+function add(filename) {
+  var key = path.basename(filename).toLowerCase();
+  console.error('Adding: ' + key);
+  included[key] = true;
+  return lines(filename, opt_strip_guards);
 }
 
 var sys_included = {};
@@ -105,7 +115,7 @@ source = source.concat('/*')
 
 for (var i = 0; i < files.length; i++) {
   var filename = files[i];
-  source = source.concat(include(null, filename));
+  source = source.concat(add(filename));
 }
 
 var patterns = [
