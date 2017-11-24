@@ -22,7 +22,7 @@ function load(filename) {
     return fs.readFileSync(filename, 'utf8');
 
   var PATH = ['.'].concat(include_dirs);
-  for (;;) {
+  for (; ;) {
     var dir = PATH.shift();
     try {
       return fs.readFileSync(dir + '/' + filename, 'utf8');
@@ -91,17 +91,17 @@ function include_sys(line, filename) {
 var source = [];
 
 source = source.concat('/*')
-             .concat(fs.readFileSync('LICENSE', 'utf8')
-                         .replace(/^\s+|\s+$/g, '')
-                         .split(/\r?\n/g)
-                         .map(function(s) {
-                           return ' * ' + s;
-                         })
-                         .map(function(s) {
-                           return s.replace(/\s+$/, '');
-                         }))
-             .concat(' */')
-             .concat('');
+  .concat(fs.readFileSync('LICENSE', 'utf8')
+    .replace(/^\s+|\s+$/g, '')
+    .split(/\r?\n/g)
+    .map(function(s) {
+      return ' * ' + s;
+    })
+    .map(function(s) {
+      return s.replace(/\s+$/, '');
+    }))
+  .concat(' */')
+  .concat('');
 
 for (var i = 0; i < files.length; i++) {
   var filename = files[i];
@@ -109,8 +109,8 @@ for (var i = 0; i < files.length; i++) {
 }
 
 var patterns = [
-  {re: /^\s*#include\s*"([^"]*)".*$/, fn: include},
-  {re: /^\s*#include\s*<([^"]*)>.*$/, fn: include_sys}
+  { re: /^\s*#include\s*"([^"]*)".*$/, fn: include },
+  { re: /^\s*#include\s*<([^"]*)>.*$/, fn: include_sys }
 ]
 
 restart: for (var lno = 0; lno < source.length;) {
