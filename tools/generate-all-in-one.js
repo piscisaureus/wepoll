@@ -129,15 +129,10 @@ restart: for (var lno = 0; lno < source.length;) {
   lno++;
 }
 
-var emptyOk = false;
-for (var i = 0; i < source.length; i++) {
-  var line = source[i].replace(/\s+$/, '');
-  if (line === '') {
-    if (emptyOk && i < source.length - 1)
-      process.stdout.write('\n');
-    emptyOk = false;
-  } else {
-    process.stdout.write(line + '\n');
-    emptyOk = true;
-  }
-}
+source = source
+  .map((line) => line.replace(/\s+$/, ''))
+  .join('\n')
+  .replace(/\n{3,}/g, '\n\n')
+  .replace(/\n*$/, '\n');
+
+process.stdout.write(source);
