@@ -7,7 +7,6 @@
 #include "port.h"
 #include "reflock-tree.h"
 #include "util.h"
-#include "wepoll.h"
 #include "win.h"
 
 static reflock_tree_t _epoll_handle_tree;

@@ -10,7 +10,6 @@
 #include "sock.h"
 #include "tree.h"
 #include "util.h"
-#include "wepoll.h"
 #include "win.h"
 
 typedef struct ep_port ep_port_t;
