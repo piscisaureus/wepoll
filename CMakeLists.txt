@@ -34,16 +34,22 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
 	get_filename_component(HEADER_NAME ${HEADER_SOURCE} NAME_WE)
 	string(TOUPPER ${HEADER_NAME} HEADER_NAME_UC)
 
-	set(ALLINONE_NAME "${HEADER_NAME}-all-in-one.c.out")
-	set(ALLINONE_SRC_C "allinone/${HEADER_NAME}-all-in-one.c")
+	set(ALLINONE_NAME "${HEADER_NAME}-all-in-one")
+	set(ALLINONE_SRC_C "allinone/${HEADER_NAME}.c")
+	set(ALLINONE_SRC_H "allinone/${HEADER_NAME}.h")
 	add_custom_command(
 		OUTPUT ${ALLINONE_SRC_C}
 		COMMAND node tools/generate-all-in-one.js -Iinclude -Isrc -Isrc/all-in-one --strip-guards ${HEADER_SOURCE} ${SOURCES_SRC_C} > ${ALLINONE_SRC_C}
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-		IMPLICIT_DEPENDS c ${SOURCES_INCLUDE} ${SOURCES_SRC}
+		IMPLICIT_DEPENDS c ${SOURCES_INCLUDE} ${SOURCES_SRC} ${SOURCES_SRC_ALL_IN_ONE}
 	)
-
-	add_custom_target(${ALLINONE_NAME} DEPENDS ${ALLINONE_SRC_C})
+	add_custom_command(
+		OUTPUT ${ALLINONE_SRC_H}
+		COMMAND node tools/generate-all-in-one.js ${HEADER_SOURCE} > ${ALLINONE_SRC_H}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		IMPLICIT_DEPENDS c ${SOURCES_INCLUDE}
+	)
+	add_custom_target(${ALLINONE_NAME} DEPENDS ${ALLINONE_SRC_C} ${ALLINONE_SRC_H})
 
 	set(ALLINONE_DLL_NAME "${HEADER_NAME}-all-in-one.dll")
 	set(ALLINONE_DLL_OUTPUT "${HEADER_NAME}-all-in-one")
