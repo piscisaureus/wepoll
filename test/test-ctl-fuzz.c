@@ -12,7 +12,7 @@
 #include <WS2tcpip.h>
 
 #define NUM_SOCKETS 10000
-#define RUN_TIME 10000
+#define RUN_TIME 5000
 #define PRINT_INTERVAL 500
 
 static SOCKET create_and_add_socket(HANDLE epfd) {

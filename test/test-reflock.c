@@ -10,7 +10,7 @@
 #include "win.h"
 
 #define THREAD_COUNT 20
-#define TEST_ITERATIONS 100
+#define TEST_ITERATIONS 50
 #define TEST_LENGTH 100
 
 typedef struct test_context {

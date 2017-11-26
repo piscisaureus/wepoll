@@ -8,7 +8,7 @@
 
 #define LISTEN_PORT 12345
 #define NUM_PINGERS 10000
-#define RUN_TIME 10000
+#define RUN_TIME 5000
 
 static const char PING[] = "PING";
 
