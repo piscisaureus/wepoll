@@ -28,7 +28,7 @@ source_group(test/shared FILES ${SOURCES_TEST_SHARED})
 
 foreach(TEST_SOURCE ${SOURCES_TEST})
 	get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
-	add_executable(${TEST_NAME} ${TEST_SOURCE} ${SOURCES_SRC} ${SOURCES_TEST_SHARED})
+	add_executable(${TEST_NAME} ${TEST_SOURCE} ${SOURCES_SRC} ${SOURCES_SRC_REGULAR} ${SOURCES_TEST_SHARED})
 	target_include_directories(${TEST_NAME} PUBLIC include src src/regular)
 endforeach(TEST_SOURCE ${SOURCES_TEST})
 
@@ -63,10 +63,9 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
 	endif()
 	set_target_properties(${ALLINONE_DLL_NAME} PROPERTIES OUTPUT_NAME ${ALLINONE_DLL_OUTPUT})
 
-
 	set(DLL_NAME "${HEADER_NAME}.dll")
 	set(DLL_OUTPUT "${HEADER_NAME}")
-	add_library(${DLL_NAME} SHARED ${HEADER_SOURCE} ${SOURCES_SRC})
+	add_library(${DLL_NAME} SHARED ${HEADER_SOURCE} ${SOURCES_SRC} ${SOURCES_SRC_REGULAR})
 	target_include_directories(${DLL_NAME} PUBLIC include src/regular)
 	if(MSVC)
 		target_compile_options(${DLL_NAME} PUBLIC "-FI${HEADER_SOURCE}")
