@@ -30,7 +30,19 @@ foreach(TEST_SOURCE ${SOURCES_TEST})
 	get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
 	add_executable(${TEST_NAME} ${TEST_SOURCE} ${SOURCES_SRC} ${SOURCES_SRC_REGULAR} ${SOURCES_TEST_SHARED})
 	target_include_directories(${TEST_NAME} PUBLIC include src src/regular)
+  list(APPEND TEST_TARGETS ${TEST_NAME})
+  list(APPEND TEST_OUTPUTS $<TARGET_FILE:${TEST_NAME}>)
 endforeach(TEST_SOURCE ${SOURCES_TEST})
+
+set(TEST_ALL_STAMP "test-all.stamp")
+set(TEST_RUNNER "tools/run-tests.js")
+add_custom_command(
+  OUTPUT ${TEST_ALL_STAMP}
+  COMMAND node ${TEST_RUNNER} ${TEST_OUTPUTS}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  DEPENDS ${TEST_RUNNER} ${TEST_TARGETS}
+)
+add_custom_target(test-all DEPENDS ${TEST_ALL_STAMP})
 
 foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
 	get_filename_component(HEADER_NAME ${HEADER_SOURCE} NAME_WE)
