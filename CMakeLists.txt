@@ -21,6 +21,8 @@ file(GLOB_RECURSE SOURCES_TEST_SHARED test/shared/*.c test/shared/*.h)
 
 source_group("" FILES ${SOURCES_INCLUDE})
 source_group(src FILES ${SOURCES_SRC})
+source_group(src FILES ${SOURCES_SRC_REGULAR})
+source_group(src FILES ${SOURCES_SRC_ALL_IN_ONE})
 source_group("" FILES ${SOURCES_TEST})
 source_group(test/shared FILES ${SOURCES_TEST_SHARED})
 
