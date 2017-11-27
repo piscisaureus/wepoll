@@ -1,8 +1,8 @@
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "error.h"
+#include "test-util.h"
 #include "wepoll.h"
 #include "win.h"
 
@@ -24,43 +24,43 @@ int main(void) {
   struct epoll_event ev;
 
   epoll_hnd = epoll_create1(0);
-  assert(epoll_hnd && epoll_hnd != INVALID_HANDLE_VALUE);
+  check(epoll_hnd && epoll_hnd != INVALID_HANDLE_VALUE);
 
   srv = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   r = ioctlsocket(srv, FIONBIO, &one);
-  assert(r == 0);
+  check(r == 0);
 
   address.sin_family = AF_INET;
   address.sin_port = htons(LISTEN_PORT);
   address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   r = bind(srv, (struct sockaddr*) &address, sizeof address);
-  assert(r == 0);
+  check(r == 0);
 
   ev.events = EPOLLIN | EPOLLERR;
   ev.data.sock = srv;
   r = epoll_ctl(epoll_hnd, EPOLL_CTL_ADD, srv, &ev);
-  assert(r == 0);
+  check(r == 0);
 
   for (i = 0; i < NUM_PINGERS; i++) {
     SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
     r = ioctlsocket(sock, FIONBIO, &one);
-    assert(r == 0);
+    check(r == 0);
 
     r = setsockopt(
         sock, SOL_SOCKET, SO_REUSEADDR, (const char*) &one, sizeof one);
-    assert(r == 0);
+    check(r == 0);
 
     r = connect(sock, (struct sockaddr*) &address, sizeof address);
     /* Unlike unix, windows sets the error to EWOULDBLOCK when the connection
      * is being established in the background.
      */
-    assert(r == 0 || WSAGetLastError() == WSAEWOULDBLOCK);
+    check(r == 0 || WSAGetLastError() == WSAEWOULDBLOCK);
 
     ev.events = (uint32_t) EPOLLOUT | EPOLLERR | EPOLLONESHOT;
     ev.data.sock = sock;
     r = epoll_ctl(epoll_hnd, EPOLL_CTL_ADD, sock, &ev);
-    assert(r == 0);
+    check(r == 0);
   }
 
   ticks_start = GetTickCount();
@@ -86,7 +86,7 @@ int main(void) {
     }
 
     count = epoll_wait(epoll_hnd, events, 15, 1000);
-    assert(count >= 0);
+    check(count >= 0);
 
     for (i = 0; i < count; i++) {
       int revents = events[i].events;
@@ -97,11 +97,11 @@ int main(void) {
         int err_len = sizeof err;
 
         r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*) &err, &err_len);
-        assert(r == 0);
+        check(r == 0);
         fprintf(stderr, "Socket error: %d\n", err);
 
         r = epoll_ctl(epoll_hnd, EPOLL_CTL_DEL, sock, NULL);
-        assert(r == 0);
+        check(r == 0);
         continue;
       }
 
@@ -119,8 +119,8 @@ int main(void) {
           r = WSARecv(sock, &wsa_buf, 1, &bytes, &flags, NULL, NULL);
           if (r == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
             break;
-          assert(r >= 0);
-          assert(bytes == sizeof PING);
+          check(r >= 0);
+          check(bytes == sizeof PING);
           pings++;
         }
 
@@ -135,8 +135,8 @@ int main(void) {
         wsa_buf.buf = (char*) PING;
         wsa_buf.len = sizeof PING;
         r = WSASend(sock, &wsa_buf, 1, &bytes, 0, NULL, NULL);
-        assert(r >= 0);
-        assert(bytes == sizeof PING);
+        check(r >= 0);
+        check(bytes == sizeof PING);
 
         pings_sent++;
 
@@ -150,12 +150,12 @@ int main(void) {
         continue;
       }
 
-      assert(0);
+      check(0);
     }
   }
 
   r = epoll_close(epoll_hnd);
-  assert(r == 0);
+  check(r == 0);
 
   closesocket(srv);
 

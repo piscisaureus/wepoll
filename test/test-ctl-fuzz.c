@@ -1,10 +1,10 @@
-#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "init.h"
+#include "test-util.h"
 #include "util.h"
 #include "wepoll.h"
 #include "win.h"
@@ -22,16 +22,16 @@ static SOCKET create_and_add_socket(HANDLE epfd) {
   struct epoll_event ev;
 
   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  assert(sock > 0);
+  check(sock > 0);
 
   one = 1;
   r = ioctlsocket(sock, FIONBIO, &one);
-  assert(r == 0);
+  check(r == 0);
 
   ev.events = 0;
   ev.data.u64 = 42;
   r = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, &ev);
-  assert(r == 0);
+  check(r == 0);
 
   return sock;
 }
@@ -44,10 +44,10 @@ int main(void) {
   HANDLE epfd;
 
   r = init();
-  assert(r == 0);
+  check(r == 0);
 
   epfd = epoll_create1(0);
-  assert(epfd != NULL);
+  check(epfd != NULL);
 
   for (size_t i = 0; i < NUM_SOCKETS; i++)
     sockets[i] = create_and_add_socket(epfd);
@@ -67,13 +67,13 @@ int main(void) {
       ev_in.data.u64 = 42;
 
       r = epoll_ctl(epfd, EPOLL_CTL_MOD, sock, &ev_in);
-      assert(r == 0);
+      check(r == 0);
     }
 
     count = 0;
     do {
       r = epoll_wait(epfd, ev_out, array_count(ev_out), count > 0 ? 0 : -1);
-      assert(r >= 0);
+      check(r >= 0);
       count += r;
     } while (r > 0);
 

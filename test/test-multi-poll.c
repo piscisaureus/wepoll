@@ -1,10 +1,10 @@
-#include <assert.h>
 #include <process.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "init.h"
+#include "test-util.h"
 #include "util.h"
 #include "wepoll.h"
 #include "win.h"
@@ -30,17 +30,17 @@ static SOCKET create_socket(unsigned short port) {
   int r;
 
   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  assert(sock > 0);
+  check(sock > 0);
 
   address.sin_family = AF_INET;
   address.sin_port = htons(port);
   address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   r = bind(sock, (struct sockaddr*) &address, sizeof address);
-  assert(r == 0);
+  check(r == 0);
 
   one = 1;
   r = ioctlsocket(sock, FIONBIO, &one);
-  assert(r == 0);
+  check(r == 0);
 
   return sock;
 }
@@ -68,7 +68,7 @@ static void send_message(SOCKET sock, unsigned short port) {
                 sizeof address,
                 NULL,
                 NULL);
-  assert(r >= 0);
+  check(r >= 0);
 }
 
 static unsigned int __stdcall poll_thread(void* arg) {
@@ -78,10 +78,10 @@ static unsigned int __stdcall poll_thread(void* arg) {
 
   memset(&ev_out, 0, sizeof ev_out);
   r = epoll_wait(context->port, &ev_out, 1, -1);
-  assert(r == 1);
+  check(r == 1);
 
-  assert(ev_out.events == EPOLLIN);
-  assert(ev_out.data.u64 == context->data);
+  check(ev_out.events == EPOLLIN);
+  check(ev_out.data.u64 == context->data);
 
   printf("Got event (port %p, thread %p)\n", context->port, context->thread);
 
@@ -96,7 +96,7 @@ int main(void) {
 
   /* Initialize winsock. */
   r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-  assert(r == 0);
+  check(r == 0);
 
   SOCKET send_sock = create_socket(0);
   SOCKET recv_sock = create_socket(LISTEN_PORT);
@@ -109,14 +109,14 @@ int main(void) {
 
     /* Create epoll port. */
     port = epoll_create1(0);
-    assert(port != INVALID_HANDLE_VALUE);
+    check(port != INVALID_HANDLE_VALUE);
     ports[i] = port;
 
     /* Register recv_sock with the epoll port. */
     ev.events = EPOLLIN;
     ev.data.u64 = rand();
     r = epoll_ctl(port, EPOLL_CTL_ADD, recv_sock, &ev);
-    assert(r == 0);
+    check(r == 0);
 
     /* Start THREADS_PER_PORT threads which will all poll the port. */
     for (size_t j = 0; j < array_count(contexts[i]); j++) {
@@ -131,7 +131,7 @@ int main(void) {
       /* Start thread. */
       thread = (HANDLE) _beginthreadex(
           NULL, 0, poll_thread, (void*) context, 0, NULL);
-      assert(thread != INVALID_HANDLE_VALUE);
+      check(thread != INVALID_HANDLE_VALUE);
       context->thread = thread;
     }
   }
@@ -147,7 +147,7 @@ int main(void) {
     for (size_t j = 0; j < array_count(contexts[i]); j++) {
       HANDLE thread = contexts[i][j].thread;
       DWORD wr = WaitForSingleObject(thread, INFINITE);
-      assert(wr == WAIT_OBJECT_0);
+      check(wr == WAIT_OBJECT_0);
       CloseHandle(thread);
     }
   }
@@ -156,7 +156,7 @@ int main(void) {
   for (size_t i = 0; i < array_count(ports); i++) {
     HANDLE port = ports[i];
     r = epoll_close(port);
-    assert(r == 0);
+    check(r == 0);
   }
 
   return 0;

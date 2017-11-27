@@ -1,8 +1,8 @@
-#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "test-util.h"
 #include "wepoll.h"
 #include "win.h"
 
@@ -67,14 +67,14 @@ int main(void) {
   {
     /* Create an epoll instance. */
     epoll_port = epoll_create(1);
-    assert(epoll_port > 0);
+    check(epoll_port > 0);
   }
 
   {
     /* Create a TCP socket pair. */
     SOCKET socks[2];
     int r = tcp_socketpair(socks);
-    assert(r == 0);
+    check(r == 0);
 
     send_sock = socks[0];
     recv_sock = socks[1];
@@ -83,13 +83,13 @@ int main(void) {
   {
     /* Enable non-blocking mode on the receiving end. */
     int r = sock_set_nonblock(recv_sock, true);
-    assert(r == 0);
+    check(r == 0);
   }
 
   {
     /* Send some data in order to trigger an event on the receiving socket. */
     int r = send(send_sock, HELLO, sizeof HELLO, 0);
-    assert(r == sizeof HELLO);
+    check(r == sizeof HELLO);
   }
 
   {
@@ -101,7 +101,7 @@ int main(void) {
     ev.data.sock = recv_sock;
 
     r = epoll_ctl(epoll_port, EPOLL_CTL_ADD, recv_sock, &ev);
-    assert(r >= 0);
+    check(r >= 0);
   }
 
   {
@@ -112,16 +112,16 @@ int main(void) {
     memset(&ev, 0, sizeof ev);
 
     r = epoll_wait(epoll_port, &ev, 1, -1);
-    assert(r == 1);
-    assert(ev.events == EPOLLIN);
-    assert(ev.data.sock == recv_sock);
+    check(r == 1);
+    check(ev.events == EPOLLIN);
+    check(ev.data.sock == recv_sock);
   }
 
   {
     /* Read the data from the socket. */
     char buffer[16];
     int r = recv(recv_sock, buffer, sizeof buffer, 0);
-    assert(r > 0);
+    check(r > 0);
   }
 
   {
@@ -134,7 +134,7 @@ int main(void) {
     memset(&ev, 0, sizeof ev);
 
     r = epoll_wait(epoll_port, &ev, 1, timeout);
-    assert(r == 0); /* Time-out. */
+    check(r == 0); /* Time-out. */
   }
 
   {
@@ -149,9 +149,9 @@ int main(void) {
 
     r = epoll_ctl(epoll_port, EPOLL_CTL_ADD, recv_sock, &ev);
 
-    assert(r == -1);
-    assert(errno == EEXIST);
-    assert(GetLastError() == ERROR_ALREADY_EXISTS);
+    check(r == -1);
+    check(errno == EEXIST);
+    check(GetLastError() == ERROR_ALREADY_EXISTS);
   }
 
   {
@@ -163,20 +163,20 @@ int main(void) {
     ev.data.sock = recv_sock;
 
     r = epoll_ctl(epoll_port, EPOLL_CTL_MOD, recv_sock, &ev);
-    assert(r == 0);
+    check(r == 0);
   }
 
   {
     /* Send some data, which will never be read by the receiving end, otherwise
      * Windows won't detect that the connection is closed. */
     int r = send(send_sock, HELLO, sizeof HELLO, 0);
-    assert(r == sizeof HELLO);
+    check(r == sizeof HELLO);
   }
 
   {
     /* Send FIN packet. */
     int r = shutdown(send_sock, SD_SEND);
-    assert(r == 0);
+    check(r == 0);
   }
 
   {
@@ -187,16 +187,16 @@ int main(void) {
     memset(&ev, 0, sizeof ev);
 
     r = epoll_wait(epoll_port, &ev, 1, -1);
-    assert(r == 1);
-    assert(ev.events == EPOLLRDHUP);
-    assert(ev.data.sock == recv_sock);
+    check(r == 1);
+    check(ev.events == EPOLLRDHUP);
+    check(ev.data.sock == recv_sock);
   }
 
   {
     /* Close to receiving socket, so the sending socket should detect a
      * connection hang-up */
     int r = closesocket(recv_sock);
-    assert(r == 0);
+    check(r == 0);
   }
 
   {
@@ -211,7 +211,7 @@ int main(void) {
     ev.data.sock = send_sock;
 
     r = epoll_ctl(epoll_port, EPOLL_CTL_ADD, send_sock, &ev);
-    assert(r == 0);
+    check(r == 0);
   }
 
   {
@@ -222,21 +222,21 @@ int main(void) {
     memset(&ev, 0, sizeof ev);
 
     r = epoll_wait(epoll_port, &ev, 1, -1);
-    assert(r == 1);
-    assert(ev.events == EPOLLHUP);
-    assert(ev.data.sock == send_sock);
+    check(r == 1);
+    check(ev.events == EPOLLHUP);
+    check(ev.data.sock == send_sock);
   }
 
   {
     /* Close the send socket. */
     int r = closesocket(send_sock);
-    assert(r == 0);
+    check(r == 0);
   }
 
   {
     /* Close the epoll port. */
     int r = epoll_close(epoll_port);
-    assert(r == 0);
+    check(r == 0);
   }
 
   return 0;

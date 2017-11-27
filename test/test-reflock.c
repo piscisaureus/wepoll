@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <process.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -6,6 +5,7 @@
 
 #include "init.h"
 #include "reflock.h"
+#include "test-util.h"
 #include "util.h"
 #include "win.h"
 
@@ -53,7 +53,7 @@ static unsigned int __stdcall test_thread(void* arg) {
 
   ReleaseSRWLockShared(&context->srwlock);
 
-  assert(lock_count > 100); /* Hopefully much more. */
+  check(lock_count > 100); /* Hopefully much more. */
 
   return 0;
 }
@@ -76,7 +76,7 @@ static void run_test_iteration(void) {
   for (size_t i = 0; i < array_count(threads); i++) {
     HANDLE thread =
         (HANDLE) _beginthreadex(NULL, 0, test_thread, &context, 0, NULL);
-    assert(thread != INVALID_HANDLE_VALUE);
+    check(thread != INVALID_HANDLE_VALUE);
     threads[i] = thread;
   }
 
@@ -87,7 +87,7 @@ static void run_test_iteration(void) {
   for (size_t i = 0; i < array_count(threads); i++) {
     HANDLE thread = threads[i];
     DWORD wr = WaitForSingleObject(thread, INFINITE);
-    assert(wr == WAIT_OBJECT_0);
+    check(wr == WAIT_OBJECT_0);
     CloseHandle(thread);
   }
 }
