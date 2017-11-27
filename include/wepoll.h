@@ -66,14 +66,14 @@ WEPOLL_EXPORT HANDLE epoll_create1(int flags);
 WEPOLL_EXPORT int epoll_close(HANDLE ephnd);
 
 WEPOLL_EXPORT int epoll_ctl(HANDLE ephnd,
-                           int op,
-                           SOCKET sock,
-                           struct epoll_event* event);
+                            int op,
+                            SOCKET sock,
+                            struct epoll_event* event);
 
 WEPOLL_EXPORT int epoll_wait(HANDLE ephnd,
-                            struct epoll_event* events,
-                            int maxevents,
-                            int timeout);
+                             struct epoll_event* events,
+                             int maxevents,
+                             int timeout);
 
 #ifdef __cplusplus
 } /* extern "C" */
