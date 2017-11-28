@@ -3,37 +3,42 @@
 var path = require('path');
 var fs = require('fs');
 
-var files = [];
-var include_dirs = [];
-var opt_strip_guards = false;
+// Parse command line options.
 
-for (var i = 2; i < process.argv.length; i++) {
-  var arg = process.argv[i];
-  var match;
-  if (match = /^-I(.*)$/.exec(arg))
-    include_dirs.push(match[1]);
-  else if (arg === '--strip-guards')
-    opt_strip_guards = true;
-  else
-    files.push(arg);
-}
+var files = [];
+var includeDirs = [];
+var stripGuardsEnabled = false;
+
+process.argv
+  .slice(2)
+  .forEach((arg) => {
+    let match;
+    if (match = /^-I(.*)$/.exec(arg))
+      includeDirs.push(match[1]);
+    else if (arg === '--strip-guards')
+      stripGuardsEnabled = true;
+    else
+      files.push(arg);
+  });
 
 var included = {};
 
-function load(filename) {
-  if (/[\/\\]/.test(filename))
-    return fs.readFileSync(filename, 'utf8');
+function readFileWithPath(fileName, dirs) {
+  if (/[/\\]/.test(fileName))
+    return fs.readFileSync(fileName, 'utf8');
 
-  var PATH = ['.'].concat(include_dirs);
-  for (; ;) {
-    var dir = PATH.shift();
+  for (let i = 0; i < dirs.length; i++) {
+    var filePath = path.resolve(dirs[i], fileName);
     try {
-      return fs.readFileSync(dir + '/' + filename, 'utf8');
+      return fs.readFileSync(filePath, 'utf8');
     } catch (e) {
-      if (PATH.length == 0)
-        throw e;
+      // Ignore.
     }
   }
+
+  var err = new Error('file not found: ' + fileName);
+  err.code = 'ENOENT'
+  throw err;
 }
 
 function strip_guards(filename, source) {
@@ -64,7 +69,7 @@ function strip_guards(filename, source) {
 }
 
 function lines(filename, strip) {
-  var source = load(filename);
+  var source = readFileWithPath(filename, ['.'].concat(includeDirs));
   if (strip) source = strip_guards(filename, source);
   return source.split(/\r?\n/g);
 }
@@ -86,7 +91,7 @@ function add(filename) {
   var key = path.basename(filename).toLowerCase();
   console.error('Adding: ' + key);
   included[key] = true;
-  return lines(filename, opt_strip_guards);
+  return lines(filename, stripGuardsEnabled);
 }
 
 var sys_included = {};
