@@ -51,6 +51,8 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
   set(ALLINONE_NAME "${HEADER_NAME}-all-in-one")
   set(ALLINONE_SRC_C "allinone/${HEADER_NAME}.c")
   set(ALLINONE_SRC_H "allinone/${HEADER_NAME}.h")
+  set(DOC_README "doc/README.md")
+  set(ALLINONE_README "allinone/README.md")
   add_custom_command(
     OUTPUT ${ALLINONE_SRC_C}
     COMMAND node tools/generate-all-in-one.js -Iinclude -Isrc -Isrc/all-in-one --strip-guards ${HEADER_SOURCE} ${SOURCES_SRC_C} > ${ALLINONE_SRC_C}
@@ -63,7 +65,13 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     IMPLICIT_DEPENDS c ${SOURCES_INCLUDE}
   )
-  add_custom_target(${ALLINONE_NAME} DEPENDS ${ALLINONE_SRC_C} ${ALLINONE_SRC_H})
+  add_custom_command(
+    OUTPUT ${ALLINONE_README}
+    COMMAND ${CMAKE_COMMAND} -E copy ${DOC_README} ${ALLINONE_README}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS ${DOC_README}
+  )
+  add_custom_target(${ALLINONE_NAME} DEPENDS ${ALLINONE_SRC_C} ${ALLINONE_SRC_H} ${ALLINONE_README})
 
   set(ALLINONE_DLL_NAME "${HEADER_NAME}-all-in-one.dll")
   set(ALLINONE_DLL_OUTPUT "${HEADER_NAME}-all-in-one")
