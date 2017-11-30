@@ -14,7 +14,7 @@ endif()
 file(GLOB SOURCES_SRC src/*.c src/*.h)
 file(GLOB SOURCES_SRC_C src/*.c)
 file(GLOB SOURCES_SRC_REGULAR src/regular/*.c src/regular/*.h)
-file(GLOB SOURCES_SRC_ALL_IN_ONE src/all-in-one/*.c src/all-in-one/*.h)
+file(GLOB SOURCES_SRC_COMBINED src/combined/*.c src/combined/*.h)
 file(GLOB SOURCES_INCLUDE include/*.h)
 file(GLOB SOURCES_TEST test/*.c)
 file(GLOB_RECURSE SOURCES_TEST_SHARED test/shared/*.c test/shared/*.h)
@@ -22,7 +22,7 @@ file(GLOB_RECURSE SOURCES_TEST_SHARED test/shared/*.c test/shared/*.h)
 source_group("" FILES ${SOURCES_INCLUDE})
 source_group(src FILES ${SOURCES_SRC})
 source_group(src FILES ${SOURCES_SRC_REGULAR})
-source_group(src FILES ${SOURCES_SRC_ALL_IN_ONE})
+source_group(src FILES ${SOURCES_SRC_COMBINED})
 source_group("" FILES ${SOURCES_TEST})
 source_group(test/shared FILES ${SOURCES_TEST_SHARED})
 
@@ -48,40 +48,40 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
   get_filename_component(HEADER_NAME ${HEADER_SOURCE} NAME_WE)
   string(TOUPPER ${HEADER_NAME} HEADER_NAME_UC)
 
-  set(ALLINONE_NAME "${HEADER_NAME}-all-in-one")
-  set(ALLINONE_SRC_C "allinone/${HEADER_NAME}.c")
-  set(ALLINONE_SRC_H "allinone/${HEADER_NAME}.h")
-  set(DOC_README "doc/README.md")
-  set(ALLINONE_README "allinone/README.md")
+  set(COMBINED_NAME "${HEADER_NAME}-combined")
+  set(DIST_SRC_C "dist/${HEADER_NAME}.c")
+  set(DIST_SRC_H "dist/${HEADER_NAME}.h")
+  set(SOURCES_README "doc/README.md")
+  set(DIST_README "dist/README.md")
   add_custom_command(
-    OUTPUT ${ALLINONE_SRC_C}
-    COMMAND node tools/generate-all-in-one.js -Iinclude -Isrc -Isrc/all-in-one --strip-guards ${HEADER_SOURCE} ${SOURCES_SRC_C} > ${ALLINONE_SRC_C}
+    OUTPUT ${DIST_SRC_C}
+    COMMAND node tools/combine.js -Iinclude -Isrc -Isrc/combined --strip-guards ${HEADER_SOURCE} ${SOURCES_SRC_C} > ${DIST_SRC_C}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    IMPLICIT_DEPENDS c ${SOURCES_INCLUDE} ${SOURCES_SRC} ${SOURCES_SRC_ALL_IN_ONE}
+    IMPLICIT_DEPENDS c ${SOURCES_INCLUDE} ${SOURCES_SRC} ${SOURCES_SRC_COMBINED}
   )
   add_custom_command(
-    OUTPUT ${ALLINONE_SRC_H}
-    COMMAND node tools/generate-all-in-one.js ${HEADER_SOURCE} > ${ALLINONE_SRC_H}
+    OUTPUT ${DIST_SRC_H}
+    COMMAND node tools/combine.js ${HEADER_SOURCE} > ${DIST_SRC_H}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     IMPLICIT_DEPENDS c ${SOURCES_INCLUDE}
   )
   add_custom_command(
-    OUTPUT ${ALLINONE_README}
-    COMMAND ${CMAKE_COMMAND} -E copy ${DOC_README} ${ALLINONE_README}
+    OUTPUT ${DIST_README}
+    COMMAND ${CMAKE_COMMAND} -E copy ${SOURCES_README} ${DIST_README}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${DOC_README}
+    DEPENDS ${SOURCES_README}
   )
-  add_custom_target(${ALLINONE_NAME} DEPENDS ${ALLINONE_SRC_C} ${ALLINONE_SRC_H} ${ALLINONE_README})
+  add_custom_target(${COMBINED_NAME} DEPENDS ${DIST_SRC_C} ${DIST_SRC_H} ${DIST_README})
 
-  set(ALLINONE_DLL_NAME "${HEADER_NAME}-all-in-one.dll")
-  set(ALLINONE_DLL_OUTPUT "${HEADER_NAME}-all-in-one")
-  add_library(${ALLINONE_DLL_NAME} SHARED ${ALLINONE_SRC_C})
+  set(COMBINED_DLL_NAME "${HEADER_NAME}-combined.dll")
+  set(COMBINED_DLL_OUTPUT "${HEADER_NAME}-combined")
+  add_library(${COMBINED_DLL_NAME} SHARED ${DIST_SRC_C})
   if(MSVC)
-    target_compile_definitions(${ALLINONE_DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__declspec(dllexport)" )
+    target_compile_definitions(${COMBINED_DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__declspec(dllexport)" )
   else()
-    target_compile_definitions(${ALLINONE_DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__attribute__((visibility(\"default\")))")
+    target_compile_definitions(${COMBINED_DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__attribute__((visibility(\"default\")))")
   endif()
-  set_target_properties(${ALLINONE_DLL_NAME} PROPERTIES OUTPUT_NAME ${ALLINONE_DLL_OUTPUT})
+  set_target_properties(${COMBINED_DLL_NAME} PROPERTIES OUTPUT_NAME ${COMBINED_DLL_OUTPUT})
 
   set(DLL_NAME "${HEADER_NAME}.dll")
   set(DLL_OUTPUT "${HEADER_NAME}")
