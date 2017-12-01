@@ -9,20 +9,30 @@ Linux API and as closely as possible.
 
 Unlike Linux, OS X, and many other operating systems, Windows doesn't
 have a good API for receiving socket state notifications. It only
-supports the `select` and `WSAPoll` APIs, but they suffer from
-well-understood scalability issues. Using I/O completion ports isn't
-always practical when software is designed to be cross-platform.
+supports the `select` and `WSAPoll` APIs, but they
+[don't scale](https://daniel.haxx.se/docs/poll-vs-select.html)
+and suffer from
+[other issues](https://daniel.haxx.se/blog/2012/10/10/wsapoll-is-broken/).
+
+Using I/O completion ports isn't always practical when software is
+designed to be cross-platform. Wepoll offers an alternative that is
+much closer to a drop-in replacement for software that was designed
+to run on Linux.
 
 ## Features
 
-* poll 100000s of sockets, efficiently
-* fully thread safe, multiple threads can poll the same epoll instance
+* can poll 100000s of sockets efficiently
+* fully thread safe
+* multiple threads can poll the same epoll port
 * sockets can be added to multiple epoll sets
+* polling for `EPOLLIN`, `EPOLLOUT`, `EPOLLPRI`, `EPOLLRDHUP`,
+  `EPOLLHUP`, and `EPOLLERR` events
+* `EPOLLONESTHOT` flag
 
 ## Limitations
 
-* only works on sockets (pipes, TTYs not supported)
-* the EPOLLEXCLUSIVE flag isn't supported
+* only works with sockets
+* some modes not suported: `EPOLLET`, `EPOLLEXCLUSIVE`
 
 ## How to use
 
@@ -33,8 +43,9 @@ project, and include the header wherever needed.
 ## Compatibility
 
 * Requires Windows 7 or higher.
-* Can be compiled with recent versions of MSVC and clang.
-  GCC (mingw) should work, but is untested.
+* Can be compiled with recent versions of MSVC and Clang.
+* GCC (mingw) should work (but is untested).
+
 
 ## Compatibility notes
 
