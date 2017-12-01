@@ -1,4 +1,5 @@
 /*
+ * wepoll - epoll for Windows
  * Copyright 2012-2017, Bert Belder. All rights reserved.
  *
  * The red-black tree implementation:
