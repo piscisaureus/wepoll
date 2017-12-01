@@ -2,13 +2,13 @@
 #define TEST_UTIL_H_
 
 #ifdef _MSC_VER
-#define no_return _declspec(noreturn)
+#define no_return __declspec(noreturn)
 #else /* GCC/clang */
 #define no_return __attribute__((noreturn))
 #endif
 
 #ifdef _MSC_VER
-#define no_inline _declspec(noinline)
+#define no_inline __declspec(noinline)
 #else /* GCC/clang */
 #define no_inline __attribute__((noinline))
 #endif
