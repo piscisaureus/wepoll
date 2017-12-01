@@ -46,7 +46,65 @@ project, and include the header wherever needed.
 * Can be compiled with recent versions of MSVC and Clang.
 * GCC (mingw) should work (but is untested).
 
+## API notes
 
-## Compatibility notes
+### General
 
-**TODO**
+* The epoll port is a `HANDLE`, not a file descriptor.
+* All functions set both `errno` and `GetLastError()` on failure.
+
+### epoll_create/epoll_create1
+
+```c
+HANDLE epoll_create(int size);
+HANDLE epoll_create1(int flags);
+```
+
+* Create a new epoll instance (port).
+* `size` is ignored but most be nonzero.
+* `flags` must be zero as there are no supported flags.
+* Returns `INVALID_HANDLE_VALUE` on failure.
+* [man page](http://man7.org/linux/man-pages/man2/epoll_create.2.html)
+
+### epoll_close
+
+```c
+int epoll_close(HANDLE ephnd);
+```
+
+* Close an epoll port.
+* do not attempt to close the epoll port with Windows' `close`,
+  `CloseHandle` or `closesocket` functions.
+
+### epoll_ctl
+
+```c
+int epoll_ctl(HANDLE ephnd,
+              int op,
+              SOCKET sock,
+              struct epoll_event* event);
+```
+
+* Control which socket events are monitored by an epoll port.
+* `ephnd` must be a HANDLE created by `epoll_create` or `epoll_create1`.
+* `op` must be one of `EPOLL_CTL_ADD`, `EPOLL_CTL_MOD`, `EPOLL_CTL_DEL`.
+* TODO: expand
+* [man page](http://man7.org/linux/man-pages/man2/epoll_ctl.2.html)
+
+### epoll_wait
+
+```c
+int epoll_wait(HANDLE ephnd,
+               struct epoll_event* events,
+               int maxevents,
+               int timeout);
+```
+
+* Receive socket events from an epoll port.
+* Returns
+  - -1 on failure
+  - 0 when a timeout occurs
+  - \>0 the number of evens received
+* TODO: expand
+* [man page](http://man7.org/linux/man-pages/man2/epoll_wait.2.html)
+
