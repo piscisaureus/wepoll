@@ -1,9 +1,7 @@
 #ifndef WEPOLL_INTERNAL_H_
 #define WEPOLL_INTERNAL_H_
 
-#ifndef WEPOLL_INTERNAL
 #define WEPOLL_INTERNAL
 #define WEPOLL_INTERNAL_EXTERN extern
-#endif
 
 #endif /* WEPOLL_INTERNAL_H_ */
