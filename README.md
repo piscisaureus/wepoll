@@ -1,18 +1,16 @@
 # wepoll - epoll for windows
 
-This library implements the
-[epoll](http://man7.org/linux/man-pages/man7/epoll.7.html) API for
-Windows applications. It attempts to be efficient, and to match the
-Linux API and as closely as possible.
+This library implements the [epoll][man epoll] API for Windows
+applications. It attempts to be efficient, and to match the Linux API
+as semantics as closely as possible.
 
 ## Rationale
 
 Unlike Linux, OS X, and many other operating systems, Windows doesn't
 have a good API for receiving socket state notifications. It only
 supports the `select` and `WSAPoll` APIs, but they
-[don't scale](https://daniel.haxx.se/docs/poll-vs-select.html)
-and suffer from
-[other issues](https://daniel.haxx.se/blog/2012/10/10/wsapoll-is-broken/).
+[don't scale][select scale] and suffer from
+[other issues][wsapoll broken].
 
 Using I/O completion ports isn't always practical when software is
 designed to be cross-platform. Wepoll offers an alternative that is
@@ -36,9 +34,10 @@ to run on Linux.
 
 ## How to use
 
-The library is distributed as a single source file (wepoll.c) and a
-single header file (wepoll.h). Compile the .c file as part of your
-project, and include the header wherever needed.
+The library is [distributed][dist] as a single source file
+([wepoll.c][wepoll.c]) and a single header file ([wepoll.h][wepoll.h]).
+Compile the .c file as part of your project, and include the header
+wherever needed.
 
 ## Compatibility
 
@@ -61,10 +60,10 @@ HANDLE epoll_create1(int flags);
 ```
 
 * Create a new epoll instance (port).
-* `size` is ignored but most be nonzero.
+* `size` is ignored but most be greater than zero.
 * `flags` must be zero as there are no supported flags.
 * Returns `INVALID_HANDLE_VALUE` on failure.
-* [man page](http://man7.org/linux/man-pages/man2/epoll_create.2.html)
+* [man page][man epoll_create]
 
 ### epoll_close
 
@@ -94,7 +93,7 @@ int epoll_ctl(HANDLE ephnd,
   wepoll may not be able to detect this until the next call to
   `epoll_wait()`.
 * TODO: expand
-* [man page](http://man7.org/linux/man-pages/man2/epoll_ctl.2.html)
+* [man page][man epoll_ctl]
 
 ### epoll_wait
 
@@ -108,8 +107,17 @@ int epoll_wait(HANDLE ephnd,
 * Receive socket events from an epoll port.
 * Returns
   - -1 on failure
-  - 0 when a timeout occurs
-  - \>0 the number of evens received
+  -  0 when a timeout occurs
+  - ≥1 the number of evens received
 * TODO: expand
-* [man page](http://man7.org/linux/man-pages/man2/epoll_wait.2.html)
+* [man page][man epoll_wait]
 
+[dist]:             https://github.com/piscisaureus/wepoll/tree/dist
+[man epoll]:        http://man7.org/linux/man-pages/man7/epoll.7.html
+[man epoll_create]: http://man7.org/linux/man-pages/man2/epoll_create.2.html
+[man epoll_ctl]:    http://man7.org/linux/man-pages/man2/epoll_ctl.2.html
+[man epoll_wait]:   http://man7.org/linux/man-pages/man2/epoll_wait.2.html
+[select scale]:     https://daniel.haxx.se/docs/poll-vs-select.html
+[wsapoll broken]:   https://daniel.haxx.se/blog/2012/10/10/wsapoll-is-broken/
+[wepoll.c]:         https://github.com/piscisaureus/wepoll/blob/dist/wepoll.c
+[wepoll.h]:         https://github.com/piscisaureus/wepoll/blob/dist/wepoll.h

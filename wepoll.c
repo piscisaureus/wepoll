@@ -35,37 +35,41 @@
 
 #include <stdint.h>
 
+/* clang-format off */
+
 enum EPOLL_EVENTS {
-  EPOLLIN = 1 << 0,
-  EPOLLPRI = 1 << 1,
-  EPOLLOUT = 1 << 2,
-  EPOLLERR = 1 << 3,
-  EPOLLHUP = 1 << 4,
-  EPOLLRDNORM = 1 << 6,
-  EPOLLRDBAND = 1 << 7,
-  EPOLLWRNORM = 1 << 8,
-  EPOLLWRBAND = 1 << 9,
-  EPOLLMSG = 1 << 10,
-  EPOLLRDHUP = 1 << 13,
+  EPOLLIN      = 1 <<  0,
+  EPOLLPRI     = 1 <<  1,
+  EPOLLOUT     = 1 <<  2,
+  EPOLLERR     = 1 <<  3,
+  EPOLLHUP     = 1 <<  4,
+  EPOLLRDNORM  = 1 <<  6,
+  EPOLLRDBAND  = 1 <<  7,
+  EPOLLWRNORM  = 1 <<  8,
+  EPOLLWRBAND  = 1 <<  9,
+  EPOLLMSG     = 1 << 10, /* Never reported. */
+  EPOLLRDHUP   = 1 << 13,
   EPOLLONESHOT = 1 << 31
 };
 
-#define EPOLLIN EPOLLIN
-#define EPOLLPRI EPOLLPRI
-#define EPOLLOUT EPOLLOUT
-#define EPOLLERR EPOLLERR
-#define EPOLLHUP EPOLLHUP
-#define EPOLLRDNORM EPOLLRDNORM
-#define EPOLLRDBAND EPOLLRDBAND
-#define EPOLLWRNORM EPOLLWRNORM
-#define EPOLLWRBAND EPOLLWRBAND
-#define EPOLLMSG EPOLLMSG
-#define EPOLLRDHUP EPOLLRDHUP
-#define EPOLLONESHOT EPOLLONESHOT
+#define EPOLLIN      ((uint32_t) EPOLLIN)
+#define EPOLLPRI     ((uint32_t) EPOLLPRI)
+#define EPOLLOUT     ((uint32_t) EPOLLOUT)
+#define EPOLLERR     ((uint32_t) EPOLLERR)
+#define EPOLLHUP     ((uint32_t) EPOLLHUP)
+#define EPOLLRDNORM  ((uint32_t) EPOLLRDNORM)
+#define EPOLLRDBAND  ((uint32_t) EPOLLRDBAND)
+#define EPOLLWRNORM  ((uint32_t) EPOLLWRNORM)
+#define EPOLLWRBAND  ((uint32_t) EPOLLWRBAND)
+#define EPOLLMSG     ((uint32_t) EPOLLMSG)
+#define EPOLLRDHUP   ((uint32_t) EPOLLRDHUP)
+#define EPOLLONESHOT ((uint32_t) EPOLLONESHOT)
 
 #define EPOLL_CTL_ADD 1
 #define EPOLL_CTL_MOD 2
 #define EPOLL_CTL_DEL 3
+
+/* clang-format on */
 
 typedef void* HANDLE;
 typedef uintptr_t SOCKET;
@@ -75,8 +79,8 @@ typedef union epoll_data {
   int fd;
   uint32_t u32;
   uint64_t u64;
-  SOCKET sock;
-  HANDLE hnd;
+  SOCKET sock; /* Windows specific */
+  HANDLE hnd;  /* Windows specific */
 } epoll_data_t;
 
 struct epoll_event {
@@ -117,6 +121,8 @@ WEPOLL_EXPORT int epoll_wait(HANDLE ephnd,
 #include <WS2tcpip.h>
 #include <WinSock2.h>
 #include <Windows.h>
+
+WEPOLL_INTERNAL int nt_global_init(void);
 
 #ifndef _NTDEF_
 typedef LONG NTSTATUS;
@@ -186,6 +192,73 @@ typedef NTSTATUS* PNTSTATUS;
 #ifndef STATUS_CANCELLED
 #define STATUS_CANCELLED ((NTSTATUS) 0xC0000120L)
 #endif
+
+typedef struct _IO_STATUS_BLOCK {
+  union {
+    NTSTATUS Status;
+    PVOID Pointer;
+  };
+  ULONG_PTR Information;
+} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+
+typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext,
+                                     PIO_STATUS_BLOCK IoStatusBlock,
+                                     ULONG Reserved);
+
+typedef struct _LSA_UNICODE_STRING {
+  USHORT Length;
+  USHORT MaximumLength;
+  PWSTR Buffer;
+} LSA_UNICODE_STRING, *PLSA_UNICODE_STRING, UNICODE_STRING, *PUNICODE_STRING;
+
+typedef struct _OBJECT_ATTRIBUTES {
+  ULONG Length;
+  HANDLE RootDirectory;
+  PUNICODE_STRING ObjectName;
+  ULONG Attributes;
+  PVOID SecurityDescriptor;
+  PVOID SecurityQualityOfService;
+} OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
+
+#define NTDLL_IMPORT_LIST(X)                                                 \
+  X(NTSTATUS,                                                                \
+    NTAPI,                                                                   \
+    NtDeviceIoControlFile,                                                   \
+    (HANDLE FileHandle,                                                      \
+     HANDLE Event,                                                           \
+     PIO_APC_ROUTINE ApcRoutine,                                             \
+     PVOID ApcContext,                                                       \
+     PIO_STATUS_BLOCK IoStatusBlock,                                         \
+     ULONG IoControlCode,                                                    \
+     PVOID InputBuffer,                                                      \
+     ULONG InputBufferLength,                                                \
+     PVOID OutputBuffer,                                                     \
+     ULONG OutputBufferLength))                                              \
+                                                                             \
+  X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))                 \
+                                                                             \
+  X(NTSTATUS,                                                                \
+    NTAPI,                                                                   \
+    NtCreateKeyedEvent,                                                      \
+    (PHANDLE handle,                                                         \
+     ACCESS_MASK access,                                                     \
+     POBJECT_ATTRIBUTES attr,                                                \
+     ULONG flags))                                                           \
+                                                                             \
+  X(NTSTATUS,                                                                \
+    NTAPI,                                                                   \
+    NtWaitForKeyedEvent,                                                     \
+    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout)) \
+                                                                             \
+  X(NTSTATUS,                                                                \
+    NTAPI,                                                                   \
+    NtReleaseKeyedEvent,                                                     \
+    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout))
+
+#define X(return_type, attributes, name, parameters) \
+  WEPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
+NTDLL_IMPORT_LIST(X)
+#undef X
 
 #include <stddef.h>
 
@@ -296,75 +369,6 @@ static const GUID AFD_PROVIDER_GUID_LIST[] = {
 
 WEPOLL_INTERNAL errno_t err_map_win_error_to_errno(DWORD error);
 WEPOLL_INTERNAL void err_set_win_error(DWORD error);
-
-WEPOLL_INTERNAL int nt_global_init(void);
-
-typedef struct _IO_STATUS_BLOCK {
-  union {
-    NTSTATUS Status;
-    PVOID Pointer;
-  };
-  ULONG_PTR Information;
-} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
-
-typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext,
-                                     PIO_STATUS_BLOCK IoStatusBlock,
-                                     ULONG Reserved);
-
-typedef struct _LSA_UNICODE_STRING {
-  USHORT Length;
-  USHORT MaximumLength;
-  PWSTR Buffer;
-} LSA_UNICODE_STRING, *PLSA_UNICODE_STRING, UNICODE_STRING, *PUNICODE_STRING;
-
-typedef struct _OBJECT_ATTRIBUTES {
-  ULONG Length;
-  HANDLE RootDirectory;
-  PUNICODE_STRING ObjectName;
-  ULONG Attributes;
-  PVOID SecurityDescriptor;
-  PVOID SecurityQualityOfService;
-} OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
-
-#define NTDLL_IMPORT_LIST(X)                                                 \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtDeviceIoControlFile,                                                   \
-    (HANDLE FileHandle,                                                      \
-     HANDLE Event,                                                           \
-     PIO_APC_ROUTINE ApcRoutine,                                             \
-     PVOID ApcContext,                                                       \
-     PIO_STATUS_BLOCK IoStatusBlock,                                         \
-     ULONG IoControlCode,                                                    \
-     PVOID InputBuffer,                                                      \
-     ULONG InputBufferLength,                                                \
-     PVOID OutputBuffer,                                                     \
-     ULONG OutputBufferLength))                                              \
-                                                                             \
-  X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))                 \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtCreateKeyedEvent,                                                      \
-    (PHANDLE handle,                                                         \
-     ACCESS_MASK access,                                                     \
-     POBJECT_ATTRIBUTES attr,                                                \
-     ULONG flags))                                                           \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtWaitForKeyedEvent,                                                     \
-    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout)) \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtReleaseKeyedEvent,                                                     \
-    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout))
-
-#define X(return_type, attributes, name, parameters) \
-  WEPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
-NTDLL_IMPORT_LIST(X)
-#undef X
 
 #define FILE_DEVICE_NETWORK 0x00000012
 #define METHOD_BUFFERED 0
@@ -2073,7 +2077,7 @@ reflock_tree_node_t* reflock_tree_del_and_ref(reflock_tree_t* rlt,
 
   AcquireSRWLockExclusive(&rlt->lock);
 
-  tree_node = tree_find(&rlt->tree, (uintptr_t) key);
+  tree_node = tree_find(&rlt->tree, key);
   rlt_node = safe_container_of(tree_node, reflock_tree_node_t, tree_node);
 
   if (rlt_node != NULL) {
@@ -2093,7 +2097,7 @@ reflock_tree_node_t* reflock_tree_find_and_ref(reflock_tree_t* rlt,
 
   AcquireSRWLockShared(&rlt->lock);
 
-  tree_node = tree_find(&rlt->tree, (uintptr_t) key);
+  tree_node = tree_find(&rlt->tree, key);
   rlt_node = safe_container_of(tree_node, reflock_tree_node_t, tree_node);
   if (rlt_node != NULL)
     reflock_ref(&rlt_node->reflock);
@@ -2199,7 +2203,9 @@ void reflock_unref_and_destroy(reflock_t* reflock) {
   assert(state == _DESTROY);
 }
 
-#define _EP_EVENT_MASK 0xffff
+#define _KNOWN_EPOLL_EVENTS                                            \
+  (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM | \
+   EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLRDHUP)
 
 typedef struct _poll_req {
   OVERLAPPED overlapped;
@@ -2433,7 +2439,7 @@ int ep_sock_set_event(ep_port_t* port_info,
   sock_private->user_events = events;
   sock_private->user_data = ev->data;
 
-  if ((events & _EP_EVENT_MASK & ~(sock_private->pending_events)) != 0)
+  if ((events & _KNOWN_EPOLL_EVENTS & ~sock_private->pending_events) != 0)
     ep_port_request_socket_update(port_info, sock_info);
 
   return 0;
@@ -2446,8 +2452,8 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
 
   assert(ep_port_is_socket_update_pending(port_info, sock_info));
 
-  if (sock_private->poll_status == _POLL_PENDING &&
-      (sock_private->user_events & _EP_EVENT_MASK &
+  if ((sock_private->poll_status == _POLL_PENDING) &&
+      (sock_private->user_events & _KNOWN_EPOLL_EVENTS &
        ~sock_private->pending_events) == 0) {
     /* All the events the user is interested in are already being monitored
      * by the pending poll request. It might spuriously complete because of an
