@@ -88,7 +88,7 @@ int epoll_ctl(HANDLE ephnd,
 * `ephnd` must be a HANDLE created by `epoll_create` or `epoll_create1`.
 * `op` must be one of `EPOLL_CTL_ADD`, `EPOLL_CTL_MOD`, `EPOLL_CTL_DEL`.
 * It is recommended to always explicitly remove a socket from its epoll
-  set using `EPOLL_CTL_MOD` *before* closing it. As on Linux, sockets
+  set using `EPOLL_CTL_DEL` *before* closing it. As on Linux, sockets
   are automatically removed from the epoll set when they are closed, but
   wepoll may not be able to detect this until the next call to
   `epoll_wait()`.
