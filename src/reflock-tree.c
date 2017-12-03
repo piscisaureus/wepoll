@@ -35,7 +35,7 @@ reflock_tree_node_t* reflock_tree_del_and_ref(reflock_tree_t* rlt,
 
   AcquireSRWLockExclusive(&rlt->lock);
 
-  tree_node = tree_find(&rlt->tree, (uintptr_t) key);
+  tree_node = tree_find(&rlt->tree, key);
   rlt_node = safe_container_of(tree_node, reflock_tree_node_t, tree_node);
 
   if (rlt_node != NULL) {
@@ -55,7 +55,7 @@ reflock_tree_node_t* reflock_tree_find_and_ref(reflock_tree_t* rlt,
 
   AcquireSRWLockShared(&rlt->lock);
 
-  tree_node = tree_find(&rlt->tree, (uintptr_t) key);
+  tree_node = tree_find(&rlt->tree, key);
   rlt_node = safe_container_of(tree_node, reflock_tree_node_t, tree_node);
   if (rlt_node != NULL)
     reflock_ref(&rlt_node->reflock);
