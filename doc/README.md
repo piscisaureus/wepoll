@@ -108,8 +108,8 @@ int epoll_wait(HANDLE ephnd,
 * Receive socket events from an epoll port.
 * Returns
   - -1 on failure
-  - 0 when a timeout occurs
-  - \>0 the number of evens received
+  -  0 when a timeout occurs
+  - ≥1 the number of evens received
 * TODO: expand
 * [man page](http://man7.org/linux/man-pages/man2/epoll_wait.2.html)
 
