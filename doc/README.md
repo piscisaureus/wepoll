@@ -73,8 +73,8 @@ int epoll_close(HANDLE ephnd);
 ```
 
 * Close an epoll port.
-* do not attempt to close the epoll port with Windows' `close`,
-  `CloseHandle` or `closesocket` functions.
+* Do not attempt to close the epoll port with `close()`,
+  `CloseHandle()` or `closesocket()`.
 
 ### epoll_ctl
 
