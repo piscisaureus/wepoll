@@ -29,7 +29,7 @@ static SOCKET create_and_add_socket(HANDLE ephnd, int events) {
   check(sock != INVALID_SOCKET);
 
   /* Associate with epoll port. */
-  ev.events = (uint32_t) events;
+  ev.events = events;
   ev.data.sock = sock;
   r = epoll_ctl(ephnd, EPOLL_CTL_ADD, sock, &ev);
   check(r == 0);

@@ -97,7 +97,7 @@ int main(void) {
     struct epoll_event ev;
     int r;
 
-    ev.events = (uint32_t) EPOLLIN | EPOLLONESHOT;
+    ev.events = EPOLLIN | EPOLLONESHOT;
     ev.data.sock = recv_sock;
 
     r = epoll_ctl(epoll_port, EPOLL_CTL_ADD, recv_sock, &ev);
@@ -144,7 +144,7 @@ int main(void) {
     struct epoll_event ev;
     int r;
 
-    ev.events = (uint32_t) EPOLLIN | EPOLLONESHOT;
+    ev.events = EPOLLIN | EPOLLONESHOT;
     ev.data.sock = recv_sock;
 
     r = epoll_ctl(epoll_port, EPOLL_CTL_ADD, recv_sock, &ev);
@@ -159,7 +159,7 @@ int main(void) {
     struct epoll_event ev;
     int r;
 
-    ev.events = (uint32_t) EPOLLRDHUP | EPOLLONESHOT;
+    ev.events = EPOLLRDHUP | EPOLLONESHOT;
     ev.data.sock = recv_sock;
 
     r = epoll_ctl(epoll_port, EPOLL_CTL_MOD, recv_sock, &ev);

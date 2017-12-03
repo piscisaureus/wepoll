@@ -57,7 +57,7 @@ int main(void) {
      */
     check(r == 0 || WSAGetLastError() == WSAEWOULDBLOCK);
 
-    ev.events = (uint32_t) EPOLLOUT | EPOLLERR | EPOLLONESHOT;
+    ev.events = EPOLLOUT | EPOLLERR | EPOLLONESHOT;
     ev.data.sock = sock;
     r = epoll_ctl(epoll_hnd, EPOLL_CTL_ADD, sock, &ev);
     check(r == 0);
