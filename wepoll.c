@@ -2225,12 +2225,9 @@ typedef struct _ep_sock_private {
 } _ep_sock_private_t;
 
 static DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
-  DWORD afd_events;
-
-  /* These events should always be monitored. */
-  assert(epoll_events & EPOLLERR);
-  assert(epoll_events & EPOLLHUP);
-  afd_events = AFD_POLL_ABORT | AFD_POLL_CONNECT_FAIL | AFD_POLL_LOCAL_CLOSE;
+  /* Always monitor for AFD_POLL_LOCAL_CLOSE, which is triggered when the
+   * socket is closed with closesocket() or CloseHandle(). */
+  DWORD afd_events = AFD_POLL_LOCAL_CLOSE;
 
   if (epoll_events & (EPOLLIN | EPOLLRDNORM))
     afd_events |= AFD_POLL_RECEIVE | AFD_POLL_ACCEPT;
@@ -2240,6 +2237,10 @@ static DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
     afd_events |= AFD_POLL_SEND | AFD_POLL_CONNECT;
   if (epoll_events & (EPOLLIN | EPOLLRDNORM | EPOLLRDHUP))
     afd_events |= AFD_POLL_DISCONNECT;
+  if (epoll_events & EPOLLHUP)
+    afd_events |= AFD_POLL_ABORT;
+  if (epoll_events & EPOLLERR)
+    afd_events |= AFD_POLL_CONNECT_FAIL;
 
   return afd_events;
 }
@@ -2424,7 +2425,9 @@ int ep_sock_set_event(ep_port_t* port_info,
                       const struct epoll_event* ev) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
-  /* EPOLLERR and EPOLLHUP are always reported, even when no sollicited. */
+  /* EPOLLERR and EPOLLHUP are always reported, even when not requested by the
+   * caller. However they are disabled after a event has been reported for a
+   * socket for which the EPOLLONESHOT flag as set. */
   uint32_t events = ev->events | EPOLLERR | EPOLLHUP;
 
   sock_private->user_events = events;
@@ -2439,7 +2442,7 @@ int ep_sock_set_event(ep_port_t* port_info,
 int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
   SOCKET driver_socket = poll_group_get_socket(sock_private->poll_group);
-  bool broken = false;
+  bool socket_closed = false;
 
   assert(ep_port_is_socket_update_pending(port_info, sock_info));
 
@@ -2472,7 +2475,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
                          driver_socket) < 0) {
       if (GetLastError() == ERROR_INVALID_HANDLE)
         /* The socket is broken. It will be dropped from the epoll set. */
-        broken = true;
+        socket_closed = true;
       else
         /* Another error occurred, which is propagated to the caller. */
         return -1;
@@ -2490,7 +2493,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   ep_port_clear_socket_update(port_info, sock_info);
 
   /* If we saw an ERROR_INVALID_HANDLE error, drop the socket. */
-  if (broken)
+  if (socket_closed)
     ep_sock_delete(port_info, sock_info);
 
   return 0;
@@ -2503,7 +2506,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
       container_of(overlapped, _ep_sock_private_t, poll_req.overlapped);
   ep_sock_t* sock_info = &sock_private->pub;
   uint32_t epoll_events;
-  bool drop_socket;
+  bool socket_closed;
   int ev_count = 0;
 
   sock_private->poll_status = _POLL_IDLE;
@@ -2516,7 +2519,7 @@ int ep_sock_feed_event(ep_port_t* port_info,
     return 0;
   }
 
-  _poll_req_complete(&sock_private->poll_req, &epoll_events, &drop_socket);
+  _poll_req_complete(&sock_private->poll_req, &epoll_events, &socket_closed);
 
   /* Filter events that the user didn't ask for. */
   epoll_events &= sock_private->user_events;
@@ -2533,10 +2536,10 @@ int ep_sock_feed_event(ep_port_t* port_info,
     ev_count = 1;
   }
 
-  if (drop_socket)
+  if (socket_closed)
     /* Drop the socket from the epoll set. */
     ep_sock_delete(port_info, sock_info);
-  else if (sock_private->user_events != 0)
+  else
     /* Put the socket back onto the attention list so a new poll request will
      * be submitted. */
     ep_port_request_socket_update(port_info, sock_info);

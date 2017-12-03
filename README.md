@@ -73,8 +73,8 @@ int epoll_close(HANDLE ephnd);
 ```
 
 * Close an epoll port.
-* do not attempt to close the epoll port with Windows' `close`,
-  `CloseHandle` or `closesocket` functions.
+* Do not attempt to close the epoll port with `close()`,
+  `CloseHandle()` or `closesocket()`.
 
 ### epoll_ctl
 
@@ -88,6 +88,11 @@ int epoll_ctl(HANDLE ephnd,
 * Control which socket events are monitored by an epoll port.
 * `ephnd` must be a HANDLE created by `epoll_create` or `epoll_create1`.
 * `op` must be one of `EPOLL_CTL_ADD`, `EPOLL_CTL_MOD`, `EPOLL_CTL_DEL`.
+* It is recommended to always explicitly remove a socket from its epoll
+  set using `EPOLL_CTL_MOD` *before* closing it. As on Linux, sockets
+  are automatically removed from the epoll set when they are closed, but
+  wepoll may not be able to detect this until the next call to
+  `epoll_wait()`.
 * TODO: expand
 * [man page](http://man7.org/linux/man-pages/man2/epoll_ctl.2.html)
 
