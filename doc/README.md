@@ -34,9 +34,10 @@ to run on Linux.
 
 ## How to use
 
-The library is distributed as a single source file (wepoll.c) and a
-single header file (wepoll.h). Compile the .c file as part of your
-project, and include the header wherever needed.
+The library is [distributed][dist] as a single source file
+([wepoll.c][wepoll.c]) and a single header file ([wepoll.h][wepoll.h]).
+Compile the .c file as part of your project, and include the header
+wherever needed.
 
 ## Compatibility
 
@@ -111,9 +112,12 @@ int epoll_wait(HANDLE ephnd,
 * TODO: expand
 * [man page][man epoll_wait]
 
+[dist]:             https://github.com/piscisaureus/wepoll/tree/dist
 [man epoll]:        http://man7.org/linux/man-pages/man7/epoll.7.html
 [man epoll_create]: http://man7.org/linux/man-pages/man2/epoll_create.2.html
 [man epoll_ctl]:    http://man7.org/linux/man-pages/man2/epoll_ctl.2.html
 [man epoll_wait]:   http://man7.org/linux/man-pages/man2/epoll_wait.2.html
 [select scale]:     https://daniel.haxx.se/docs/poll-vs-select.html
 [wsapoll broken]:   https://daniel.haxx.se/blog/2012/10/10/wsapoll-is-broken/
+[wepoll.c]:         https://github.com/piscisaureus/wepoll/blob/dist/wepoll.c
+[wepoll.h]:         https://github.com/piscisaureus/wepoll/blob/dist/wepoll.h
