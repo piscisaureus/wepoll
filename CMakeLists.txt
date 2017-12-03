@@ -74,7 +74,7 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
 
   set(COMBINED_DLL_NAME "${HEADER_NAME}-combined.dll")
   set(COMBINED_DLL_OUTPUT "${HEADER_NAME}-combined")
-  add_library(${COMBINED_DLL_NAME} SHARED ${DIST_SRC_C})
+  add_library(${COMBINED_DLL_NAME} SHARED ${DIST_SRC_C} ${DIST_SRC_H})
   if(MSVC)
     target_compile_definitions(${COMBINED_DLL_NAME} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__declspec(dllexport)" )
   else()
