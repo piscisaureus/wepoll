@@ -51,7 +51,7 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
   set(COMBINED_NAME "${HEADER_NAME}-combined")
   set(DIST_SRC_C "dist/${HEADER_NAME}.c")
   set(DIST_SRC_H "dist/${HEADER_NAME}.h")
-  set(SOURCES_README "doc/README.md")
+  set(SOURCES_README "README.md")
   set(DIST_README "dist/README.md")
   add_custom_command(
     OUTPUT ${DIST_SRC_C}
