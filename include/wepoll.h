@@ -17,7 +17,7 @@ enum EPOLL_EVENTS {
   EPOLLRDBAND = 1 << 7,
   EPOLLWRNORM = 1 << 8,
   EPOLLWRBAND = 1 << 9,
-  EPOLLMSG = 1 << 10,
+  EPOLLMSG = 1 << 10, /* Never reported */
   EPOLLRDHUP = 1 << 13,
   EPOLLONESHOT = 1 << 31
 };
