@@ -1,8 +1,6 @@
 #include <errno.h>
 
 #include "error.h"
-#include "nt.h"
-#include "ntstatus.h"
 #include "win.h"
 
 #define _ERROR_ERRNO_MAP(X)                  \

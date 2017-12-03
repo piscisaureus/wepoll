@@ -2,7 +2,7 @@
 #define WEPOLL_AFD_H_
 
 #include "internal.h"
-#include "ntstatus.h"
+#include "nt.h"
 #include "util.h"
 #include "win.h"
 

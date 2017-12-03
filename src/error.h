@@ -4,7 +4,7 @@
 #include <errno.h>
 
 #include "internal.h"
-#include "ntstatus.h"
+#include "win.h"
 
 #define _return_error_helper(error, value) \
   do {                                     \
