@@ -7,18 +7,20 @@
 
 #include <stdint.h>
 
+/* clang-format off */
+
 enum EPOLL_EVENTS {
-  EPOLLIN = 1 << 0,
-  EPOLLPRI = 1 << 1,
-  EPOLLOUT = 1 << 2,
-  EPOLLERR = 1 << 3,
-  EPOLLHUP = 1 << 4,
-  EPOLLRDNORM = 1 << 6,
-  EPOLLRDBAND = 1 << 7,
-  EPOLLWRNORM = 1 << 8,
-  EPOLLWRBAND = 1 << 9,
-  EPOLLMSG = 1 << 10, /* Never reported */
-  EPOLLRDHUP = 1 << 13,
+  EPOLLIN      = 1 <<  0,
+  EPOLLPRI     = 1 <<  1,
+  EPOLLOUT     = 1 <<  2,
+  EPOLLERR     = 1 <<  3,
+  EPOLLHUP     = 1 <<  4,
+  EPOLLRDNORM  = 1 <<  6,
+  EPOLLRDBAND  = 1 <<  7,
+  EPOLLWRNORM  = 1 <<  8,
+  EPOLLWRBAND  = 1 <<  9,
+  EPOLLMSG     = 1 << 10, /* Never reported. */
+  EPOLLRDHUP   = 1 << 13,
   EPOLLONESHOT = 1 << 31
 };
 
@@ -38,6 +40,8 @@ enum EPOLL_EVENTS {
 #define EPOLL_CTL_ADD 1
 #define EPOLL_CTL_MOD 2
 #define EPOLL_CTL_DEL 3
+
+/* clang-format on */
 
 typedef void* HANDLE;
 typedef uintptr_t SOCKET;
