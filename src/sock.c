@@ -10,7 +10,9 @@
 #include "sock.h"
 #include "wepoll.h"
 
-#define _EP_EVENT_MASK 0xffff
+#define _KNOWN_EPOLL_EVENTS                                            \
+  (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM | \
+   EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLRDHUP)
 
 typedef struct _poll_req {
   OVERLAPPED overlapped;
@@ -244,7 +246,7 @@ int ep_sock_set_event(ep_port_t* port_info,
   sock_private->user_events = events;
   sock_private->user_data = ev->data;
 
-  if ((events & _EP_EVENT_MASK & ~(sock_private->pending_events)) != 0)
+  if ((events & _KNOWN_EPOLL_EVENTS & ~sock_private->pending_events) != 0)
     ep_port_request_socket_update(port_info, sock_info);
 
   return 0;
@@ -257,8 +259,8 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
 
   assert(ep_port_is_socket_update_pending(port_info, sock_info));
 
-  if (sock_private->poll_status == _POLL_PENDING &&
-      (sock_private->user_events & _EP_EVENT_MASK &
+  if ((sock_private->poll_status == _POLL_PENDING) &&
+      (sock_private->user_events & _KNOWN_EPOLL_EVENTS &
        ~sock_private->pending_events) == 0) {
     /* All the events the user is interested in are already being monitored
      * by the pending poll request. It might spuriously complete because of an
