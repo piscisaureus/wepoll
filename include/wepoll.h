@@ -47,8 +47,8 @@ typedef union epoll_data {
   int fd;
   uint32_t u32;
   uint64_t u64;
-  SOCKET sock;
-  HANDLE hnd;
+  SOCKET sock; /* Windows specific */
+  HANDLE hnd;  /* Windows specific */
 } epoll_data_t;
 
 struct epoll_event {
