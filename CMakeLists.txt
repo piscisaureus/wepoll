@@ -48,7 +48,6 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
   get_filename_component(HEADER_NAME ${HEADER_SOURCE} NAME_WE)
   string(TOUPPER ${HEADER_NAME} HEADER_NAME_UC)
 
-  set(COMBINED_NAME "${HEADER_NAME}-combined")
   set(DIST_SRC_C "dist/${HEADER_NAME}.c")
   set(DIST_SRC_H "dist/${HEADER_NAME}.h")
   set(SOURCES_README "README.md")
@@ -71,7 +70,7 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${SOURCES_README}
   )
-  add_custom_target(${COMBINED_NAME} DEPENDS ${DIST_SRC_C} ${DIST_SRC_H} ${DIST_README})
+  add_custom_target(dist DEPENDS ${DIST_SRC_C} ${DIST_SRC_H} ${DIST_README})
 
   set(COMBINED_DLL_NAME "${HEADER_NAME}-combined.dll")
   set(COMBINED_DLL_OUTPUT "${HEADER_NAME}-combined")
