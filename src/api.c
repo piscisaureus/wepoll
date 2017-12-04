@@ -66,7 +66,7 @@ int epoll_close(HANDLE ephnd) {
 
   tree_node = reflock_tree_del_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL)
-    return_error(-1, ERROR_INVALID_HANDLE);
+    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
   port_info = _handle_tree_node_to_port(tree_node);
 
   ep_port_close(port_info);
@@ -87,7 +87,7 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   tree_node =
       reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL)
-    return_error(-1, ERROR_INVALID_HANDLE);
+    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
   port_info = _handle_tree_node_to_port(tree_node);
 
   result = ep_port_ctl(port_info, op, sock, ev);
@@ -111,7 +111,7 @@ int epoll_wait(HANDLE ephnd,
   tree_node =
       reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL)
-    return_error(-1, ERROR_INVALID_HANDLE);
+    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
   port_info = _handle_tree_node_to_port(tree_node);
 
   result = ep_port_wait(port_info, events, maxevents, timeout);
