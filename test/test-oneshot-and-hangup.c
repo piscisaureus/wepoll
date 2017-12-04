@@ -65,7 +65,7 @@ int main(void) {
   {
     /* Create an epoll instance. */
     epoll_port = epoll_create(1);
-    check(epoll_port > 0);
+    check(epoll_port != NULL);
   }
 
   {

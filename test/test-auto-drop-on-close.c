@@ -60,7 +60,7 @@ int main(void) {
   int r;
 
   ephnd = epoll_create1(0);
-  check(ephnd != INVALID_HANDLE_VALUE);
+  check(ephnd != NULL);
 
   sock1 = create_and_add_socket(ephnd, EPOLLIN);
   sock2 = create_and_add_socket(ephnd, EPOLLIN);

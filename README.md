@@ -62,7 +62,7 @@ HANDLE epoll_create1(int flags);
 * Create a new epoll instance (port).
 * `size` is ignored but most be greater than zero.
 * `flags` must be zero as there are no supported flags.
-* Returns `INVALID_HANDLE_VALUE` on failure.
+* Returns `NULL` on failure.
 * [man page][man epoll_create]
 
 ### epoll_close

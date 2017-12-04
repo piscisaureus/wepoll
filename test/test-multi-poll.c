@@ -107,7 +107,7 @@ int main(void) {
 
     /* Create epoll port. */
     port = epoll_create1(0);
-    check(port != INVALID_HANDLE_VALUE);
+    check(port != NULL);
     ports[i] = port;
 
     /* Register recv_sock with the epoll port. */

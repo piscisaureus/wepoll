@@ -24,7 +24,7 @@ int main(void) {
   struct epoll_event ev;
 
   epoll_hnd = epoll_create1(0);
-  check(epoll_hnd && epoll_hnd != INVALID_HANDLE_VALUE);
+  check(epoll_hnd != NULL);
 
   srv = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   r = ioctlsocket(srv, FIONBIO, &one);
