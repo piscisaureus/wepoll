@@ -119,3 +119,23 @@ void err_set_win_error(DWORD error) {
     SetLastError(error);
   errno = err_map_win_error_to_errno(error);
 }
+
+int _check_handle(HANDLE handle) {
+  DWORD flags;
+
+  /* GetHandleInformation() succeeds when passed INVALID_HANDLE_VALUE, so check
+   * for this condition explicitly. */
+  if (handle == INVALID_HANDLE_VALUE)
+    return_error(-1, ERROR_INVALID_HANDLE);
+
+  if (!GetHandleInformation(handle, &flags))
+    return_error(-1);
+
+  return 0;
+}
+
+void err_validate_handle_and_set_win_error(HANDLE handle, DWORD error) {
+  if (_check_handle(handle) < 0)
+    return;
+  err_set_win_error(error);
+}
