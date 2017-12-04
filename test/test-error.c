@@ -58,7 +58,49 @@ int main(void) {
 
   {
     /* Test epoll_wait() errors. */
-    /* TODO. */
+    HANDLE valid_ephnd;
+    struct epoll_event evs[1];
+    int r;
+
+    valid_ephnd = epoll_create1(0);
+    check(valid_ephnd != NULL);
+
+    /* Invalid `ephnd` */
+    r = epoll_wait(NULL, evs, 1, 0);
+    check_error(r == -1, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_wait(INVALID_HANDLE_VALUE, evs, 1, 0);
+    check_error(r == -1, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_wait(bad_value, evs, 1, 0);
+    check_error(r == -1, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_wait(bad_type, evs, 1, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+
+    /* Zero `maxevents` */
+    r = epoll_wait(valid_ephnd, evs, 0, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_wait(NULL, evs, 0, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_wait(INVALID_HANDLE_VALUE, evs, 0, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_wait(bad_value, evs, 0, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_wait(bad_type, evs, 0, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+
+    /* Negative `maxevents` */
+    r = epoll_wait(valid_ephnd, evs, -1, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_wait(NULL, evs, -1, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_wait(INVALID_HANDLE_VALUE, evs, -1, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_wait(bad_value, evs, -1, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_wait(bad_type, evs, -1, 0);
+    check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
+
+    r = epoll_close(valid_ephnd);
+    check(r == 0);
   }
 
   CloseHandle(bad_type);
