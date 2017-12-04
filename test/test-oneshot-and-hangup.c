@@ -6,8 +6,6 @@
 #include "wepoll.h"
 #include "win.h"
 
-#include <WS2tcpip.h>
-
 int tcp_socketpair(SOCKET socks[2]) {
   SOCKET listen_sock;
   struct sockaddr_in addr;

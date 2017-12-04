@@ -9,8 +9,6 @@
 #include "wepoll.h"
 #include "win.h"
 
-#include <WS2tcpip.h>
-
 #define PORT_COUNT 10
 #define THREADS_PER_PORT 10
 

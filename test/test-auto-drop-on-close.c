@@ -17,8 +17,6 @@
 #include "wepoll.h"
 #include "win.h"
 
-#include <WS2tcpip.h>
-
 static SOCKET create_and_add_socket(HANDLE ephnd, int events) {
   SOCKET sock;
   struct epoll_event ev;
