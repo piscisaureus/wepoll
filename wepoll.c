@@ -364,11 +364,20 @@ static const GUID AFD_PROVIDER_GUID_LIST[] = {
     err_set_win_error(error);              \
     return (value);                        \
   } while (0)
-
 #define return_error(value, ...) _return_error_helper(__VA_ARGS__ + 0, value)
+
+#define _return_handle_error_helper(error, value, handle)          \
+  do {                                                             \
+    err_validate_handle_and_set_win_error((HANDLE) handle, error); \
+    return (value);                                                \
+  } while (0)
+#define return_handle_error(value, handle, ...) \
+  _return_handle_error_helper(__VA_ARGS__ + 0, value, handle)
 
 WEPOLL_INTERNAL errno_t err_map_win_error_to_errno(DWORD error);
 WEPOLL_INTERNAL void err_set_win_error(DWORD error);
+WEPOLL_INTERNAL void err_validate_handle_and_set_win_error(HANDLE handle,
+                                                           DWORD error);
 
 #define FILE_DEVICE_NETWORK 0x00000012
 #define METHOD_BUFFERED 0
@@ -1216,8 +1225,9 @@ static HANDLE _epoll_create(void) {
   if (reflock_tree_add(&_epoll_handle_tree,
                        &port_info->handle_tree_node,
                        (uintptr_t) ephnd) < 0) {
+    /* This should never happen. */
     ep_port_delete(port_info);
-    return_error(INVALID_HANDLE_VALUE, ERROR_ALREADY_EXISTS);
+    return_error(NULL, ERROR_ALREADY_EXISTS);
   }
 
   return ephnd;
@@ -1225,14 +1235,14 @@ static HANDLE _epoll_create(void) {
 
 HANDLE epoll_create(int size) {
   if (size <= 0)
-    return_error(INVALID_HANDLE_VALUE, ERROR_INVALID_PARAMETER);
+    return_error(NULL, ERROR_INVALID_PARAMETER);
 
   return _epoll_create();
 }
 
 HANDLE epoll_create1(int flags) {
   if (flags != 0)
-    return_error(INVALID_HANDLE_VALUE, ERROR_INVALID_PARAMETER);
+    return_error(NULL, ERROR_INVALID_PARAMETER);
 
   return _epoll_create();
 }
@@ -1246,7 +1256,7 @@ int epoll_close(HANDLE ephnd) {
 
   tree_node = reflock_tree_del_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL)
-    return_error(-1, ERROR_INVALID_HANDLE);
+    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
   port_info = _handle_tree_node_to_port(tree_node);
 
   ep_port_close(port_info);
@@ -1267,7 +1277,7 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   tree_node =
       reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL)
-    return_error(-1, ERROR_INVALID_HANDLE);
+    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
   port_info = _handle_tree_node_to_port(tree_node);
 
   result = ep_port_ctl(port_info, op, sock, ev);
@@ -1291,7 +1301,7 @@ int epoll_wait(HANDLE ephnd,
   tree_node =
       reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL)
-    return_error(-1, ERROR_INVALID_HANDLE);
+    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
   port_info = _handle_tree_node_to_port(tree_node);
 
   result = ep_port_wait(port_info, events, maxevents, timeout);
@@ -1342,6 +1352,7 @@ int epoll_wait(HANDLE ephnd,
   X(ERROR_NETWORK_BUSY, ENETDOWN)            \
   X(ERROR_NETWORK_UNREACHABLE, ENETUNREACH)  \
   X(ERROR_NOACCESS, EFAULT)                  \
+  X(ERROR_NONPAGED_SYSTEM_RESOURCES, ENOMEM) \
   X(ERROR_NOT_ENOUGH_MEMORY, ENOMEM)         \
   X(ERROR_NOT_ENOUGH_QUOTA, ENOMEM)          \
   X(ERROR_NOT_FOUND, ENOENT)                 \
@@ -1353,6 +1364,7 @@ int epoll_wait(HANDLE ephnd,
   X(ERROR_NO_SYSTEM_RESOURCES, ENOMEM)       \
   X(ERROR_OPERATION_ABORTED, EINTR)          \
   X(ERROR_OUT_OF_PAPER, EACCES)              \
+  X(ERROR_PAGED_SYSTEM_RESOURCES, ENOMEM)    \
   X(ERROR_PAGEFILE_QUOTA, ENOMEM)            \
   X(ERROR_PATH_NOT_FOUND, ENOENT)            \
   X(ERROR_PIPE_NOT_CONNECTED, EPIPE)         \
@@ -1414,6 +1426,26 @@ void err_set_win_error(DWORD error) {
   else
     SetLastError(error);
   errno = err_map_win_error_to_errno(error);
+}
+
+int _check_handle(HANDLE handle) {
+  DWORD flags;
+
+  /* GetHandleInformation() succeeds when passed INVALID_HANDLE_VALUE, so check
+   * for this condition explicitly. */
+  if (handle == INVALID_HANDLE_VALUE)
+    return_error(-1, ERROR_INVALID_HANDLE);
+
+  if (!GetHandleInformation(handle, &flags))
+    return_error(-1);
+
+  return 0;
+}
+
+void err_validate_handle_and_set_win_error(HANDLE handle, DWORD error) {
+  if (_check_handle(handle) < 0)
+    return;
+  err_set_win_error(error);
 }
 
 static bool _initialized = false;
@@ -1624,6 +1656,14 @@ static void _ep_port_free(ep_port_t* port) {
   free(port);
 }
 
+static HANDLE _ep_port_create_iocp(void) {
+  HANDLE iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+  if (iocp == NULL)
+    return_error(NULL);
+
+  return iocp;
+}
+
 ep_port_t* ep_port_new(HANDLE* iocp_out) {
   ep_port_t* port_info;
   HANDLE iocp;
@@ -1632,8 +1672,8 @@ ep_port_t* ep_port_new(HANDLE* iocp_out) {
   if (port_info == NULL)
     goto err1;
 
-  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-  if (iocp == INVALID_HANDLE_VALUE)
+  iocp = _ep_port_create_iocp();
+  if (iocp == NULL)
     goto err2;
 
   memset(port_info, 0, sizeof *port_info);
@@ -1937,7 +1977,7 @@ ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
   ep_sock_t* sock_info = safe_container_of(
       tree_find(&port_info->sock_tree, socket), ep_sock_t, tree_node);
   if (sock_info == NULL)
-    return_error(NULL, ERROR_NOT_FOUND);
+    return_handle_error(NULL, socket, ERROR_NOT_FOUND);
   return sock_info;
 }
 

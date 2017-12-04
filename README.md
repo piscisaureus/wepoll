@@ -62,7 +62,7 @@ HANDLE epoll_create1(int flags);
 * Create a new epoll instance (port).
 * `size` is ignored but most be greater than zero.
 * `flags` must be zero as there are no supported flags.
-* Returns `INVALID_HANDLE_VALUE` on failure.
+* Returns `NULL` on failure.
 * [man page][man epoll_create]
 
 ### epoll_close
@@ -88,7 +88,7 @@ int epoll_ctl(HANDLE ephnd,
 * `ephnd` must be a HANDLE created by `epoll_create` or `epoll_create1`.
 * `op` must be one of `EPOLL_CTL_ADD`, `EPOLL_CTL_MOD`, `EPOLL_CTL_DEL`.
 * It is recommended to always explicitly remove a socket from its epoll
-  set using `EPOLL_CTL_MOD` *before* closing it. As on Linux, sockets
+  set using `EPOLL_CTL_DEL` *before* closing it. As on Linux, sockets
   are automatically removed from the epoll set when they are closed, but
   wepoll may not be able to detect this until the next call to
   `epoll_wait()`.
