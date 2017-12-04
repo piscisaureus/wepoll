@@ -27,6 +27,14 @@ static void _ep_port_free(ep_port_t* port) {
   free(port);
 }
 
+static HANDLE _ep_port_create_iocp(void) {
+  HANDLE iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+  if (iocp == NULL)
+    return_error(NULL);
+
+  return iocp;
+}
+
 ep_port_t* ep_port_new(HANDLE* iocp_out) {
   ep_port_t* port_info;
   HANDLE iocp;
@@ -35,8 +43,8 @@ ep_port_t* ep_port_new(HANDLE* iocp_out) {
   if (port_info == NULL)
     goto err1;
 
-  iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-  if (iocp == INVALID_HANDLE_VALUE)
+  iocp = _ep_port_create_iocp();
+  if (iocp == NULL)
     goto err2;
 
   memset(port_info, 0, sizeof *port_info);
