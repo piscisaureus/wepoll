@@ -105,6 +105,9 @@ int epoll_wait(HANDLE ephnd,
   ep_port_t* port_info;
   int result;
 
+  if (maxevents <= 0)
+    return_error(-1, ERROR_INVALID_PARAMETER);
+
   if (init() < 0)
     return -1;
 
