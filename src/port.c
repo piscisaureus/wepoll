@@ -348,7 +348,7 @@ ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
   ep_sock_t* sock_info = safe_container_of(
       tree_find(&port_info->sock_tree, socket), ep_sock_t, tree_node);
   if (sock_info == NULL)
-    return_error(NULL, ERROR_NOT_FOUND);
+    return_handle_error(NULL, socket, ERROR_NOT_FOUND);
   return sock_info;
 }
 

@@ -45,12 +45,12 @@ static void check_dropped(HANDLE ephnd, SOCKET sock) {
   /* Check that EPOLL_CTL_MOD fails. */
   r = epoll_ctl(ephnd, EPOLL_CTL_MOD, sock, &ev);
   check(r < 0);
-  check(errno == ENOENT); /* TODO: should be EBADF. */
+  check(errno == EBADF);
 
   /* Check that EPOLL_CTL_DEL fails. */
   r = epoll_ctl(ephnd, EPOLL_CTL_DEL, sock, &ev);
   check(r < 0);
-  check(errno == ENOENT); /* TODO: should be EBADF. */
+  check(errno == EBADF);
 }
 
 int main(void) {
