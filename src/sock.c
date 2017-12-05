@@ -34,7 +34,7 @@ typedef struct _ep_sock_private {
   uint32_t user_events;
   uint32_t pending_events;
   _poll_status_t poll_status;
-  unsigned deleted : 1;
+  bool delete_pending;
 } _ep_sock_private_t;
 
 static DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
@@ -155,7 +155,6 @@ static inline _ep_sock_private_t* _ep_sock_alloc(void) {
 }
 
 static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
-  assert(sock_private->poll_status == _POLL_IDLE);
   free(sock_private);
 }
 
@@ -216,30 +215,41 @@ err1:
   return NULL;
 }
 
-void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
+static void _ep_sock_delete(ep_port_t* port_info,
+                            ep_sock_t* sock_info,
+                            bool force) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
 
-  assert(!sock_private->deleted);
-  sock_private->deleted = true;
+  if (!sock_private->delete_pending) {
+    if (sock_private->poll_status == _POLL_PENDING)
+      _ep_sock_cancel_poll(sock_private);
 
-  if (sock_private->poll_status == _POLL_PENDING)
-    _ep_sock_cancel_poll(sock_private);
+    ep_port_cancel_socket_update(port_info, sock_info);
+    ep_port_del_socket(port_info, sock_info);
 
-  ep_port_del_socket(port_info, sock_info);
-  ep_port_cancel_socket_update(port_info, sock_info);
-  ep_port_release_poll_group(port_info, sock_private->poll_group);
-  sock_private->poll_group = NULL;
+    sock_private->delete_pending = true;
+  }
 
   /* If the poll request still needs to complete, the ep_sock object can't
-   * be free()d yet. `ep_sock_feed_event` will take care of this later. */
-  if (sock_private->poll_status == _POLL_IDLE)
+   * be free()d yet. `ep_sock_feed_event()` or `ep_port_close()` will take care
+   * of this later. */
+  if (force || sock_private->poll_status == _POLL_IDLE) {
+    /* Free the sock_info now. */
+    ep_port_remove_deleted_socket(port_info, sock_info);
+    ep_port_release_poll_group(port_info, sock_private->poll_group);
     _ep_sock_free(sock_private);
+  } else {
+    /* Free the socket later. */
+    ep_port_add_deleted_socket(port_info, sock_info);
+  }
+}
+
+void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
+  _ep_sock_delete(port_info, sock_info, false);
 }
 
 void ep_sock_force_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
-  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-  sock_private->poll_status = _POLL_IDLE;
-  ep_sock_delete(port_info, sock_info);
+  _ep_sock_delete(port_info, sock_info, true);
 }
 
 int ep_sock_set_event(ep_port_t* port_info,
@@ -265,6 +275,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
   bool socket_closed = false;
 
+  assert(!sock_private->delete_pending);
   if ((sock_private->poll_status == _POLL_PENDING) &&
       (sock_private->user_events & _KNOWN_EPOLL_EVENTS &
        ~sock_private->pending_events) == 0) {
@@ -331,10 +342,10 @@ int ep_sock_feed_event(ep_port_t* port_info,
   sock_private->poll_status = _POLL_IDLE;
   sock_private->pending_events = 0;
 
-  if (sock_private->deleted) {
-    /* Ignore completion for overlapped poll operation if the socket has been
-     * deleted; instead, free the socket. */
-    _ep_sock_free(sock_private);
+  if (sock_private->delete_pending) {
+    /* Ignore completion for overlapped poll operation if the socket is pending
+     * deletion; instead, delete the socket. */
+    ep_sock_delete(port_info, sock_info);
     return 0;
   }
 

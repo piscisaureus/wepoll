@@ -21,6 +21,7 @@ typedef struct ep_port {
       poll_group_allocators[array_count(AFD_PROVIDER_GUID_LIST)];
   tree_t sock_tree;
   queue_t sock_update_queue;
+  queue_t sock_deleted_queue;
   reflock_tree_node_t handle_tree_node;
   CRITICAL_SECTION lock;
   size_t active_poll_count;
@@ -59,5 +60,10 @@ WEPOLL_INTERNAL void ep_port_request_socket_update(ep_port_t* port_info,
                                                    ep_sock_t* sock_info);
 WEPOLL_INTERNAL void ep_port_cancel_socket_update(ep_port_t* port_info,
                                                   ep_sock_t* sock_info);
+
+WEPOLL_INTERNAL void ep_port_add_deleted_socket(ep_port_t* port_info,
+                                                ep_sock_t* sock_info);
+WEPOLL_INTERNAL void ep_port_remove_deleted_socket(ep_port_t* port_info,
+                                                   ep_sock_t* sock_info);
 
 #endif /* WEPOLL_PORT_H_ */

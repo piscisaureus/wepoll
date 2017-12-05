@@ -51,6 +51,7 @@ ep_port_t* ep_port_new(HANDLE* iocp_out) {
 
   port_info->iocp = iocp;
   queue_init(&port_info->sock_update_queue);
+  queue_init(&port_info->sock_deleted_queue);
   tree_init(&port_info->sock_tree);
   reflock_tree_node_init(&port_info->handle_tree_node);
   InitializeCriticalSection(&port_info->lock);
@@ -86,6 +87,7 @@ int ep_port_close(ep_port_t* port_info) {
 
 int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
+  queue_node_t* queue_node;
 
   EnterCriticalSection(&port_info->lock);
 
@@ -94,6 +96,11 @@ int ep_port_delete(ep_port_t* port_info) {
 
   while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
     ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
+    ep_sock_force_delete(port_info, sock_info);
+  }
+
+  while ((queue_node = queue_first(&port_info->sock_deleted_queue)) != NULL) {
+    ep_sock_t* sock_info = container_of(queue_node, ep_sock_t, queue_node);
     ep_sock_force_delete(port_info, sock_info);
   }
 
@@ -390,6 +397,20 @@ void ep_port_request_socket_update(ep_port_t* port_info,
 }
 
 void ep_port_cancel_socket_update(ep_port_t* port_info, ep_sock_t* sock_info) {
+  unused(port_info);
+  if (!queue_enqueued(&sock_info->queue_node))
+    return;
+  queue_remove(&sock_info->queue_node);
+}
+
+void ep_port_add_deleted_socket(ep_port_t* port_info, ep_sock_t* sock_info) {
+  if (queue_enqueued(&sock_info->queue_node))
+    return;
+  queue_append(&port_info->sock_deleted_queue, &sock_info->queue_node);
+}
+
+void ep_port_remove_deleted_socket(ep_port_t* port_info,
+                                   ep_sock_t* sock_info) {
   unused(port_info);
   if (!queue_enqueued(&sock_info->queue_node))
     return;
