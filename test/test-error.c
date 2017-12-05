@@ -52,8 +52,32 @@ int main(void) {
   }
 
   {
-      /* Test epoll_ctl() errors. */
-      /* TODO. */
+    /* Test epoll_ctl() errors. */
+    /* TODO: incomplete. */
+    HANDLE valid_ephnd;
+    SOCKET sock_bad = (SOCKET) 0xbadbad;
+    SOCKET sock_nonsock = (SOCKET) bad_type;
+    struct epoll_event ev;
+    int r;
+
+    valid_ephnd = epoll_create1(0);
+    check(valid_ephnd != NULL);
+
+    ev.data.u64 = 0;
+    ev.events = 0;
+
+    /* Invalid `sock` */
+    r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, 0, &ev);
+    check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, INVALID_SOCKET, &ev);
+    check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, sock_bad, &ev);
+    check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, sock_nonsock, &ev);
+    check_error(r < 0, ENOTSOCK, WSAENOTSOCK);
+
+    r = epoll_close(valid_ephnd);
+    check(r == 0);
   }
 
   {
