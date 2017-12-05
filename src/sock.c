@@ -159,6 +159,19 @@ static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
   free(sock_private);
 }
 
+static int _ep_sock_cancel_poll(_ep_sock_private_t* sock_private) {
+  assert(sock_private->poll_status == _POLL_PENDING);
+
+  if (_poll_req_cancel(&sock_private->poll_req,
+                       poll_group_get_socket(sock_private->poll_group)) < 0)
+    return -1;
+
+  sock_private->poll_status = _POLL_CANCELLED;
+  sock_private->pending_events = 0;
+
+  return 0;
+}
+
 ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   SOCKET afd_socket;
   ssize_t protocol_id;
@@ -209,12 +222,8 @@ void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   assert(!sock_private->deleted);
   sock_private->deleted = true;
 
-  if (sock_private->poll_status == _POLL_PENDING) {
-    _poll_req_cancel(&sock_private->poll_req,
-                     poll_group_get_socket(sock_private->poll_group));
-    sock_private->poll_status = _POLL_CANCELLED;
-    sock_private->pending_events = 0;
-  }
+  if (sock_private->poll_status == _POLL_PENDING)
+    _ep_sock_cancel_poll(sock_private);
 
   ep_port_del_socket(port_info, sock_info);
   ep_port_cancel_socket_update(port_info, sock_info);
@@ -254,7 +263,6 @@ int ep_sock_set_event(ep_port_t* port_info,
 
 int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-  SOCKET driver_socket = poll_group_get_socket(sock_private->poll_group);
   bool socket_closed = false;
 
   if ((sock_private->poll_status == _POLL_PENDING) &&
@@ -270,16 +278,16 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
      * events that the user is interested in. Cancel the pending poll request;
      * when it completes it will be submitted again with the correct event
      * mask. */
-    if (_poll_req_cancel(&sock_private->poll_req, driver_socket) < 0)
+    if (_ep_sock_cancel_poll(sock_private) < 0)
       return -1;
-    sock_private->poll_status = _POLL_CANCELLED;
-    sock_private->pending_events = 0;
 
   } else if (sock_private->poll_status == _POLL_CANCELLED) {
     /* The poll request has already been cancelled, we're still waiting for it
      * to return. For now, there's nothing that needs to be done. */
 
   } else if (sock_private->poll_status == _POLL_IDLE) {
+    SOCKET driver_socket = poll_group_get_socket(sock_private->poll_group);
+
     if (_poll_req_submit(&sock_private->poll_req,
                          sock_private->user_events,
                          sock_private->afd_socket,
