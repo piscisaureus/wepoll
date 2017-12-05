@@ -51,7 +51,7 @@
   X(ERROR_NOT_LOCKED, EACCES)                \
   X(ERROR_NOT_READY, EACCES)                 \
   X(ERROR_NOT_SAME_DEVICE, EXDEV)            \
-  X(ERROR_NOT_SUPPORTED, EOPNOTSUPP)         \
+  X(ERROR_NOT_SUPPORTED, EPERM)              \
   X(ERROR_NO_MORE_FILES, ENOENT)             \
   X(ERROR_NO_SYSTEM_RESOURCES, ENOMEM)       \
   X(ERROR_OPERATION_ABORTED, EINTR)          \
