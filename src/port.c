@@ -376,7 +376,9 @@ poll_group_t* ep_port_acquire_poll_group(
   return poll_group_acquire(pga);
 }
 
-void ep_port_release_poll_group(poll_group_t* poll_group) {
+void ep_port_release_poll_group(ep_port_t* port_info,
+                                poll_group_t* poll_group) {
+  unused(port_info);
   poll_group_release(poll_group);
 }
 

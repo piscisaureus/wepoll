@@ -198,7 +198,7 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
 err2:
   _ep_sock_free(sock_private);
 err1:
-  ep_port_release_poll_group(poll_group);
+  ep_port_release_poll_group(port_info, poll_group);
 
   return NULL;
 }
@@ -218,7 +218,7 @@ void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
 
   ep_port_del_socket(port_info, sock_info);
   ep_port_cancel_socket_update(port_info, sock_info);
-  ep_port_release_poll_group(sock_private->poll_group);
+  ep_port_release_poll_group(port_info, sock_private->poll_group);
   sock_private->poll_group = NULL;
 
   /* If the poll request still needs to complete, the ep_sock object can't
