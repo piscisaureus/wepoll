@@ -3,7 +3,6 @@
 #include <stdlib.h>
 
 #include "test-util.h"
-#include "util.h"
 #include "wepoll.h"
 #include "win.h"
 
