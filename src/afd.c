@@ -150,19 +150,18 @@ WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
   if (id < 0) {
     /* If getting protocol information failed, it might be due to the socket
      * not being an AFD socket. If so, attempt to fetch the underlying base
-     * socket, then try again to obtain protocol information. If that also
-     * fails, return the *original* error. */
-    DWORD original_error = GetLastError();
-    if (original_error != ERROR_NOT_SUPPORTED)
-      return_error(-1);
+     * socket, then try again to obtain protocol information. */
+    DWORD error = GetLastError();
+    if (error != ERROR_NOT_SUPPORTED)
+      return -1;
 
     afd_socket = _afd_get_base_socket(socket);
     if (afd_socket == INVALID_SOCKET || afd_socket == socket)
-      return_error(-1, original_error);
+      return_error(-1, error);
 
     id = _afd_get_protocol_info(afd_socket, protocol_info);
     if (id < 0)
-      return_error(-1, original_error);
+      return -1;
   }
 
   *afd_socket_out = afd_socket;
