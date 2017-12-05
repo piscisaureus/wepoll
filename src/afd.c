@@ -116,7 +116,7 @@ static ssize_t _afd_get_protocol_info(SOCKET socket,
                  SO_PROTOCOL_INFOW,
                  (char*) protocol_info,
                  &opt_len) != 0)
-    return_error(-1);
+    return_handle_error(-1, socket);
 
   id = -1;
   for (size_t i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {

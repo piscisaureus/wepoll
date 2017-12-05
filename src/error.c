@@ -95,7 +95,7 @@
   X(WSAENETUNREACH, ENETUNREACH)             \
   X(WSAENOBUFS, ENOMEM)                      \
   X(WSAENOTCONN, ENOTCONN)                   \
-  X(WSAENOTSOCK, EBADF)                      \
+  X(WSAENOTSOCK, ENOTSOCK)                   \
   X(WSAEOPNOTSUPP, EOPNOTSUPP)               \
   X(WSAESHUTDOWN, EPIPE)                     \
   X(WSAETIMEDOUT, ETIMEDOUT)                 \
