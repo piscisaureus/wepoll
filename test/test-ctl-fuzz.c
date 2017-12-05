@@ -88,5 +88,7 @@ int main(void) {
     }
   } while (total_time < RUN_TIME);
 
+  epoll_close(epfd);
+
   return 0;
 }
