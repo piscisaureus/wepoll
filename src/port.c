@@ -50,7 +50,7 @@ ep_port_t* ep_port_new(HANDLE* iocp_out) {
   memset(port_info, 0, sizeof *port_info);
 
   port_info->iocp = iocp;
-  queue_init(&port_info->update_queue);
+  queue_init(&port_info->sock_update_queue);
   tree_init(&port_info->sock_tree);
   reflock_tree_node_init(&port_info->handle_tree_node);
   InitializeCriticalSection(&port_info->lock);
@@ -113,12 +113,12 @@ int ep_port_delete(ep_port_t* port_info) {
 }
 
 static int _ep_port_update_events(ep_port_t* port_info) {
-  queue_t* update_queue = &port_info->update_queue;
+  queue_t* sock_update_queue = &port_info->sock_update_queue;
 
   /* Walk the queue, submitting new poll requests for every socket that needs
    * it. */
-  while (!queue_empty(update_queue)) {
-    queue_node_t* queue_node = queue_first(update_queue);
+  while (!queue_empty(sock_update_queue)) {
+    queue_node_t* queue_node = queue_first(sock_update_queue);
     ep_sock_t* sock_info = container_of(queue_node, ep_sock_t, queue_node);
 
     if (ep_sock_update(port_info, sock_info) < 0)
@@ -382,20 +382,14 @@ void ep_port_release_poll_group(poll_group_t* poll_group) {
 
 void ep_port_request_socket_update(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
-  if (ep_port_is_socket_update_pending(port_info, sock_info))
+  if (queue_enqueued(&sock_info->queue_node))
     return;
-  queue_append(&port_info->update_queue, &sock_info->queue_node);
-  assert(ep_port_is_socket_update_pending(port_info, sock_info));
+  queue_append(&port_info->sock_update_queue, &sock_info->queue_node);
 }
 
-void ep_port_clear_socket_update(ep_port_t* port_info, ep_sock_t* sock_info) {
-  if (!ep_port_is_socket_update_pending(port_info, sock_info))
+void ep_port_cancel_socket_update(ep_port_t* port_info, ep_sock_t* sock_info) {
+  unused(port_info);
+  if (!queue_enqueued(&sock_info->queue_node))
     return;
   queue_remove(&sock_info->queue_node);
-}
-
-bool ep_port_is_socket_update_pending(ep_port_t* port_info,
-                                      ep_sock_t* sock_info) {
-  unused(port_info);
-  return queue_enqueued(&sock_info->queue_node);
 }

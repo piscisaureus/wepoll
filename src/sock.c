@@ -217,7 +217,7 @@ void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
   }
 
   ep_port_del_socket(port_info, sock_info);
-  ep_port_clear_socket_update(port_info, sock_info);
+  ep_port_cancel_socket_update(port_info, sock_info);
   ep_port_release_poll_group(sock_private->poll_group);
   sock_private->poll_group = NULL;
 
@@ -256,8 +256,6 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
   SOCKET driver_socket = poll_group_get_socket(sock_private->poll_group);
   bool socket_closed = false;
-
-  assert(ep_port_is_socket_update_pending(port_info, sock_info));
 
   if ((sock_private->poll_status == _POLL_PENDING) &&
       (sock_private->user_events & _KNOWN_EPOLL_EVENTS &
@@ -303,7 +301,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
     assert(false);
   }
 
-  ep_port_clear_socket_update(port_info, sock_info);
+  ep_port_cancel_socket_update(port_info, sock_info);
 
   /* If we saw an ERROR_INVALID_HANDLE error, drop the socket. */
   if (socket_closed)
