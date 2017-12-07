@@ -130,7 +130,7 @@ static ssize_t _afd_get_protocol_info(SOCKET socket,
 
   /* Check if the protocol uses an msafd socket. */
   if (id < 0)
-    return_error(-1, ERROR_NOT_SUPPORTED);
+    return_error(-1, ERROR_DEVICE_FEATURE_NOT_SUPPORTED);
 
   return id;
 }
@@ -152,7 +152,7 @@ WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
      * not being an AFD socket. If so, attempt to fetch the underlying base
      * socket, then try again to obtain protocol information. */
     DWORD error = GetLastError();
-    if (error != ERROR_NOT_SUPPORTED)
+    if (error != ERROR_DEVICE_FEATURE_NOT_SUPPORTED)
       return -1;
 
     afd_socket = _afd_get_base_socket(socket);
