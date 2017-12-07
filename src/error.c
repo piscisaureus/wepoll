@@ -134,9 +134,3 @@ int err_check_handle(HANDLE handle) {
 
   return 0;
 }
-
-void err_validate_handle_and_set_win_error(HANDLE handle, DWORD error) {
-  if (err_check_handle(handle) < 0)
-    return;
-  err_set_win_error(error);
-}
