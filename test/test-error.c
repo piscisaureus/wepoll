@@ -52,8 +52,8 @@ int main(void) {
 
   {
     /* Test epoll_ctl() errors. */
-    /* TODO: incomplete. */
     HANDLE valid_ephnd;
+    SOCKET sock_valid;
     SOCKET sock_bad = (SOCKET) 0xbadbad;
     SOCKET sock_nonsock = (SOCKET) bad_type;
     struct epoll_event ev;
@@ -62,8 +62,21 @@ int main(void) {
     valid_ephnd = epoll_create1(0);
     check(valid_ephnd != NULL);
 
+    sock_valid = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    check(sock_valid != INVALID_SOCKET);
+
     ev.data.u64 = 0;
     ev.events = 0;
+
+    /* Invalid `ephnd` */
+    r = epoll_ctl(NULL, EPOLL_CTL_ADD, sock_valid, &ev);
+    check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_ctl(INVALID_HANDLE_VALUE, EPOLL_CTL_ADD, sock_valid, &ev);
+    check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_ctl(bad_value, EPOLL_CTL_ADD, sock_valid, &ev);
+    check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_ctl(bad_type, EPOLL_CTL_ADD, sock_valid, &ev);
+    check_error(r < 0, EINVAL, ERROR_INVALID_PARAMETER);
 
     /* Invalid `sock` */
     r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, 0, &ev);
@@ -75,6 +88,23 @@ int main(void) {
     r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, sock_nonsock, &ev);
     check_error(r < 0, ENOTSOCK, WSAENOTSOCK);
 
+    /* Invalid `op` */
+    r = epoll_ctl(valid_ephnd, -1, sock_valid, &ev);
+    check_error(r < 0, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_ctl(valid_ephnd, 0, sock_valid, &ev);
+    check_error(r < 0, EINVAL, ERROR_INVALID_PARAMETER);
+    r = epoll_ctl(valid_ephnd, 4, sock_valid, &ev);
+    check_error(r < 0, EINVAL, ERROR_INVALID_PARAMETER);
+
+    /* Precedence - `EBADF` before `EINVAL`. */
+    r = epoll_ctl(INVALID_HANDLE_VALUE, -1, sock_valid, &ev);
+    check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
+    r = epoll_ctl(valid_ephnd, -1, INVALID_SOCKET, &ev);
+    check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
+    /* TODO: bad `ephnd` type with invalid `sock`. */
+
+    r = closesocket(sock_valid);
+    check(r == 0);
     r = epoll_close(valid_ephnd);
     check(r == 0);
   }
