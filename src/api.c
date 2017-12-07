@@ -121,7 +121,7 @@ int epoll_wait(HANDLE ephnd,
                int timeout) {
   reflock_tree_node_t* tree_node;
   ep_port_t* port_info;
-  int result;
+  int num_events;
 
   if (maxevents <= 0)
     return_error(-1, ERROR_INVALID_PARAMETER);
@@ -131,13 +131,22 @@ int epoll_wait(HANDLE ephnd,
 
   tree_node =
       reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
-  if (tree_node == NULL)
-    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
-  port_info = _handle_tree_node_to_port(tree_node);
+  if (tree_node == NULL) {
+    err_set_win_error(ERROR_INVALID_PARAMETER);
+    goto err;
+  }
 
-  result = ep_port_wait(port_info, events, maxevents, timeout);
+  port_info = _handle_tree_node_to_port(tree_node);
+  num_events = ep_port_wait(port_info, events, maxevents, timeout);
 
   reflock_tree_node_unref(tree_node);
 
-  return result;
+  if (num_events < 0)
+    goto err;
+
+  return num_events;
+
+err:
+  err_check_handle(ephnd);
+  return -1;
 }
