@@ -79,22 +79,34 @@ int epoll_close(HANDLE ephnd) {
 int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   reflock_tree_node_t* tree_node;
   ep_port_t* port_info;
-  int result;
+  int r;
 
   if (init() < 0)
     return -1;
 
   tree_node =
       reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
-  if (tree_node == NULL)
-    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
-  port_info = _handle_tree_node_to_port(tree_node);
+  if (tree_node == NULL) {
+    err_set_win_error(ERROR_INVALID_PARAMETER);
+    goto err;
+  }
 
-  result = ep_port_ctl(port_info, op, sock, ev);
+  port_info = _handle_tree_node_to_port(tree_node);
+  r = ep_port_ctl(port_info, op, sock, ev);
 
   reflock_tree_node_unref(tree_node);
 
-  return result;
+  if (r < 0)
+    goto err;
+
+  return 0;
+
+err:
+  /* On Linux, in the case of epoll_ctl_mod(), EBADF takes precendence over
+   * other errors. Wepoll copies this behavior. */
+  err_check_handle(ephnd);
+  err_check_handle((HANDLE) sock);
+  return -1;
 }
 
 int epoll_wait(HANDLE ephnd,

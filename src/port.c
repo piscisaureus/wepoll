@@ -320,7 +320,7 @@ static int _ep_port_ctl_op(ep_port_t* port_info,
     case EPOLL_CTL_DEL:
       return _ep_port_ctl_del(port_info, sock);
     default:
-      return_handle_error(-1, sock, ERROR_INVALID_PARAMETER);
+      return_error(-1, ERROR_INVALID_PARAMETER);
   }
 }
 
@@ -355,7 +355,7 @@ ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
   ep_sock_t* sock_info = safe_container_of(
       tree_find(&port_info->sock_tree, socket), ep_sock_t, tree_node);
   if (sock_info == NULL)
-    return_handle_error(NULL, socket, ERROR_NOT_FOUND);
+    return_error(NULL, ERROR_NOT_FOUND);
   return sock_info;
 }
 

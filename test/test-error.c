@@ -101,7 +101,8 @@ int main(void) {
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
     r = epoll_ctl(valid_ephnd, -1, INVALID_SOCKET, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
-    /* TODO: bad `ephnd` type with invalid `sock`. */
+    r = epoll_ctl(bad_type, -1, INVALID_SOCKET, &ev);
+    check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
 
     r = closesocket(sock_valid);
     check(r == 0);
