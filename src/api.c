@@ -65,15 +65,21 @@ int epoll_close(HANDLE ephnd) {
     return -1;
 
   tree_node = reflock_tree_del_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
-  if (tree_node == NULL)
-    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
-  port_info = _handle_tree_node_to_port(tree_node);
+  if (tree_node == NULL) {
+    err_set_win_error(ERROR_INVALID_PARAMETER);
+    goto err;
+  }
 
+  port_info = _handle_tree_node_to_port(tree_node);
   ep_port_close(port_info);
 
   reflock_tree_node_unref_and_destroy(tree_node);
 
   return ep_port_delete(port_info);
+
+err:
+  err_check_handle(ephnd);
+  return -1;
 }
 
 int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
