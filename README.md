@@ -1,5 +1,7 @@
 # wepoll - epoll for windows
 
+[![][ci status badge]][ci status link]
+
 This library implements the [epoll][man epoll] API for Windows
 applications. It attempts to be efficient, and to match the Linux API
 as semantics as closely as possible.
@@ -112,6 +114,9 @@ int epoll_wait(HANDLE ephnd,
 * TODO: expand
 * [man page][man epoll_wait]
 
+
+[ci status badge]:  https://ci.appveyor.com/api/projects/status/github/piscisaureus/wepoll?branch=master&svg=true
+[ci status link]:   https://ci.appveyor.com/project/piscisaureus/wepoll/branch/master
 [dist]:             https://github.com/piscisaureus/wepoll/tree/dist
 [man epoll]:        http://man7.org/linux/man-pages/man7/epoll.7.html
 [man epoll_create]: http://man7.org/linux/man-pages/man2/epoll_create.2.html
