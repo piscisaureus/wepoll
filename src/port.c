@@ -320,7 +320,7 @@ static int _ep_port_ctl_op(ep_port_t* port_info,
     case EPOLL_CTL_DEL:
       return _ep_port_ctl_del(port_info, sock);
     default:
-      return_error(-1, ERROR_INVALID_PARAMETER);
+      return_handle_error(-1, sock, ERROR_INVALID_PARAMETER);
   }
 }
 
