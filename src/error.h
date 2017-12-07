@@ -23,6 +23,7 @@
 
 WEPOLL_INTERNAL errno_t err_map_win_error_to_errno(DWORD error);
 WEPOLL_INTERNAL void err_set_win_error(DWORD error);
+WEPOLL_INTERNAL int err_check_handle(HANDLE handle);
 WEPOLL_INTERNAL void err_validate_handle_and_set_win_error(HANDLE handle,
                                                            DWORD error);
 
