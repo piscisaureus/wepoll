@@ -115,6 +115,20 @@ int main(void) {
     r = epoll_ctl(ep_type, -1, sock_hinv, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
 
+    /* Socket already in epoll set. */
+    r = epoll_ctl(ep_good, EPOLL_CTL_ADD, sock_good, &ev);
+    check(r == 0);
+    r = epoll_ctl(ep_good, EPOLL_CTL_ADD, sock_good, &ev);
+    check_error(r < 0, EEXIST, ERROR_ALREADY_EXISTS);
+
+    /* Socket not in epoll set. */
+    r = epoll_ctl(ep_good, EPOLL_CTL_DEL, sock_good, NULL);
+    check(r == 0);
+    r = epoll_ctl(ep_good, EPOLL_CTL_MOD, sock_good, &ev);
+    check_error(r < 0, ENOENT, ERROR_NOT_FOUND);
+    r = epoll_ctl(ep_good, EPOLL_CTL_DEL, sock_good, NULL);
+    check_error(r < 0, ENOENT, ERROR_NOT_FOUND);
+
     r = closesocket(sock_good);
     check(r == 0);
     r = epoll_close(ep_good);
