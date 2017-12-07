@@ -20,6 +20,11 @@ typedef intptr_t ssize_t;
 
 #define unused(v) ((void) (v))
 
+#if defined(_MSC_VER) && _MSC_VER < 1900
+/* Polyfill `inline` for msvc 12 (Visual Studio 2013) */
+#define inline __inline
+#endif
+
 #ifdef __clang__
 /* Polyfill static_assert() because clang doesn't support it. */
 #define static_assert(condition, message) typedef __attribute__( \

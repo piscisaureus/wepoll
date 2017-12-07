@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "queue.h"
+#include "util.h"
 
 void queue_init(queue_t* queue) {
   queue_node_init(&queue->head);

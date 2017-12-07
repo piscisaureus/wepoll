@@ -3,6 +3,7 @@
 #include "error.h"
 #include "rb.h"
 #include "tree.h"
+#include "util.h"
 
 static inline int _tree_compare(tree_node_t* a, tree_node_t* b) {
   if (a->key < b->key)
