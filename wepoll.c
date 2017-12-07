@@ -373,20 +373,12 @@ static const GUID AFD_PROVIDER_GUID_LIST[] = {
     err_set_win_error(error);              \
     return (value);                        \
   } while (0)
-#define return_error(value, ...) _return_error_helper(__VA_ARGS__ + 0, value)
 
-#define _return_handle_error_helper(error, value, handle)          \
-  do {                                                             \
-    err_validate_handle_and_set_win_error((HANDLE) handle, error); \
-    return (value);                                                \
-  } while (0)
-#define return_handle_error(value, handle, ...) \
-  _return_handle_error_helper(__VA_ARGS__ + 0, value, handle)
+#define return_error(value, ...) _return_error_helper(__VA_ARGS__ + 0, value)
 
 WEPOLL_INTERNAL errno_t err_map_win_error_to_errno(DWORD error);
 WEPOLL_INTERNAL void err_set_win_error(DWORD error);
-WEPOLL_INTERNAL void err_validate_handle_and_set_win_error(HANDLE handle,
-                                                           DWORD error);
+WEPOLL_INTERNAL int err_check_handle(HANDLE handle);
 
 #define FILE_DEVICE_NETWORK 0x00000012
 #define METHOD_BUFFERED 0
@@ -500,7 +492,7 @@ static ssize_t _afd_get_protocol_info(SOCKET socket,
                  SO_PROTOCOL_INFOW,
                  (char*) protocol_info,
                  &opt_len) != 0)
-    return_handle_error(-1, socket);
+    return_error(-1);
 
   id = -1;
   for (size_t i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
@@ -1268,36 +1260,54 @@ int epoll_close(HANDLE ephnd) {
     return -1;
 
   tree_node = reflock_tree_del_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
-  if (tree_node == NULL)
-    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
-  port_info = _handle_tree_node_to_port(tree_node);
+  if (tree_node == NULL) {
+    err_set_win_error(ERROR_INVALID_PARAMETER);
+    goto err;
+  }
 
+  port_info = _handle_tree_node_to_port(tree_node);
   ep_port_close(port_info);
 
   reflock_tree_node_unref_and_destroy(tree_node);
 
   return ep_port_delete(port_info);
+
+err:
+  err_check_handle(ephnd);
+  return -1;
 }
 
 int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   reflock_tree_node_t* tree_node;
   ep_port_t* port_info;
-  int result;
+  int r;
 
   if (init() < 0)
     return -1;
 
   tree_node =
       reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
-  if (tree_node == NULL)
-    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
-  port_info = _handle_tree_node_to_port(tree_node);
+  if (tree_node == NULL) {
+    err_set_win_error(ERROR_INVALID_PARAMETER);
+    goto err;
+  }
 
-  result = ep_port_ctl(port_info, op, sock, ev);
+  port_info = _handle_tree_node_to_port(tree_node);
+  r = ep_port_ctl(port_info, op, sock, ev);
 
   reflock_tree_node_unref(tree_node);
 
-  return result;
+  if (r < 0)
+    goto err;
+
+  return 0;
+
+err:
+  /* On Linux, in the case of epoll_ctl_mod(), EBADF takes precendence over
+   * other errors. Wepoll copies this behavior. */
+  err_check_handle(ephnd);
+  err_check_handle((HANDLE) sock);
+  return -1;
 }
 
 int epoll_wait(HANDLE ephnd,
@@ -1306,7 +1316,7 @@ int epoll_wait(HANDLE ephnd,
                int timeout) {
   reflock_tree_node_t* tree_node;
   ep_port_t* port_info;
-  int result;
+  int num_events;
 
   if (maxevents <= 0)
     return_error(-1, ERROR_INVALID_PARAMETER);
@@ -1316,15 +1326,24 @@ int epoll_wait(HANDLE ephnd,
 
   tree_node =
       reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
-  if (tree_node == NULL)
-    return_handle_error(-1, ephnd, ERROR_INVALID_PARAMETER);
-  port_info = _handle_tree_node_to_port(tree_node);
+  if (tree_node == NULL) {
+    err_set_win_error(ERROR_INVALID_PARAMETER);
+    goto err;
+  }
 
-  result = ep_port_wait(port_info, events, maxevents, timeout);
+  port_info = _handle_tree_node_to_port(tree_node);
+  num_events = ep_port_wait(port_info, events, maxevents, timeout);
 
   reflock_tree_node_unref(tree_node);
 
-  return result;
+  if (num_events < 0)
+    goto err;
+
+  return num_events;
+
+err:
+  err_check_handle(ephnd);
+  return -1;
 }
 
 #define _ERROR_ERRNO_MAP(X)                    \
@@ -1445,7 +1464,7 @@ void err_set_win_error(DWORD error) {
   errno = err_map_win_error_to_errno(error);
 }
 
-int _check_handle(HANDLE handle) {
+int err_check_handle(HANDLE handle) {
   DWORD flags;
 
   /* GetHandleInformation() succeeds when passed INVALID_HANDLE_VALUE, so check
@@ -1457,12 +1476,6 @@ int _check_handle(HANDLE handle) {
     return_error(-1);
 
   return 0;
-}
-
-void err_validate_handle_and_set_win_error(HANDLE handle, DWORD error) {
-  if (_check_handle(handle) < 0)
-    return;
-  err_set_win_error(error);
 }
 
 static bool _initialized = false;
@@ -1966,7 +1979,7 @@ static int _ep_port_ctl_op(ep_port_t* port_info,
     case EPOLL_CTL_DEL:
       return _ep_port_ctl_del(port_info, sock);
     default:
-      return_handle_error(-1, sock, ERROR_INVALID_PARAMETER);
+      return_error(-1, ERROR_INVALID_PARAMETER);
   }
 }
 
@@ -2001,7 +2014,7 @@ ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
   ep_sock_t* sock_info = safe_container_of(
       tree_find(&port_info->sock_tree, socket), ep_sock_t, tree_node);
   if (sock_info == NULL)
-    return_handle_error(NULL, socket, ERROR_NOT_FOUND);
+    return_error(NULL, ERROR_NOT_FOUND);
   return sock_info;
 }
 
