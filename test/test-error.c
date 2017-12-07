@@ -15,9 +15,22 @@ static void check_error(bool did_fail,
 }
 
 int main(void) {
-  const HANDLE bad_value = (HANDLE) 0xbadbad;
-  const HANDLE bad_type = CreateEventW(NULL, FALSE, FALSE, NULL);
-  check(bad_type != NULL && bad_type != INVALID_HANDLE_VALUE);
+  HANDLE event_handle;
+  HANDLE ep_null, ep_hinv, ep_badv, ep_type;
+  SOCKET sock_null, sock_hinv, sock_badv, sock_type;
+
+  event_handle = CreateEventW(NULL, FALSE, FALSE, NULL);
+  check(event_handle != NULL && event_handle != INVALID_HANDLE_VALUE);
+
+  ep_null = NULL;
+  ep_hinv = INVALID_HANDLE_VALUE;
+  ep_badv = (HANDLE) 0xbadbad;
+  ep_type = event_handle;
+
+  sock_null = (SOCKET) NULL;
+  sock_hinv = INVALID_SOCKET;
+  sock_badv = (SOCKET) 0xbadbad;
+  sock_type = (SOCKET) event_handle;
 
   {
     /* Test epoll_create() errors. */
@@ -40,124 +53,122 @@ int main(void) {
   {
     /* Test epoll_close() errors. */
     int r;
-    r = epoll_close(NULL);
+    r = epoll_close(ep_null);
     check_error(r == -1, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_close(INVALID_HANDLE_VALUE);
+    r = epoll_close(ep_hinv);
     check_error(r == -1, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_close(bad_value);
+    r = epoll_close(ep_badv);
     check_error(r == -1, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_close(bad_type);
+    r = epoll_close(ep_type);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
   }
 
   {
     /* Test epoll_ctl() errors. */
-    HANDLE valid_ephnd;
-    SOCKET sock_valid;
-    SOCKET sock_bad = (SOCKET) 0xbadbad;
-    SOCKET sock_nonsock = (SOCKET) bad_type;
+    HANDLE ep_good;
+    SOCKET sock_good;
     struct epoll_event ev;
     int r;
 
-    valid_ephnd = epoll_create1(0);
-    check(valid_ephnd != NULL);
+    ep_good = epoll_create1(0);
+    check(ep_good != ep_null);
 
-    sock_valid = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    check(sock_valid != INVALID_SOCKET);
+    sock_good = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    check(sock_good != sock_hinv);
 
     ev.data.u64 = 0;
     ev.events = 0;
 
     /* Invalid `ephnd` */
-    r = epoll_ctl(NULL, EPOLL_CTL_ADD, sock_valid, &ev);
+    r = epoll_ctl(ep_null, EPOLL_CTL_ADD, sock_good, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_ctl(INVALID_HANDLE_VALUE, EPOLL_CTL_ADD, sock_valid, &ev);
+    r = epoll_ctl(ep_hinv, EPOLL_CTL_ADD, sock_good, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_ctl(bad_value, EPOLL_CTL_ADD, sock_valid, &ev);
+    r = epoll_ctl(ep_badv, EPOLL_CTL_ADD, sock_good, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_ctl(bad_type, EPOLL_CTL_ADD, sock_valid, &ev);
+    r = epoll_ctl(ep_type, EPOLL_CTL_ADD, sock_good, &ev);
     check_error(r < 0, EINVAL, ERROR_INVALID_PARAMETER);
 
     /* Invalid `sock` */
-    r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, 0, &ev);
+    r = epoll_ctl(ep_good, EPOLL_CTL_ADD, sock_null, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, INVALID_SOCKET, &ev);
+    r = epoll_ctl(ep_good, EPOLL_CTL_ADD, sock_hinv, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, sock_bad, &ev);
+    r = epoll_ctl(ep_good, EPOLL_CTL_ADD, sock_badv, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_ctl(valid_ephnd, EPOLL_CTL_ADD, sock_nonsock, &ev);
+    r = epoll_ctl(ep_good, EPOLL_CTL_ADD, sock_type, &ev);
     check_error(r < 0, ENOTSOCK, WSAENOTSOCK);
 
     /* Invalid `op` */
-    r = epoll_ctl(valid_ephnd, -1, sock_valid, &ev);
+    r = epoll_ctl(ep_good, -1, sock_good, &ev);
     check_error(r < 0, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_ctl(valid_ephnd, 0, sock_valid, &ev);
+    r = epoll_ctl(ep_good, 0, sock_good, &ev);
     check_error(r < 0, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_ctl(valid_ephnd, 4, sock_valid, &ev);
+    r = epoll_ctl(ep_good, 4, sock_good, &ev);
     check_error(r < 0, EINVAL, ERROR_INVALID_PARAMETER);
 
     /* Precedence - `EBADF` before `EINVAL`. */
-    r = epoll_ctl(INVALID_HANDLE_VALUE, -1, sock_valid, &ev);
+    r = epoll_ctl(ep_hinv, -1, sock_good, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_ctl(valid_ephnd, -1, INVALID_SOCKET, &ev);
+    r = epoll_ctl(ep_good, -1, sock_hinv, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_ctl(bad_type, -1, INVALID_SOCKET, &ev);
+    r = epoll_ctl(ep_type, -1, sock_hinv, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
 
-    r = closesocket(sock_valid);
+    r = closesocket(sock_good);
     check(r == 0);
-    r = epoll_close(valid_ephnd);
+    r = epoll_close(ep_good);
     check(r == 0);
   }
 
   {
     /* Test epoll_wait() errors. */
-    HANDLE valid_ephnd;
+    HANDLE ep_good;
     struct epoll_event evs[1];
     int r;
 
-    valid_ephnd = epoll_create1(0);
-    check(valid_ephnd != NULL);
+    ep_good = epoll_create1(0);
+    check(ep_good != ep_null);
 
     /* Invalid `ephnd` */
-    r = epoll_wait(NULL, evs, 1, 0);
+    r = epoll_wait(ep_null, evs, 1, 0);
     check_error(r == -1, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_wait(INVALID_HANDLE_VALUE, evs, 1, 0);
+    r = epoll_wait(ep_hinv, evs, 1, 0);
     check_error(r == -1, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_wait(bad_value, evs, 1, 0);
+    r = epoll_wait(ep_badv, evs, 1, 0);
     check_error(r == -1, EBADF, ERROR_INVALID_HANDLE);
-    r = epoll_wait(bad_type, evs, 1, 0);
+    r = epoll_wait(ep_type, evs, 1, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
 
     /* Zero `maxevents` */
-    r = epoll_wait(valid_ephnd, evs, 0, 0);
+    r = epoll_wait(ep_good, evs, 0, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_wait(NULL, evs, 0, 0);
+    r = epoll_wait(ep_null, evs, 0, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_wait(INVALID_HANDLE_VALUE, evs, 0, 0);
+    r = epoll_wait(ep_hinv, evs, 0, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_wait(bad_value, evs, 0, 0);
+    r = epoll_wait(ep_badv, evs, 0, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_wait(bad_type, evs, 0, 0);
+    r = epoll_wait(ep_type, evs, 0, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
 
     /* Negative `maxevents` */
-    r = epoll_wait(valid_ephnd, evs, -1, 0);
+    r = epoll_wait(ep_good, evs, -1, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_wait(NULL, evs, -1, 0);
+    r = epoll_wait(ep_null, evs, -1, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_wait(INVALID_HANDLE_VALUE, evs, -1, 0);
+    r = epoll_wait(ep_hinv, evs, -1, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_wait(bad_value, evs, -1, 0);
+    r = epoll_wait(ep_badv, evs, -1, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
-    r = epoll_wait(bad_type, evs, -1, 0);
+    r = epoll_wait(ep_type, evs, -1, 0);
     check_error(r == -1, EINVAL, ERROR_INVALID_PARAMETER);
 
-    r = epoll_close(valid_ephnd);
+    r = epoll_close(ep_good);
     check(r == 0);
   }
 
-  CloseHandle(bad_type);
+  CloseHandle(event_handle);
 
   return 0;
 }
