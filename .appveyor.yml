@@ -1,9 +1,5 @@
 version: b{build}-{branch}
 
-branches:
-  except:
-    - dist
-
 environment:
   matrix:
     - platform: x64
