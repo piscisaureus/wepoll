@@ -31,10 +31,10 @@ typedef intptr_t ssize_t;
 #define inline __inline
 #endif
 
-#if defined(__clang__) || defined(__GNUC__)
-/* Polyfill static_assert() for clang and gcc. */
+#if !defined(static_assert) && !defined(_MSC_VER)
+/* Polyfill `static_assert` for some versions of clang and gcc. */
 #define static_assert(condition, message) typedef __attribute__( \
-    (unused)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
+    (__unused__)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
 #endif
 
 WEPOLL_INTERNAL void* util_safe_container_of_helper(void* ptr, size_t offset);
