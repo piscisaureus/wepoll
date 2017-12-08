@@ -88,6 +88,7 @@ int ep_port_close(ep_port_t* port_info) {
 int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
   queue_node_t* queue_node;
+  size_t i;
 
   EnterCriticalSection(&port_info->lock);
 
@@ -104,7 +105,7 @@ int ep_port_delete(ep_port_t* port_info) {
     ep_sock_force_delete(port_info, sock_info);
   }
 
-  for (size_t i = 0; i < array_count(port_info->poll_group_allocators); i++) {
+  for (i = 0; i < array_count(port_info->poll_group_allocators); i++) {
     poll_group_allocator_t* pga = port_info->poll_group_allocators[i];
     if (pga != NULL)
       poll_group_allocator_delete(pga);
@@ -148,8 +149,9 @@ static int _ep_port_feed_events(ep_port_t* port_info,
                                 OVERLAPPED_ENTRY* iocp_events,
                                 int iocp_event_count) {
   int epoll_event_count = 0;
+  int i;
 
-  for (int i = 0; i < iocp_event_count; i++) {
+  for (i = 0; i < iocp_event_count; i++) {
     OVERLAPPED* overlapped = iocp_events[i].lpOverlapped;
     struct epoll_event* ev = &epoll_events[epoll_event_count];
 

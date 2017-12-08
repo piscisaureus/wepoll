@@ -107,8 +107,9 @@ static SOCKET _afd_get_base_socket(SOCKET socket) {
 
 static ssize_t _afd_get_protocol_info(SOCKET socket,
                                       WSAPROTOCOL_INFOW* protocol_info) {
-  ssize_t id;
   int opt_len;
+  ssize_t id;
+  size_t i;
 
   opt_len = sizeof *protocol_info;
   if (getsockopt(socket,
@@ -119,7 +120,7 @@ static ssize_t _afd_get_protocol_info(SOCKET socket,
     return_error(-1);
 
   id = -1;
-  for (size_t i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
+  for (i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
     if (memcmp(&protocol_info->ProviderId,
                &AFD_PROVIDER_GUID_LIST[i],
                sizeof protocol_info->ProviderId) == 0) {
