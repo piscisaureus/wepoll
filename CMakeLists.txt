@@ -48,6 +48,7 @@ foreach(HEADER_SOURCE ${SOURCES_INCLUDE})
   get_filename_component(HEADER_NAME ${HEADER_SOURCE} NAME_WE)
   string(TOUPPER ${HEADER_NAME} HEADER_NAME_UC)
 
+  file(MAKE_DIRECTORY dist)
   set(DIST_SRC_C "dist/${HEADER_NAME}.c")
   set(DIST_SRC_H "dist/${HEADER_NAME}.h")
   set(SOURCES_README "README.md")
