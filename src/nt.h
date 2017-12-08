@@ -6,10 +6,8 @@
 
 WEPOLL_INTERNAL int nt_global_init(void);
 
-#ifndef _NTDEF_
 typedef LONG NTSTATUS;
 typedef NTSTATUS* PNTSTATUS;
-#endif
 
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(status) (((NTSTATUS)(status)) >= 0)
