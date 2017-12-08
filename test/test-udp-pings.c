@@ -18,7 +18,7 @@ int main(void) {
   u_long one = 1;
   struct sockaddr_in address;
   DWORD ticks_start, ticks_last;
-  long long pings = 0, pings_sent = 0;
+  uint64_t pings = 0, pings_sent = 0;
   int i;
   SOCKET srv;
   struct epoll_event ev;
@@ -74,7 +74,7 @@ int main(void) {
     ticks = GetTickCount();
 
     if (ticks >= ticks_last + 1000) {
-      printf("%lld pings (%0.0f per sec), %lld sent (%0.0f per sec)\n",
+      printf("%I64d pings (%0.0f per sec), %I64d sent (%0.0f per sec)\n",
              pings,
              (double) pings / (ticks - ticks_start) * 1000.0,
              pings_sent,
