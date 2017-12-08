@@ -25,4 +25,9 @@
 #pragma warning(pop)
 #endif
 
+#ifndef ERROR_DEVICE_FEATURE_NOT_SUPPORTED
+/* Windows headers distributed with MinGW lack a definition for this. */
+#define ERROR_DEVICE_FEATURE_NOT_SUPPORTED 316L
+#endif
+
 #endif /* WEPOLL_WIN_H_ */
