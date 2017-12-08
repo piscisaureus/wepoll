@@ -140,7 +140,7 @@ int main(void) {
 
         pings_sent++;
 
-        uint32_t rev = rand() & 0xff | EPOLLOUT | EPOLLONESHOT;
+        uint32_t rev = EPOLLOUT | EPOLLONESHOT;
         struct epoll_event e;
         e.data.sock = sock;
         e.events = rev;

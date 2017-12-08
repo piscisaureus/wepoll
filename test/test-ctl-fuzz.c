@@ -62,7 +62,7 @@ int main(void) {
       SOCKET sock = sockets[i];
       struct epoll_event ev_in;
 
-      ev_in.events = rand() & 0xff | EPOLLONESHOT;
+      ev_in.events = (rand() & 0xff) | EPOLLONESHOT;
       ev_in.data.u64 = 42;
 
       r = epoll_ctl(epfd, EPOLL_CTL_MOD, sock, &ev_in);
