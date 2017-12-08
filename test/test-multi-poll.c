@@ -90,6 +90,7 @@ int main(void) {
   HANDLE ports[PORT_COUNT];
   test_context_t contexts[PORT_COUNT][THREADS_PER_PORT];
   WSADATA wsa_data;
+  size_t i, j;
   int r;
 
   /* Initialize winsock. */
@@ -101,7 +102,7 @@ int main(void) {
 
   /* Create PORT_COUNT epoll ports which, will be polled by THREADS_PER_PORT
    * threads. */
-  for (size_t i = 0; i < array_count(contexts); i++) {
+  for (i = 0; i < array_count(contexts); i++) {
     HANDLE port;
     struct epoll_event ev;
 
@@ -117,7 +118,7 @@ int main(void) {
     check(r == 0);
 
     /* Start THREADS_PER_PORT threads which will all poll the port. */
-    for (size_t j = 0; j < array_count(contexts[i]); j++) {
+    for (j = 0; j < array_count(contexts[i]); j++) {
       test_context_t* context = &contexts[i][j];
       HANDLE thread;
 
@@ -141,8 +142,8 @@ int main(void) {
   send_message(send_sock, LISTEN_PORT);
 
   /* Wait for all threads to exit and clean up after them. */
-  for (size_t i = 0; i < array_count(contexts); i++) {
-    for (size_t j = 0; j < array_count(contexts[i]); j++) {
+  for (i = 0; i < array_count(contexts); i++) {
+    for (j = 0; j < array_count(contexts[i]); j++) {
       HANDLE thread = contexts[i][j].thread;
       DWORD wr = WaitForSingleObject(thread, INFINITE);
       check(wr == WAIT_OBJECT_0);
@@ -151,7 +152,7 @@ int main(void) {
   }
 
   /* Close all epoll ports. */
-  for (size_t i = 0; i < array_count(ports); i++) {
+  for (i = 0; i < array_count(ports); i++) {
     HANDLE port = ports[i];
     r = epoll_close(port);
     check(r == 0);

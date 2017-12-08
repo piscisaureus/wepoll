@@ -38,8 +38,9 @@ int main(void) {
   uint64_t total_events = 0;
   uint64_t start_time, last_print_time, now, total_time;
   SOCKET sockets[NUM_SOCKETS];
-  int r;
   HANDLE epfd;
+  size_t i;
+  int r;
 
   r = init();
   check(r == 0);
@@ -47,7 +48,7 @@ int main(void) {
   epfd = epoll_create1(0);
   check(epfd != NULL);
 
-  for (size_t i = 0; i < NUM_SOCKETS; i++)
+  for (i = 0; i < NUM_SOCKETS; i++)
     sockets[i] = create_and_add_socket(epfd);
 
   start_time = GetTickCount64();
@@ -57,7 +58,7 @@ int main(void) {
     struct epoll_event ev_out[64];
     uint64_t count;
 
-    for (size_t i = 0; i < NUM_SOCKETS; i++) {
+    for (i = 0; i < NUM_SOCKETS; i++) {
       SOCKET sock = sockets[i];
       struct epoll_event ev_in;
 

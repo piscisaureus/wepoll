@@ -70,10 +70,11 @@ static void destroy_reflock(test_context_t* context) {
 static void run_test_iteration(void) {
   test_context_t context;
   HANDLE threads[THREAD_COUNT];
+  size_t i;
 
   init_context(&context);
 
-  for (size_t i = 0; i < array_count(threads); i++) {
+  for (i = 0; i < array_count(threads); i++) {
     HANDLE thread =
         (HANDLE) _beginthreadex(NULL, 0, test_thread, &context, 0, NULL);
     check(thread != INVALID_HANDLE_VALUE);
@@ -84,7 +85,7 @@ static void run_test_iteration(void) {
 
   destroy_reflock(&context);
 
-  for (size_t i = 0; i < array_count(threads); i++) {
+  for (i = 0; i < array_count(threads); i++) {
     HANDLE thread = threads[i];
     DWORD wr = WaitForSingleObject(thread, INFINITE);
     check(wr == WAIT_OBJECT_0);
@@ -93,10 +94,12 @@ static void run_test_iteration(void) {
 }
 
 int main(void) {
+  int i;
+
   if (init() < 0)
     return 0;
 
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
+  for (i = 0; i < TEST_ITERATIONS; i++) {
     printf("Iteration %d of %d\n", i + 1, TEST_ITERATIONS);
     run_test_iteration();
   }
