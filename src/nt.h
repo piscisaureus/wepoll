@@ -136,7 +136,7 @@ typedef struct _OBJECT_ATTRIBUTES {
     (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout))
 
 #define X(return_type, attributes, name, parameters) \
-  WEPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
+  WEPOLL_INTERNAL_VAR return_type(attributes* name) parameters;
 NTDLL_IMPORT_LIST(X)
 #undef X
 

@@ -2,6 +2,6 @@
 #define WEPOLL_INTERNAL_H_
 
 #define WEPOLL_INTERNAL
-#define WEPOLL_INTERNAL_EXTERN extern
+#define WEPOLL_INTERNAL_VAR extern
 
 #endif /* WEPOLL_INTERNAL_H_ */
