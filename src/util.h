@@ -20,7 +20,7 @@ typedef intptr_t ssize_t;
 
 #define unused_var(v) ((void) (v))
 
-#ifdef __clang__
+#if defined(__clang__) || defined(__GNUC__)
 #define unused_fn __attribute__((__unused__))
 #else
 #define unused_fn /* nothing */
@@ -31,8 +31,8 @@ typedef intptr_t ssize_t;
 #define inline __inline
 #endif
 
-#ifdef __clang__
-/* Polyfill static_assert() because clang doesn't support it. */
+#if defined(__clang__) || defined(__GNUC__)
+/* Polyfill static_assert() for clang and gcc. */
 #define static_assert(condition, message) typedef __attribute__( \
     (unused)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
 #endif
