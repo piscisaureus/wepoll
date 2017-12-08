@@ -23,6 +23,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef WEPOLL_RB_H_
+#define WEPOLL_RB_H_
+
+#include "util.h"
+
 /*
  * A red-black tree is a binary search tree with the node color as an
  * extra attribute.  It fulfills a set of conditions:
@@ -34,15 +39,6 @@
  * Every operation on a red-black tree is bounded as O(lg n).
  * The maximum height of a red-black tree is 2lg (n+1).
  */
-
-#ifndef WEPOLL_RB_H_
-#define WEPOLL_RB_H_
-
-#ifdef __clang__
-#define RB_UNUSED __attribute__((__unused__))
-#else
-#define RB_UNUSED /* empty */
-#endif
 
 /* clang-format off */
 
@@ -123,7 +119,7 @@ struct {                                                                      \
 #define  RB_PROTOTYPE(name, type, field, cmp)                                 \
   RB_PROTOTYPE_INTERNAL(name, type, field, cmp,)
 #define  RB_PROTOTYPE_STATIC(name, type, field, cmp)                          \
-  RB_PROTOTYPE_INTERNAL(name, type, field, cmp, static RB_UNUSED)
+  RB_PROTOTYPE_INTERNAL(name, type, field, cmp, static unused_fn)
 #define RB_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)                   \
 attr void name##_RB_INSERT_COLOR(struct name *, struct type *);               \
 attr void name##_RB_REMOVE_COLOR(struct name *, struct type *, struct type *);\
@@ -142,7 +138,7 @@ attr struct type *name##_RB_MINMAX(struct name *, int);                       \
 #define  RB_GENERATE(name, type, field, cmp)                                  \
   RB_GENERATE_INTERNAL(name, type, field, cmp,)
 #define  RB_GENERATE_STATIC(name, type, field, cmp)                           \
-  RB_GENERATE_INTERNAL(name, type, field, cmp, static RB_UNUSED)
+  RB_GENERATE_INTERNAL(name, type, field, cmp, static unused_fn)
 #define RB_GENERATE_INTERNAL(name, type, field, cmp, attr)                    \
 attr void                                                                     \
 name##_RB_INSERT_COLOR(struct name *head, struct type *elm)                   \
