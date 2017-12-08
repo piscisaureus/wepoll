@@ -3,6 +3,9 @@
 *_REMOTE_*
 *_LOCAL_*
 
+*.a
+*.dll
+*.exe
 *.opensdf
 *.orig
 *.sdf
