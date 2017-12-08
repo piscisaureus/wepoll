@@ -43,9 +43,8 @@ wherever needed.
 
 ## Compatibility
 
-* Requires Windows 7 or higher.
-* Can be compiled with recent versions of MSVC and Clang.
-* GCC (mingw) should work (but is untested).
+* Requires Windows Vista or higher.
+* Can be compiled with recent versions of MSVC, Clang, and GCC.
 
 ## API notes
 
