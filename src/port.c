@@ -385,7 +385,7 @@ poll_group_t* ep_port_acquire_poll_group(
 
 void ep_port_release_poll_group(ep_port_t* port_info,
                                 poll_group_t* poll_group) {
-  unused(port_info);
+  unused_var(port_info);
   poll_group_release(poll_group);
 }
 
@@ -397,7 +397,7 @@ void ep_port_request_socket_update(ep_port_t* port_info,
 }
 
 void ep_port_cancel_socket_update(ep_port_t* port_info, ep_sock_t* sock_info) {
-  unused(port_info);
+  unused_var(port_info);
   if (!queue_enqueued(&sock_info->queue_node))
     return;
   queue_remove(&sock_info->queue_node);
@@ -411,7 +411,7 @@ void ep_port_add_deleted_socket(ep_port_t* port_info, ep_sock_t* sock_info) {
 
 void ep_port_remove_deleted_socket(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
-  unused(port_info);
+  unused_var(port_info);
   if (!queue_enqueued(&sock_info->queue_node))
     return;
   queue_remove(&sock_info->queue_node);

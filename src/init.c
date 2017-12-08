@@ -25,9 +25,9 @@ static int _winsock_global_init(void) {
 static BOOL CALLBACK _init_once_callback(INIT_ONCE* once,
                                          void* parameter,
                                          void** context) {
-  unused(once);
-  unused(parameter);
-  unused(context);
+  unused_var(once);
+  unused_var(parameter);
+  unused_var(context);
 
   if (_winsock_global_init() < 0 || nt_global_init() < 0 ||
       reflock_global_init() < 0 || api_global_init() < 0)

@@ -64,7 +64,7 @@ static inline uint32_t _sync_fetch_and_set(volatile uint32_t* target,
 
 void reflock_ref(reflock_t* reflock) {
   uint32_t state = _sync_add_and_fetch(&reflock->state, _REF);
-  unused(state);
+  unused_var(state);
   assert((state & _DESTROY_MASK) == 0); /* Overflow or destroyed. */
 }
 
@@ -73,8 +73,8 @@ void reflock_unref(reflock_t* reflock) {
   uint32_t ref_count = state & _REF_MASK;
   uint32_t destroy = state & _DESTROY_MASK;
 
-  unused(ref_count);
-  unused(destroy);
+  unused_var(ref_count);
+  unused_var(destroy);
 
   if (state == _DESTROY)
     _signal_event(reflock);

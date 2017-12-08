@@ -18,7 +18,7 @@ typedef intptr_t ssize_t;
 #define safe_container_of(ptr, type, member) \
   ((type*) util_safe_container_of_helper((ptr), offsetof(type, member)))
 
-#define unused(v) ((void) (v))
+#define unused_var(v) ((void) (v))
 
 #if defined(_MSC_VER) && _MSC_VER < 1900
 /* Polyfill `inline` for msvc 12 (Visual Studio 2013) */
