@@ -13,4 +13,4 @@
 
 #pragma warning(pop)
 
-#endif
+#endif /* WEPOLL_WIN_H_ */
