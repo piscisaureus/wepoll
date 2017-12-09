@@ -6,6 +6,10 @@
 *.a
 *.dll
 *.exe
+*.exp
+*.ilk
+*.lib
+*.pdb
 *.opensdf
 *.orig
 *.sdf
