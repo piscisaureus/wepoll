@@ -112,26 +112,41 @@ WEPOLL_EXPORT int epoll_wait(HANDLE ephnd,
 #endif
 
 #define WEPOLL_INTERNAL static
-#define WEPOLL_INTERNAL_EXTERN static
+#define WEPOLL_INTERNAL_VAR static
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 
+#if defined(_WIN32_WINNT) && _WIN32_WINNT < 0x0600
+#undef _WIN32_WINNT
+#endif
+
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+
+#ifndef __GNUC__
 #pragma warning(push, 1)
+#endif
 
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#ifndef __GNUC__
 #pragma warning(pop)
+#endif
+
+#ifndef ERROR_DEVICE_FEATURE_NOT_SUPPORTED
+/* Windows headers distributed with MinGW lack a definition for this. */
+#define ERROR_DEVICE_FEATURE_NOT_SUPPORTED 316L
+#endif
 
 WEPOLL_INTERNAL int nt_global_init(void);
 
-#ifndef _NTDEF_
 typedef LONG NTSTATUS;
 typedef NTSTATUS* PNTSTATUS;
-#endif
 
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(status) (((NTSTATUS)(status)) >= 0)
@@ -260,14 +275,14 @@ typedef struct _OBJECT_ATTRIBUTES {
     (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout))
 
 #define X(return_type, attributes, name, parameters) \
-  WEPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
+  WEPOLL_INTERNAL_VAR return_type(attributes* name) parameters;
 NTDLL_IMPORT_LIST(X)
 #undef X
 
 #include <stddef.h>
 
 #ifndef _SSIZE_T_DEFINED
-#define SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
 typedef intptr_t ssize_t;
 #endif
 
@@ -279,17 +294,23 @@ typedef intptr_t ssize_t;
 #define safe_container_of(ptr, type, member) \
   ((type*) util_safe_container_of_helper((ptr), offsetof(type, member)))
 
-#define unused(v) ((void) (v))
+#define unused_var(v) ((void) (v))
+
+#if defined(__clang__) || defined(__GNUC__)
+#define unused_fn __attribute__((__unused__))
+#else
+#define unused_fn /* nothing */
+#endif
 
 #if defined(_MSC_VER) && _MSC_VER < 1900
 /* Polyfill `inline` for msvc 12 (Visual Studio 2013) */
 #define inline __inline
 #endif
 
-#ifdef __clang__
-/* Polyfill static_assert() because clang doesn't support it. */
+#if !defined(static_assert) && !defined(_MSC_VER)
+/* Polyfill `static_assert` for some versions of clang and gcc. */
 #define static_assert(condition, message) typedef __attribute__( \
-    (unused)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
+    (__unused__)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
 #endif
 
 WEPOLL_INTERNAL void* util_safe_container_of_helper(void* ptr, size_t offset);
@@ -483,8 +504,9 @@ static SOCKET _afd_get_base_socket(SOCKET socket) {
 
 static ssize_t _afd_get_protocol_info(SOCKET socket,
                                       WSAPROTOCOL_INFOW* protocol_info) {
-  ssize_t id;
   int opt_len;
+  ssize_t id;
+  size_t i;
 
   opt_len = sizeof *protocol_info;
   if (getsockopt(socket,
@@ -495,7 +517,7 @@ static ssize_t _afd_get_protocol_info(SOCKET socket,
     return_error(-1);
 
   id = -1;
-  for (size_t i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
+  for (i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
     if (memcmp(&protocol_info->ProviderId,
                &AFD_PROVIDER_GUID_LIST[i],
                sizeof protocol_info->ProviderId) == 0) {
@@ -591,11 +613,17 @@ WEPOLL_INTERNAL void poll_group_release(poll_group_t* ds);
 
 WEPOLL_INTERNAL SOCKET poll_group_get_socket(poll_group_t* poll_group);
 
-#ifdef __clang__
-#define RB_UNUSED __attribute__((__unused__))
-#else
-#define RB_UNUSED /* empty */
-#endif
+/*
+ * A red-black tree is a binary search tree with the node color as an
+ * extra attribute.  It fulfills a set of conditions:
+ *  - every search path from the root to a leaf consists of the
+ *    same number of black nodes,
+ *  - each red node (except for the root) has a black parent,
+ *  - each leaf node is black.
+ *
+ * Every operation on a red-black tree is bounded as O(lg n).
+ * The maximum height of a red-black tree is 2lg (n+1).
+ */
 
 /* clang-format off */
 
@@ -676,7 +704,7 @@ struct {                                                                      \
 #define  RB_PROTOTYPE(name, type, field, cmp)                                 \
   RB_PROTOTYPE_INTERNAL(name, type, field, cmp,)
 #define  RB_PROTOTYPE_STATIC(name, type, field, cmp)                          \
-  RB_PROTOTYPE_INTERNAL(name, type, field, cmp, static RB_UNUSED)
+  RB_PROTOTYPE_INTERNAL(name, type, field, cmp, static unused_fn)
 #define RB_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)                   \
 attr void name##_RB_INSERT_COLOR(struct name *, struct type *);               \
 attr void name##_RB_REMOVE_COLOR(struct name *, struct type *, struct type *);\
@@ -695,7 +723,7 @@ attr struct type *name##_RB_MINMAX(struct name *, int);                       \
 #define  RB_GENERATE(name, type, field, cmp)                                  \
   RB_GENERATE_INTERNAL(name, type, field, cmp,)
 #define  RB_GENERATE_STATIC(name, type, field, cmp)                           \
-  RB_GENERATE_INTERNAL(name, type, field, cmp, static RB_UNUSED)
+  RB_GENERATE_INTERNAL(name, type, field, cmp, static unused_fn)
 #define RB_GENERATE_INTERNAL(name, type, field, cmp, attr)                    \
 attr void                                                                     \
 name##_RB_INSERT_COLOR(struct name *head, struct type *elm)                   \
@@ -1186,11 +1214,11 @@ WEPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
 WEPOLL_INTERNAL void ep_port_release_poll_group(ep_port_t* port_info,
                                                 poll_group_t* poll_group);
 
-WEPOLL_INTERNAL int ep_port_add_socket(ep_port_t* port_info,
-                                       ep_sock_t* sock_info,
-                                       SOCKET socket);
-WEPOLL_INTERNAL int ep_port_del_socket(ep_port_t* port_info,
-                                       ep_sock_t* sock_info);
+WEPOLL_INTERNAL int ep_port_register_socket_handle(ep_port_t* port_info,
+                                                   ep_sock_t* sock_info,
+                                                   SOCKET socket);
+WEPOLL_INTERNAL int ep_port_unregister_socket_handle(ep_port_t* port_info,
+                                                     ep_sock_t* sock_info);
 WEPOLL_INTERNAL ep_sock_t* ep_port_find_socket(ep_port_t* port_info,
                                                SOCKET socket);
 
@@ -1495,9 +1523,9 @@ static int _winsock_global_init(void) {
 static BOOL CALLBACK _init_once_callback(INIT_ONCE* once,
                                          void* parameter,
                                          void** context) {
-  unused(once);
-  unused(parameter);
-  unused(context);
+  unused_var(once);
+  unused_var(parameter);
+  unused_var(context);
 
   if (_winsock_global_init() < 0 || nt_global_init() < 0 ||
       reflock_global_init() < 0 || api_global_init() < 0)
@@ -1747,6 +1775,7 @@ int ep_port_close(ep_port_t* port_info) {
 int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
   queue_node_t* queue_node;
+  size_t i;
 
   EnterCriticalSection(&port_info->lock);
 
@@ -1763,7 +1792,7 @@ int ep_port_delete(ep_port_t* port_info) {
     ep_sock_force_delete(port_info, sock_info);
   }
 
-  for (size_t i = 0; i < array_count(port_info->poll_group_allocators); i++) {
+  for (i = 0; i < array_count(port_info->poll_group_allocators); i++) {
     poll_group_allocator_t* pga = port_info->poll_group_allocators[i];
     if (pga != NULL)
       poll_group_allocator_delete(pga);
@@ -1807,8 +1836,9 @@ static int _ep_port_feed_events(ep_port_t* port_info,
                                 OVERLAPPED_ENTRY* iocp_events,
                                 int iocp_event_count) {
   int epoll_event_count = 0;
+  int i;
 
-  for (int i = 0; i < iocp_event_count; i++) {
+  for (i = 0; i < iocp_event_count; i++) {
     OVERLAPPED* overlapped = iocp_events[i].lpOverlapped;
     struct epoll_event* ev = &epoll_events[epoll_event_count];
 
@@ -1996,15 +2026,16 @@ int ep_port_ctl(ep_port_t* port_info,
   return result;
 }
 
-int ep_port_add_socket(ep_port_t* port_info,
-                       ep_sock_t* sock_info,
-                       SOCKET socket) {
+int ep_port_register_socket_handle(ep_port_t* port_info,
+                                   ep_sock_t* sock_info,
+                                   SOCKET socket) {
   if (tree_add(&port_info->sock_tree, &sock_info->tree_node, socket) < 0)
     return_error(-1, ERROR_ALREADY_EXISTS);
   return 0;
 }
 
-int ep_port_del_socket(ep_port_t* port_info, ep_sock_t* sock_info) {
+int ep_port_unregister_socket_handle(ep_port_t* port_info,
+                                     ep_sock_t* sock_info) {
   if (tree_del(&port_info->sock_tree, &sock_info->tree_node) < 0)
     return_error(-1, ERROR_NOT_FOUND);
   return 0;
@@ -2044,7 +2075,7 @@ poll_group_t* ep_port_acquire_poll_group(
 
 void ep_port_release_poll_group(ep_port_t* port_info,
                                 poll_group_t* poll_group) {
-  unused(port_info);
+  unused_var(port_info);
   poll_group_release(poll_group);
 }
 
@@ -2056,7 +2087,7 @@ void ep_port_request_socket_update(ep_port_t* port_info,
 }
 
 void ep_port_cancel_socket_update(ep_port_t* port_info, ep_sock_t* sock_info) {
-  unused(port_info);
+  unused_var(port_info);
   if (!queue_enqueued(&sock_info->queue_node))
     return;
   queue_remove(&sock_info->queue_node);
@@ -2070,7 +2101,7 @@ void ep_port_add_deleted_socket(ep_port_t* port_info, ep_sock_t* sock_info) {
 
 void ep_port_remove_deleted_socket(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
-  unused(port_info);
+  unused_var(port_info);
   if (!queue_enqueued(&sock_info->queue_node))
     return;
   queue_remove(&sock_info->queue_node);
@@ -2258,7 +2289,7 @@ static inline uint32_t _sync_fetch_and_set(volatile uint32_t* target,
 
 void reflock_ref(reflock_t* reflock) {
   uint32_t state = _sync_add_and_fetch(&reflock->state, _REF);
-  unused(state);
+  unused_var(state);
   assert((state & _DESTROY_MASK) == 0); /* Overflow or destroyed. */
 }
 
@@ -2267,8 +2298,8 @@ void reflock_unref(reflock_t* reflock) {
   uint32_t ref_count = state & _REF_MASK;
   uint32_t destroy = state & _DESTROY_MASK;
 
-  unused(ref_count);
-  unused(destroy);
+  unused_var(ref_count);
+  unused_var(destroy);
 
   if (state == _DESTROY)
     _signal_event(reflock);
@@ -2482,7 +2513,8 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   tree_node_init(&sock_private->pub.tree_node);
   queue_node_init(&sock_private->pub.queue_node);
 
-  if (ep_port_add_socket(port_info, &sock_private->pub, socket) < 0)
+  if (ep_port_register_socket_handle(port_info, &sock_private->pub, socket) <
+      0)
     goto err2;
 
   return &sock_private->pub;
@@ -2505,7 +2537,7 @@ static void _ep_sock_delete(ep_port_t* port_info,
       _ep_sock_cancel_poll(sock_private);
 
     ep_port_cancel_socket_update(port_info, sock_info);
-    ep_port_del_socket(port_info, sock_info);
+    ep_port_unregister_socket_handle(port_info, sock_info);
 
     sock_private->delete_pending = true;
   }
