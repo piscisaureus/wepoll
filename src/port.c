@@ -339,15 +339,16 @@ int ep_port_ctl(ep_port_t* port_info,
   return result;
 }
 
-int ep_port_add_socket(ep_port_t* port_info,
-                       ep_sock_t* sock_info,
-                       SOCKET socket) {
+int ep_port_register_socket_handle(ep_port_t* port_info,
+                                   ep_sock_t* sock_info,
+                                   SOCKET socket) {
   if (tree_add(&port_info->sock_tree, &sock_info->tree_node, socket) < 0)
     return_error(-1, ERROR_ALREADY_EXISTS);
   return 0;
 }
 
-int ep_port_del_socket(ep_port_t* port_info, ep_sock_t* sock_info) {
+int ep_port_unregister_socket_handle(ep_port_t* port_info,
+                                     ep_sock_t* sock_info) {
   if (tree_del(&port_info->sock_tree, &sock_info->tree_node) < 0)
     return_error(-1, ERROR_NOT_FOUND);
   return 0;

@@ -202,7 +202,8 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   tree_node_init(&sock_private->pub.tree_node);
   queue_node_init(&sock_private->pub.queue_node);
 
-  if (ep_port_add_socket(port_info, &sock_private->pub, socket) < 0)
+  if (ep_port_register_socket_handle(port_info, &sock_private->pub, socket) <
+      0)
     goto err2;
 
   return &sock_private->pub;
@@ -225,7 +226,7 @@ static void _ep_sock_delete(ep_port_t* port_info,
       _ep_sock_cancel_poll(sock_private);
 
     ep_port_cancel_socket_update(port_info, sock_info);
-    ep_port_del_socket(port_info, sock_info);
+    ep_port_unregister_socket_handle(port_info, sock_info);
 
     sock_private->delete_pending = true;
   }
