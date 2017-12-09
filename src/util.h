@@ -6,7 +6,7 @@
 #include "internal.h"
 
 #ifndef _SSIZE_T_DEFINED
-#define SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
 typedef intptr_t ssize_t;
 #endif
 
