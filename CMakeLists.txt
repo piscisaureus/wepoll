@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 2.8.0)
 project(wepoll)
 
-if(WIN32)
-  link_libraries(ws2_32)
-endif()
+link_libraries(ws2_32)
 
 if(MSVC)
   add_compile_options(/Wall /wd4127 /wd4201 /wd4242 /wd4710 /wd4711 /wd4820)

@@ -2,24 +2,73 @@ version: b{build}-{branch}
 
 environment:
   matrix:
-    - platform: x64
-      generator: "Visual Studio 15 2017 Win64"
-      appveyor_build_worker_image: Visual Studio 2017
-    - platform: x86
-      generator: "Visual Studio 15 2017"
-      appveyor_build_worker_image: Visual Studio 2017
-    - platform: x64
-      generator: "Visual Studio 14 2015 Win64"
-      appveyor_build_worker_image: Visual Studio 2015
-    - platform: x86
-      generator: "Visual Studio 14 2015"
-      appveyor_build_worker_image: Visual Studio 2015
-    - platform: x64
-      generator: "Visual Studio 12 2013 Win64"
+    - job: msvc-vs2013-x86
       appveyor_build_worker_image: Visual Studio 2013
-    - platform: x86
-      generator: "Visual Studio 12 2013"
+      cmake_options: -G "Visual Studio 12 2013"
+
+    - job: msvc-vs2013-x64
       appveyor_build_worker_image: Visual Studio 2013
+      cmake_options: -G "Visual Studio 12 2013 Win64"
+
+    - job: msvc-vs2015-x86
+      appveyor_build_worker_image: Visual Studio 2015
+      cmake_options: -G "Visual Studio 14 2015"
+
+    - job: msvc-vs2015-x64
+      appveyor_build_worker_image: Visual Studio 2015
+      cmake_options: -G "Visual Studio 14 2015 Win64"
+
+    - job: msvc-vs2017-x86
+      appveyor_build_worker_image: Visual Studio 2017
+      cmake_options: -G "Visual Studio 15 2017"
+
+    - job: msvc-vs2017-x64
+      appveyor_build_worker_image: Visual Studio 2017
+      cmake_options: -G "Visual Studio 15 2017 Win64"
+
+    - job: gcc-mingw-x86
+      appveyor_build_worker_image: Visual Studio 2015
+      mingw_path: c:\msys64\mingw32\bin
+      cmake_options: >
+        -G "MinGW Makefiles"
+        -DCMAKE_C_COMPILER=gcc
+        -DCMAKE_CXX_COMPILER=g++
+        -DCMAKE_C_FLAGS=-m32
+        -DCMAKE_CXX_FLAGS=-m32
+
+    - job: gcc-mingw-x64
+      appveyor_build_worker_image: Visual Studio 2015
+      mingw_path: c:\msys64\mingw64\bin
+      cmake_options: >
+        -G "MinGW Makefiles"
+        -DCMAKE_C_COMPILER=gcc
+        -DCMAKE_CXX_COMPILER=g++
+        -DCMAKE_C_FLAGS=-m64
+        -DCMAKE_CXX_FLAGS=-m64
+
+    - job: clang-mingw-x86
+      appveyor_build_worker_image: Visual Studio 2015
+      mingw_path: c:\msys64\mingw32\bin
+      vs_path: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC
+      setup_script: vcvarsall.bat x86
+      cmake_options: >
+        -G "MinGW Makefiles"
+        -DCMAKE_C_COMPILER=clang-cl
+        -DCMAKE_CXX_COMPILER=clang-cl
+        -DCMAKE_C_FLAGS=-m32
+        -DCMAKE_CXX_FLAGS=-m32
+
+    - job: clang-mingw-x64
+      appveyor_build_worker_image: Visual Studio 2015
+      mingw_path: c:\msys64\mingw64\bin
+      vs_path: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC
+      setup_script: vcvarsall.bat amd64
+      cmake_options: >
+        -G "MinGW Makefiles"
+        -DCMAKE_C_COMPILER=clang-cl
+        -DCMAKE_CXX_COMPILER=clang-cl
+        -DCMAKE_C_FLAGS=-m64
+        -DCMAKE_CXX_FLAGS=-m64
 
 configuration: Debug
 
@@ -32,9 +81,13 @@ init:
 
 install:
   - ps: Install-Product node 'Current'
+  - cmd: set path=%path:C:\Program Files\Git\usr\bin;=%
+  - cmd: set path=%path%;%mingw_path%
+  - cmd: set path=%path%;%vs_path%
+  - cmd: call %setup_script%
 
 before_build:
-  - cmd: cmake . -G "%generator%"
+  - cmd: cmake . %cmake_options%
 
 build_script:
   - cmd: cmake --build . --config "%configuration%" --target wepoll.dll
