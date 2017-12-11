@@ -3,8 +3,8 @@
 [![][ci status badge]][ci status link]
 
 This library implements the [epoll][man epoll] API for Windows
-applications. It attempts to be efficient, and to match the Linux API
-as semantics as closely as possible.
+applications. It is fast and scalable, and it closely resembles the API
+and behavior of Linux' epoll.
 
 ## Rationale
 
@@ -21,18 +21,19 @@ to run on Linux.
 
 ## Features
 
-* can poll 100000s of sockets efficiently
-* fully thread safe
-* multiple threads can poll the same epoll port
-* sockets can be added to multiple epoll sets
-* polling for `EPOLLIN`, `EPOLLOUT`, `EPOLLPRI`, `EPOLLRDHUP`,
-  `EPOLLHUP`, and `EPOLLERR` events
-* `EPOLLONESTHOT` flag
+* Can poll 100000s of sockets efficiently.
+* Fully thread-safe.
+* Multiple threads can poll the same epoll port.
+* Sockets can be added to multiple epoll sets.
+* All epoll events (`EPOLLIN`, `EPOLLOUT`, `EPOLLPRI`, `EPOLLRDHUP`)
+  are supported.
+* Level-triggered and one-shot (`EPOLLONESTHOT`) modes are supported
+* Trivial to embed: you need [only two files][dist].
 
 ## Limitations
 
-* only works with sockets
-* some modes not suported: `EPOLLET`, `EPOLLEXCLUSIVE`
+* Only works with sockets.
+* Edge-triggered (`EPOLLET`) mode isn't supported.
 
 ## How to use
 
