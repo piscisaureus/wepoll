@@ -9,6 +9,7 @@
 *.exp
 *.ilk
 *.lib
+*.manifest
 *.pdb
 *.opensdf
 *.orig
