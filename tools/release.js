@@ -10,7 +10,7 @@ let stdout;
 
 const version = process.argv[2];
 if (!/^\d+\.\d+\.\d+$/.test(version))
-    throw new Error('usage: release.js {version}');
+  throw new Error('usage: node release.js {version}');
 
 const distTag = `v${version}`;
 
@@ -19,7 +19,7 @@ process.chdir(projectRootDir);
 
 stdout = exec('git.exe status --porcelain -uno', utf8);
 if (stdout.match(/\S/))
-    throw new Error('git index or working directory not clean');
+  throw new Error('git index or working directory not clean');
 
 exec('cmake.exe --build . --target dist', inherit);
 
@@ -42,17 +42,17 @@ const distTree = getSHA(stdout);
 
 exec('git reset');
 
-stdout = exec(`git commit-tree ${distTree} ` + 
-              `-p ${previousTagCommit} ` + 
+stdout = exec(`git commit-tree ${distTree} ` +
+              `-p ${previousTagCommit} ` +
               `-p ${sourceCommit} ` +
               `-m "version ${version}"`, utf8);
-const distCommit = stdout.match(/[\w+]+/)[0];
-          
-stdout = exec(`git commit-tree ${sourceTree} ` + 
-              `-p ${sourceCommit} ` + 
+const distCommit = getSHA(stdout);
+
+stdout = exec(`git commit-tree ${sourceTree} ` +
+              `-p ${sourceCommit} ` +
               `-p ${distCommit} ` +
               `-m "dist: merge release tag ${distTag}"`, utf8);
-const mergeCommit = stdout.match(/[\w+]+/)[0];
+const mergeCommit = getSHA(stdout);
 
 exec(`git diff --stat ${previousTagCommit}..${distCommit}`, inherit);
 
