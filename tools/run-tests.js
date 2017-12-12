@@ -22,7 +22,7 @@ function run_tests(test_exes, num = 0, fail_count = 0) {
 
   child.on('exit', (code) => {
     if (code === 0) {
-      console.log('  PASS')
+      console.log('  PASS');
     } else {
       console.log('  FAIL\n' + out);
       fail_count++;
@@ -33,7 +33,7 @@ function run_tests(test_exes, num = 0, fail_count = 0) {
 }
 
 function done(test_exes, fail_count) {
-  let pass_count = test_exes.length - fail_count;
+  const pass_count = test_exes.length - fail_count;
   console.log('  DONE - %d PASSED, %d FAILED', pass_count, fail_count);
 
   process.exit(fail_count == 0 ? 0 : 1);
