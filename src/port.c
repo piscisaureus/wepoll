@@ -347,11 +347,9 @@ int ep_port_register_socket_handle(ep_port_t* port_info,
   return 0;
 }
 
-int ep_port_unregister_socket_handle(ep_port_t* port_info,
-                                     ep_sock_t* sock_info) {
-  if (tree_del(&port_info->sock_tree, &sock_info->tree_node) < 0)
-    return_error(-1, ERROR_NOT_FOUND);
-  return 0;
+void ep_port_unregister_socket_handle(ep_port_t* port_info,
+                                      ep_sock_t* sock_info) {
+  tree_del(&port_info->sock_tree, &sock_info->tree_node);
 }
 
 ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {

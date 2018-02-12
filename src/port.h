@@ -51,8 +51,8 @@ WEPOLL_INTERNAL void ep_port_release_poll_group(ep_port_t* port_info,
 WEPOLL_INTERNAL int ep_port_register_socket_handle(ep_port_t* port_info,
                                                    ep_sock_t* sock_info,
                                                    SOCKET socket);
-WEPOLL_INTERNAL int ep_port_unregister_socket_handle(ep_port_t* port_info,
-                                                     ep_sock_t* sock_info);
+WEPOLL_INTERNAL void ep_port_unregister_socket_handle(ep_port_t* port_info,
+                                                      ep_sock_t* sock_info);
 WEPOLL_INTERNAL ep_sock_t* ep_port_find_socket(ep_port_t* port_info,
                                                SOCKET socket);
 
