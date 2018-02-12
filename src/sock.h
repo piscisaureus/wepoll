@@ -5,7 +5,6 @@
 
 #include "internal.h"
 #include "queue.h"
-#include "rb.h"
 #include "tree.h"
 #include "util.h"
 #include "wepoll.h"

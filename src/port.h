@@ -5,7 +5,6 @@
 #include "internal.h"
 #include "poll-group.h"
 #include "queue.h"
-#include "rb.h"
 #include "reflock-tree.h"
 #include "sock.h"
 #include "tree.h"
