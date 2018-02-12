@@ -42,13 +42,13 @@ const distTree = getSHA(stdout);
 
 exec('git reset');
 
-stdout = exec(`git commit-tree ${distTree} ` +
+stdout = exec(`git commit-tree -S ${distTree} ` +
               `-p ${previousTagCommit} ` +
               `-p ${sourceCommit} ` +
               `-m "version ${version}"`, utf8);
 const distCommit = getSHA(stdout);
 
-stdout = exec(`git commit-tree ${sourceTree} ` +
+stdout = exec(`git commit-tree -S ${sourceTree} ` +
               `-p ${sourceCommit} ` +
               `-p ${distCommit} ` +
               `-m "dist: merge release tag ${distTag}"`, utf8);
