@@ -90,10 +90,8 @@ int ep_port_delete(ep_port_t* port_info) {
   queue_node_t* queue_node;
   size_t i;
 
-  EnterCriticalSection(&port_info->lock);
-
-  if (port_info->iocp != NULL)
-    _ep_port_close_iocp(port_info);
+  /* At this point the IOCP port should have been closed. */
+  assert(port_info->iocp == NULL);
 
   while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
     ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
@@ -110,8 +108,6 @@ int ep_port_delete(ep_port_t* port_info) {
     if (pga != NULL)
       poll_group_allocator_delete(pga);
   }
-
-  LeaveCriticalSection(&port_info->lock);
 
   DeleteCriticalSection(&port_info->lock);
 
