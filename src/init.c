@@ -1,26 +1,14 @@
 #include <stdbool.h>
 
 #include "api.h"
-#include "error.h"
 #include "init.h"
 #include "nt.h"
 #include "reflock.h"
 #include "util.h"
-#include "win.h"
+#include "ws.h"
 
 static bool _initialized = false;
 static INIT_ONCE _once = INIT_ONCE_STATIC_INIT;
-
-static int _winsock_global_init(void) {
-  int r;
-  WSADATA wsa_data;
-
-  r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-  if (r != 0)
-    return_error(-1);
-
-  return 0;
-}
 
 static BOOL CALLBACK _init_once_callback(INIT_ONCE* once,
                                          void* parameter,
@@ -29,7 +17,8 @@ static BOOL CALLBACK _init_once_callback(INIT_ONCE* once,
   unused_var(parameter);
   unused_var(context);
 
-  if (_winsock_global_init() < 0 || nt_global_init() < 0 ||
+  /* N.b. that initialization order matters here. */
+  if (ws_global_init() < 0 || nt_global_init() < 0 ||
       reflock_global_init() < 0 || api_global_init() < 0)
     return FALSE;
 
