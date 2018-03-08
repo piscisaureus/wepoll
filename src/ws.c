@@ -8,7 +8,7 @@ int ws_global_init(void) {
 
   r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
   if (r != 0)
-    return_error(-1);
+    return_error(-1, r);
 
   return 0;
 }

@@ -87,6 +87,7 @@
   X(WSAEFAULT, EFAULT)                         \
   X(WSAEHOSTDOWN, EHOSTUNREACH)                \
   X(WSAEHOSTUNREACH, EHOSTUNREACH)             \
+  X(WSAEINPROGRESS, EBUSY)                     \
   X(WSAEINTR, EINTR)                           \
   X(WSAEINVAL, EINVAL)                         \
   X(WSAEISCONN, EISCONN)                       \
@@ -98,9 +99,13 @@
   X(WSAENOTCONN, ENOTCONN)                     \
   X(WSAENOTSOCK, ENOTSOCK)                     \
   X(WSAEOPNOTSUPP, EOPNOTSUPP)                 \
+  X(WSAEPROCLIM, ENOMEM)                       \
   X(WSAESHUTDOWN, EPIPE)                       \
   X(WSAETIMEDOUT, ETIMEDOUT)                   \
-  X(WSAEWOULDBLOCK, EWOULDBLOCK)
+  X(WSAEWOULDBLOCK, EWOULDBLOCK)               \
+  X(WSANOTINITIALISED, ENETDOWN)               \
+  X(WSASYSNOTREADY, ENETDOWN)                  \
+  X(WSAVERNOTSUPPORTED, ENOSYS)
 
 errno_t err_map_win_error_to_errno(DWORD error) {
   switch (error) {
