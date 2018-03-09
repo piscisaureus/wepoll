@@ -88,7 +88,6 @@ int ep_port_close(ep_port_t* port_info) {
 int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
   queue_node_t* queue_node;
-  size_t i;
 
   /* At this point the IOCP port should have been closed. */
   assert(port_info->iocp == NULL);
@@ -103,11 +102,8 @@ int ep_port_delete(ep_port_t* port_info) {
     ep_sock_force_delete(port_info, sock_info);
   }
 
-  for (i = 0; i < array_count(port_info->poll_group_allocators); i++) {
-    poll_group_allocator_t* pga = port_info->poll_group_allocators[i];
-    if (pga != NULL)
-      poll_group_allocator_delete(pga);
-  }
+  if (port_info->poll_group_allocator != NULL)
+    poll_group_allocator_delete(port_info->poll_group_allocator);
 
   DeleteCriticalSection(&port_info->lock);
 
@@ -357,26 +353,19 @@ ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
 }
 
 static poll_group_allocator_t* _ep_port_get_poll_group_allocator(
-    ep_port_t* port_info,
-    size_t protocol_id,
-    const WSAPROTOCOL_INFOW* protocol_info) {
-  poll_group_allocator_t** pga;
+    ep_port_t* port_info, const WSAPROTOCOL_INFOW* protocol_info) {
+  if (port_info->poll_group_allocator == NULL) {
+    port_info->poll_group_allocator =
+        poll_group_allocator_new(port_info, protocol_info);
+  }
 
-  assert(protocol_id < array_count(port_info->poll_group_allocators));
-
-  pga = &port_info->poll_group_allocators[protocol_id];
-  if (*pga == NULL)
-    *pga = poll_group_allocator_new(port_info, protocol_info);
-
-  return *pga;
+  return port_info->poll_group_allocator;
 }
 
 poll_group_t* ep_port_acquire_poll_group(
-    ep_port_t* port_info,
-    size_t protocol_id,
-    const WSAPROTOCOL_INFOW* protocol_info) {
+    ep_port_t* port_info, const WSAPROTOCOL_INFOW* protocol_info) {
   poll_group_allocator_t* pga =
-      _ep_port_get_poll_group_allocator(port_info, protocol_id, protocol_info);
+      _ep_port_get_poll_group_allocator(port_info, protocol_info);
   return poll_group_acquire(pga);
 }
 

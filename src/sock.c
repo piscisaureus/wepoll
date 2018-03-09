@@ -173,7 +173,6 @@ static int _ep_sock_cancel_poll(_ep_sock_private_t* sock_private) {
 
 ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   SOCKET afd_socket;
-  ssize_t protocol_id;
   WSAPROTOCOL_INFOW protocol_info;
   poll_group_t* poll_group;
   _ep_sock_private_t* sock_private;
@@ -181,12 +180,10 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   if (socket == 0 || socket == INVALID_SOCKET)
     return_error(NULL, ERROR_INVALID_HANDLE);
 
-  protocol_id = afd_get_protocol(socket, &afd_socket, &protocol_info);
-  if (protocol_id < 0)
+  if (afd_get_protocol_info(socket, &afd_socket, &protocol_info) < 0)
     return NULL;
 
-  poll_group =
-      ep_port_acquire_poll_group(port_info, protocol_id, &protocol_info);
+  poll_group = ep_port_acquire_poll_group(port_info, &protocol_info);
   if (poll_group == NULL)
     return NULL;
 

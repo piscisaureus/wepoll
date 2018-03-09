@@ -105,10 +105,9 @@ static SOCKET _afd_get_base_socket(SOCKET socket) {
   return base_socket;
 }
 
-static ssize_t _afd_get_protocol_info(SOCKET socket,
-                                      WSAPROTOCOL_INFOW* protocol_info) {
+static int _afd_get_protocol_info(SOCKET socket,
+                                  WSAPROTOCOL_INFOW* protocol_info) {
   int opt_len;
-  ssize_t id;
   size_t i;
 
   opt_len = sizeof *protocol_info;
@@ -119,36 +118,31 @@ static ssize_t _afd_get_protocol_info(SOCKET socket,
                  &opt_len) != 0)
     return_error(-1);
 
-  id = -1;
   for (i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
     if (memcmp(&protocol_info->ProviderId,
                &AFD_PROVIDER_GUID_LIST[i],
                sizeof protocol_info->ProviderId) == 0) {
-      id = i;
-      break;
+      return 0;
     }
   }
 
-  /* Check if the protocol uses an msafd socket. */
-  if (id < 0)
-    return_error(-1, ERROR_DEVICE_FEATURE_NOT_SUPPORTED);
-
-  return id;
+  /* Socket doesn't appear to be controlled by MSAFD. */
+  return_error(-1, ERROR_DEVICE_FEATURE_NOT_SUPPORTED);
 }
 
-WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
-                                         SOCKET* afd_socket_out,
-                                         WSAPROTOCOL_INFOW* protocol_info) {
-  ssize_t id;
+WEPOLL_INTERNAL int afd_get_protocol_info(SOCKET socket,
+                                          SOCKET* afd_socket_out,
+                                          WSAPROTOCOL_INFOW* protocol_info) {
   SOCKET afd_socket;
+  int r;
 
   /* Try to get protocol information, assuming that the given socket is an AFD
    * socket. This should almost always be the case, and if it is, that saves us
    * a call to WSAIoctl(). */
   afd_socket = socket;
-  id = _afd_get_protocol_info(afd_socket, protocol_info);
+  r = _afd_get_protocol_info(afd_socket, protocol_info);
 
-  if (id < 0) {
+  if (r < 0) {
     /* If getting protocol information failed, it might be due to the socket
      * not being an AFD socket. If so, attempt to fetch the underlying base
      * socket, then try again to obtain protocol information. */
@@ -160,11 +154,11 @@ WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
     if (afd_socket == INVALID_SOCKET || afd_socket == socket)
       return_error(-1, error);
 
-    id = _afd_get_protocol_info(afd_socket, protocol_info);
-    if (id < 0)
+    r = _afd_get_protocol_info(afd_socket, protocol_info);
+    if (r < 0)
       return -1;
   }
 
   *afd_socket_out = afd_socket;
-  return id;
+  return r;
 }

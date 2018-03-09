@@ -16,8 +16,7 @@ typedef struct ep_sock ep_sock_t;
 
 typedef struct ep_port {
   HANDLE iocp;
-  poll_group_allocator_t*
-      poll_group_allocators[array_count(AFD_PROVIDER_GUID_LIST)];
+  poll_group_allocator_t* poll_group_allocator;
   tree_t sock_tree;
   queue_t sock_update_queue;
   queue_t sock_deleted_queue;
@@ -41,9 +40,7 @@ WEPOLL_INTERNAL int ep_port_ctl(ep_port_t* port_info,
                                 struct epoll_event* ev);
 
 WEPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
-    ep_port_t* port_info,
-    size_t protocol_id,
-    const WSAPROTOCOL_INFOW* protocol_info);
+    ep_port_t* port_info, const WSAPROTOCOL_INFOW* protocol_info);
 WEPOLL_INTERNAL void ep_port_release_poll_group(ep_port_t* port_info,
                                                 poll_group_t* poll_group);
 
