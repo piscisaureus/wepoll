@@ -50,12 +50,6 @@ static inline uint32_t _sync_add_and_fetch(volatile uint32_t* target,
   return InterlockedAdd((volatile long*) target, value);
 }
 
-static inline uint32_t _sync_sub_and_fetch(volatile uint32_t* target,
-                                           uint32_t value) {
-  uint32_t add_value = -(int32_t) value;
-  return _sync_add_and_fetch(target, add_value);
-}
-
 static inline uint32_t _sync_fetch_and_set(volatile uint32_t* target,
                                            uint32_t value) {
   static_assert(sizeof(*target) == sizeof(long), "");
@@ -69,7 +63,7 @@ void reflock_ref(reflock_t* reflock) {
 }
 
 void reflock_unref(reflock_t* reflock) {
-  uint32_t state = _sync_sub_and_fetch(&reflock->state, _REF);
+  uint32_t state = _sync_add_and_fetch(&reflock->state, -(int32_t) _REF);
   uint32_t ref_count = state & _REF_MASK;
   uint32_t destroy = state & _DESTROY_MASK;
 
