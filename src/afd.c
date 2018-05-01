@@ -17,6 +17,22 @@
 #define SIO_BASE_HANDLE 0x48000022
 #endif
 
+/* clang-format off */
+static const GUID _AFD_PROVIDER_GUID_LIST[] = {
+  /* MSAFD Tcpip [TCP+UDP+RAW / IP] */
+  {0xe70f1aa0, 0xab8b, 0x11cf,
+   {0x8c, 0xa3, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92}},
+  /* MSAFD Tcpip [TCP+UDP+RAW / IPv6] */
+  {0xf9eab0c0, 0x26d4, 0x11d0,
+   {0xbb, 0xbf, 0x00, 0xaa, 0x00, 0x6c, 0x34, 0xe4}},
+  /* MSAFD RfComm [Bluetooth] */
+  {0x9fc48064, 0x7298, 0x43e4,
+   {0xb7, 0xbd, 0x18, 0x1f, 0x20, 0x89, 0x79, 0x2a}},
+  /* MSAFD Irda [IrDA] */
+  {0x3972523d, 0x2af1, 0x11d1,
+   {0xb6, 0x55, 0x00, 0x80, 0x5f, 0x36, 0x42, 0xcc}}};
+/* clang-format on */
+
 int afd_poll(SOCKET driver_socket,
              AFD_POLL_INFO* poll_info,
              OVERLAPPED* overlapped) {
@@ -118,9 +134,9 @@ static int _afd_get_protocol_info(SOCKET socket,
                  &opt_len) != 0)
     return_error(-1);
 
-  for (i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
+  for (i = 0; i < array_count(_AFD_PROVIDER_GUID_LIST); i++) {
     if (memcmp(&protocol_info->ProviderId,
-               &AFD_PROVIDER_GUID_LIST[i],
+               &_AFD_PROVIDER_GUID_LIST[i],
                sizeof protocol_info->ProviderId) == 0) {
       return 0;
     }
