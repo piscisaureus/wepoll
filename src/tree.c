@@ -5,50 +5,6 @@
 
 #include "tree.h"
 
-static void _tree_rotate_left(tree_t* tree, tree_node_t* node) {
-  tree_node_t* p = node;
-  tree_node_t* q = node->right;
-  tree_node_t* parent = p->parent;
-
-  if (parent) {
-    if (parent->left == p)
-      parent->left = q;
-    else
-      parent->right = q;
-  } else {
-    tree->root = q;
-  }
-
-  q->parent = parent;
-  p->parent = q;
-  p->right = q->left;
-  if (p->right)
-    p->right->parent = p;
-  q->left = p;
-}
-
-static void _tree_rotate_right(tree_t* tree, tree_node_t* node) {
-  tree_node_t* p = node;
-  tree_node_t* q = node->left;
-  tree_node_t* parent = p->parent;
-
-  if (parent) {
-    if (parent->left == p)
-      parent->left = q;
-    else
-      parent->right = q;
-  } else {
-    tree->root = q;
-  }
-
-  q->parent = parent;
-  p->parent = q;
-  p->left = q->right;
-  if (p->left)
-    p->left->parent = p;
-  q->right = p;
-}
-
 void tree_init(tree_t* tree) {
   memset(tree, 0, sizeof *tree);
 }
@@ -57,28 +13,66 @@ void tree_node_init(tree_node_t* node) {
   memset(node, 0, sizeof *node);
 }
 
+#define _tree_rotate(cis, trans, tree, node) \
+  do {                                       \
+    tree_node_t* p = node;                   \
+    tree_node_t* q = node->trans;            \
+    tree_node_t* parent1 = p->parent;        \
+                                             \
+    if (parent1) {                           \
+      if (parent1->left == p)                \
+        parent1->left = q;                   \
+      else                                   \
+        parent1->right = q;                  \
+    } else {                                 \
+      tree->root = q;                        \
+    }                                        \
+                                             \
+    q->parent = parent1;                     \
+    p->parent = q;                           \
+    p->trans = q->cis;                       \
+    if (p->trans)                            \
+      p->trans->parent = p;                  \
+    q->cis = p;                              \
+  } while (0)
+
+#define _tree_add_insert_or_descend(side, parent, node) \
+  if (parent->side) {                                   \
+    parent = parent->side;                              \
+  } else {                                              \
+    parent->side = node;                                \
+    break;                                              \
+  }
+
+#define _tree_add_fixup(cis, trans, tree, parent, node) \
+  tree_node_t* grandparent = parent->parent;            \
+  tree_node_t* uncle = grandparent->trans;              \
+                                                        \
+  if (uncle && uncle->red) {                            \
+    parent->red = uncle->red = false;                   \
+    grandparent->red = true;                            \
+    node = grandparent;                                 \
+  } else {                                              \
+    if (node == parent->trans) {                        \
+      _tree_rotate(cis, trans, tree, parent);           \
+      node = parent;                                    \
+      parent = node->parent;                            \
+    }                                                   \
+    parent->red = false;                                \
+    grandparent->red = true;                            \
+    _tree_rotate(trans, cis, tree, grandparent);        \
+  }
+
 int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   tree_node_t* parent;
-  tree_node_t* grandparent;
-  tree_node_t* uncle;
 
   parent = tree->root;
   if (parent) {
     for (;;) {
       if (key < parent->key) {
-        if (parent->left) {
-          parent = parent->left;
-        } else {
-          parent->left = node;
-          break;
-        }
+        _tree_add_insert_or_descend(left, parent, node);
       } else if (key > parent->key) {
-        if (parent->right) {
-          parent = parent->right;
-        } else {
-          parent->right = node;
-          break;
-        }
+        _tree_add_insert_or_descend(right, parent, node);
       } else {
         return -1;
       }
@@ -92,54 +86,48 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   node->parent = parent;
   node->red = true;
 
-  while (parent && parent->red) {
-    grandparent = parent->parent;
-    if (parent == grandparent->left) {
-      uncle = grandparent->right;
-      if (uncle && uncle->red) {
-        parent->red = uncle->red = false;
-        grandparent->red = true;
-        node = grandparent;
-      } else {
-        if (node == parent->right) {
-          _tree_rotate_left(tree, parent);
-          node = parent;
-          parent = node->parent;
-        }
-        parent->red = false;
-        grandparent->red = true;
-        _tree_rotate_right(tree, grandparent);
-      }
+  for (; parent && parent->red; parent = node->parent) {
+    if (parent == parent->parent->left) {
+      _tree_add_fixup(left, right, tree, parent, node);
     } else {
-      uncle = grandparent->left;
-      if (uncle && uncle->red) {
-        parent->red = uncle->red = false;
-        grandparent->red = true;
-        node = grandparent;
-      } else {
-        if (node == parent->left) {
-          _tree_rotate_right(tree, parent);
-          node = parent;
-          parent = node->parent;
-        }
-        parent->red = false;
-        grandparent->red = true;
-        _tree_rotate_left(tree, grandparent);
-      }
+      _tree_add_fixup(right, left, tree, parent, node);
     }
-    parent = node->parent;
   }
   tree->root->red = false;
 
   return 0;
 }
 
+#define _tree_del_fixup(cis, trans, tree, node)    \
+  tree_node_t* sibling = parent->trans;            \
+                                                   \
+  if (sibling->red) {                              \
+    sibling->red = false;                          \
+    parent->red = true;                            \
+    _tree_rotate(cis, trans, tree, parent);        \
+    sibling = parent->trans;                       \
+  }                                                \
+  if ((sibling->left && sibling->left->red) ||     \
+      (sibling->right && sibling->right->red)) {   \
+    if (!sibling->trans || !sibling->trans->red) { \
+      sibling->cis->red = false;                   \
+      sibling->red = true;                         \
+      _tree_rotate(trans, cis, tree, sibling);     \
+      sibling = parent->trans;                     \
+    }                                              \
+    sibling->red = parent->red;                    \
+    parent->red = sibling->trans->red = false;     \
+    _tree_rotate(cis, trans, tree, parent);        \
+    node = tree->root;                             \
+    break;                                         \
+  }                                                \
+  sibling->red = true;
+
 void tree_del(tree_t* tree, tree_node_t* node) {
   tree_node_t* parent = node->parent;
   tree_node_t* left = node->left;
   tree_node_t* right = node->right;
   tree_node_t* next;
-  tree_node_t* sibling;
   bool red;
 
   if (!left) {
@@ -196,51 +184,10 @@ void tree_del(tree_t* tree, tree_node_t* node) {
     if (node == tree->root)
       break;
     if (node == parent->left) {
-      sibling = parent->right;
-      if (sibling->red) {
-        sibling->red = false;
-        parent->red = true;
-        _tree_rotate_left(tree, parent);
-        sibling = parent->right;
-      }
-      if ((sibling->left && sibling->left->red) ||
-          (sibling->right && sibling->right->red)) {
-        if (!sibling->right || !sibling->right->red) {
-          sibling->left->red = false;
-          sibling->red = true;
-          _tree_rotate_right(tree, sibling);
-          sibling = parent->right;
-        }
-        sibling->red = parent->red;
-        parent->red = sibling->right->red = false;
-        _tree_rotate_left(tree, parent);
-        node = tree->root;
-        break;
-      }
+      _tree_del_fixup(left, right, tree, node);
     } else {
-      sibling = parent->left;
-      if (sibling->red) {
-        sibling->red = false;
-        parent->red = true;
-        _tree_rotate_right(tree, parent);
-        sibling = parent->left;
-      }
-      if ((sibling->left && sibling->left->red) ||
-          (sibling->right && sibling->right->red)) {
-        if (!sibling->left || !sibling->left->red) {
-          sibling->right->red = false;
-          sibling->red = true;
-          _tree_rotate_left(tree, sibling);
-          sibling = parent->left;
-        }
-        sibling->red = parent->red;
-        parent->red = sibling->left->red = false;
-        _tree_rotate_right(tree, parent);
-        node = tree->root;
-        break;
-      }
+      _tree_del_fixup(right, left, tree, node);
     }
-    sibling->red = true;
     node = parent;
     parent = parent->parent;
   } while (!node->red);
