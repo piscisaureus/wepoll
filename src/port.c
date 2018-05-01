@@ -225,7 +225,7 @@ int ep_port_wait(ep_port_t* port_info,
   /* Dequeue completion packets until either at least one interesting event
    * has been discovered, or the timeout is reached.
    */
-  do {
+  for (;;) {
     ULONGLONG now;
 
     result =
@@ -234,16 +234,20 @@ int ep_port_wait(ep_port_t* port_info,
       break; /* Result, error, or time-out. */
 
     if (timeout < 0)
-      continue; /* _ep_port_wait() never times out. */
+      continue; /* When timeout is negative, never time out. */
 
-    /* Check for time-out. */
+    /* Update time. */
     now = GetTickCount64();
-    if (now >= due)
-      break;
 
-    /* Recompute timeout. */
+    /* Do not allow the due time to be in the past. */
+    if (now >= due) {
+      SetLastError(WAIT_TIMEOUT);
+      break;
+    }
+
+    /* Recompute time-out argument for GetQueuedCompletionStatus. */
     gqcs_timeout = (DWORD)(due - now);
-  } while (gqcs_timeout > 0);
+  }
 
   _ep_port_update_events_if_polling(port_info);
 
