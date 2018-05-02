@@ -13,54 +13,60 @@ void tree_node_init(tree_node_t* node) {
   memset(node, 0, sizeof *node);
 }
 
-#define _tree_rotate(cis, trans, tree, node) \
-  do {                                       \
-    tree_node_t* p = node;                   \
-    tree_node_t* q = node->trans;            \
-    tree_node_t* parent1 = p->parent;        \
-                                             \
-    if (parent1) {                           \
-      if (parent1->left == p)                \
-        parent1->left = q;                   \
-      else                                   \
-        parent1->right = q;                  \
-    } else {                                 \
-      tree->root = q;                        \
-    }                                        \
-                                             \
-    q->parent = parent1;                     \
-    p->parent = q;                           \
-    p->trans = q->cis;                       \
-    if (p->trans)                            \
-      p->trans->parent = p;                  \
-    q->cis = p;                              \
-  } while (0)
+#define _TREE_ROTATE(cis, trans)   \
+  tree_node_t* p = node;           \
+  tree_node_t* q = node->trans;    \
+  tree_node_t* parent = p->parent; \
+                                   \
+  if (parent) {                    \
+    if (parent->left == p)         \
+      parent->left = q;            \
+    else                           \
+      parent->right = q;           \
+  } else {                         \
+    tree->root = q;                \
+  }                                \
+                                   \
+  q->parent = parent;              \
+  p->parent = q;                   \
+  p->trans = q->cis;               \
+  if (p->trans)                    \
+    p->trans->parent = p;          \
+  q->cis = p;
 
-#define _tree_add_insert_or_descend(side, parent, node) \
-  if (parent->side) {                                   \
-    parent = parent->side;                              \
-  } else {                                              \
-    parent->side = node;                                \
-    break;                                              \
+static inline void _tree_rotate_left(tree_t* tree, tree_node_t* node) {
+  _TREE_ROTATE(left, right)
+}
+
+static inline void _tree_rotate_right(tree_t* tree, tree_node_t* node) {
+  _TREE_ROTATE(right, left)
+}
+
+#define _TREE_INSERT_OR_DESCEND(side) \
+  if (parent->side) {                 \
+    parent = parent->side;            \
+  } else {                            \
+    parent->side = node;              \
+    break;                            \
   }
 
-#define _tree_add_fixup(cis, trans, tree, parent, node) \
-  tree_node_t* grandparent = parent->parent;            \
-  tree_node_t* uncle = grandparent->trans;              \
-                                                        \
-  if (uncle && uncle->red) {                            \
-    parent->red = uncle->red = false;                   \
-    grandparent->red = true;                            \
-    node = grandparent;                                 \
-  } else {                                              \
-    if (node == parent->trans) {                        \
-      _tree_rotate(cis, trans, tree, parent);           \
-      node = parent;                                    \
-      parent = node->parent;                            \
-    }                                                   \
-    parent->red = false;                                \
-    grandparent->red = true;                            \
-    _tree_rotate(trans, cis, tree, grandparent);        \
+#define _TREE_FIXUP_AFTER_INSERT(cis, trans) \
+  tree_node_t* grandparent = parent->parent; \
+  tree_node_t* uncle = grandparent->trans;   \
+                                             \
+  if (uncle && uncle->red) {                 \
+    parent->red = uncle->red = false;        \
+    grandparent->red = true;                 \
+    node = grandparent;                      \
+  } else {                                   \
+    if (node == parent->trans) {             \
+      _tree_rotate_##cis(tree, parent);      \
+      node = parent;                         \
+      parent = node->parent;                 \
+    }                                        \
+    parent->red = false;                     \
+    grandparent->red = true;                 \
+    _tree_rotate_##trans(tree, grandparent); \
   }
 
 int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
@@ -70,9 +76,9 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   if (parent) {
     for (;;) {
       if (key < parent->key) {
-        _tree_add_insert_or_descend(left, parent, node);
+        _TREE_INSERT_OR_DESCEND(left)
       } else if (key > parent->key) {
-        _tree_add_insert_or_descend(right, parent, node);
+        _TREE_INSERT_OR_DESCEND(right)
       } else {
         return -1;
       }
@@ -88,9 +94,9 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
 
   for (; parent && parent->red; parent = node->parent) {
     if (parent == parent->parent->left) {
-      _tree_add_fixup(left, right, tree, parent, node);
+      _TREE_FIXUP_AFTER_INSERT(left, right)
     } else {
-      _tree_add_fixup(right, left, tree, parent, node);
+      _TREE_FIXUP_AFTER_INSERT(right, left)
     }
   }
   tree->root->red = false;
@@ -98,13 +104,13 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   return 0;
 }
 
-#define _tree_del_fixup(cis, trans, tree, node)    \
+#define _TREE_FIXUP_AFTER_REMOVE(cis, trans)       \
   tree_node_t* sibling = parent->trans;            \
                                                    \
   if (sibling->red) {                              \
     sibling->red = false;                          \
     parent->red = true;                            \
-    _tree_rotate(cis, trans, tree, parent);        \
+    _tree_rotate_##cis(tree, parent);              \
     sibling = parent->trans;                       \
   }                                                \
   if ((sibling->left && sibling->left->red) ||     \
@@ -112,12 +118,12 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
     if (!sibling->trans || !sibling->trans->red) { \
       sibling->cis->red = false;                   \
       sibling->red = true;                         \
-      _tree_rotate(trans, cis, tree, sibling);     \
+      _tree_rotate_##trans(tree, sibling);         \
       sibling = parent->trans;                     \
     }                                              \
     sibling->red = parent->red;                    \
     parent->red = sibling->trans->red = false;     \
-    _tree_rotate(cis, trans, tree, parent);        \
+    _tree_rotate_##cis(tree, parent);              \
     node = tree->root;                             \
     break;                                         \
   }                                                \
@@ -184,9 +190,9 @@ void tree_del(tree_t* tree, tree_node_t* node) {
     if (node == tree->root)
       break;
     if (node == parent->left) {
-      _tree_del_fixup(left, right, tree, node);
+      _TREE_FIXUP_AFTER_REMOVE(left, right)
     } else {
-      _tree_del_fixup(right, left, tree, node);
+      _TREE_FIXUP_AFTER_REMOVE(right, left)
     }
     node = parent;
     parent = parent->parent;
