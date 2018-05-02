@@ -38,21 +38,23 @@ to run on Linux.
 ## How to use
 
 The library is [distributed][dist] as a single source file
-([wepoll.c][wepoll.c]) and a single header file ([wepoll.h][wepoll.h]).
-Compile the .c file as part of your project, and include the header
-wherever needed.
+([wepoll.c][wepoll.c]) and a single header file ([wepoll.h][wepoll.h]).<br>
+Compile the .c file as part of your project, and include the header wherever
+needed.
 
 ## Compatibility
 
 * Requires Windows Vista or higher.
 * Can be compiled with recent versions of MSVC, Clang, and GCC.
 
-## API notes
+## API
 
-### General
+### General remarks
 
 * The epoll port is a `HANDLE`, not a file descriptor.
 * All functions set both `errno` and `GetLastError()` on failure.
+* For more extensive documentation, see the [epoll(7) man page][man epoll],
+  and the per-function man pages that are linked below.
 
 ### epoll_create/epoll_create1
 
