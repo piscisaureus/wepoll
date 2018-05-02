@@ -5,8 +5,8 @@
 #include "internal.h"
 #include "poll-group.h"
 #include "queue.h"
-#include "reflock-tree.h"
 #include "sock.h"
+#include "thread-safe-tree.h"
 #include "tree.h"
 #include "util.h"
 #include "win.h"
@@ -20,7 +20,7 @@ typedef struct ep_port {
   queue_t sock_update_queue;
   queue_t sock_deleted_queue;
   queue_t poll_group_queue;
-  reflock_tree_node_t handle_tree_node;
+  ts_tree_node_t handle_tree_node;
   CRITICAL_SECTION lock;
   size_t active_poll_count;
 } ep_port_t;

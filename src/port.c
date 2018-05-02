@@ -7,6 +7,7 @@
 #include "port.h"
 #include "queue.h"
 #include "sock.h"
+#include "thread-safe-tree.h"
 #include "tree.h"
 #include "util.h"
 #include "wepoll.h"
@@ -54,7 +55,7 @@ ep_port_t* ep_port_new(HANDLE* iocp_out) {
   queue_init(&port_info->sock_update_queue);
   queue_init(&port_info->sock_deleted_queue);
   queue_init(&port_info->poll_group_queue);
-  reflock_tree_node_init(&port_info->handle_tree_node);
+  ts_tree_node_init(&port_info->handle_tree_node);
   InitializeCriticalSection(&port_info->lock);
 
   *iocp_out = iocp;
