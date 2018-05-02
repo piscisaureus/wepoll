@@ -1,6 +1,10 @@
-#include "ws.h"
 #include "error.h"
 #include "win.h"
+#include "ws.h"
+
+#ifndef SIO_BASE_HANDLE
+#define SIO_BASE_HANDLE 0x48000022
+#endif
 
 int ws_global_init(void) {
   int r;
@@ -11,4 +15,22 @@ int ws_global_init(void) {
     return_error(-1, r);
 
   return 0;
+}
+
+SOCKET ws_get_base_socket(SOCKET socket) {
+  SOCKET base_socket;
+  DWORD bytes;
+
+  if (WSAIoctl(socket,
+               SIO_BASE_HANDLE,
+               NULL,
+               0,
+               &base_socket,
+               sizeof base_socket,
+               &bytes,
+               NULL,
+               NULL) == SOCKET_ERROR)
+    return_error(INVALID_SOCKET);
+
+  return base_socket;
 }

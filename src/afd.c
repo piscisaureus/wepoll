@@ -3,6 +3,7 @@
 #include "nt.h"
 #include "util.h"
 #include "win.h"
+#include "ws.h"
 
 #define FILE_DEVICE_NETWORK 0x00000012
 #define METHOD_BUFFERED 0
@@ -12,10 +13,6 @@
   ((FILE_DEVICE_NETWORK) << 12 | (operation << 2) | method)
 
 #define IOCTL_AFD_POLL _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
-
-#ifndef SIO_BASE_HANDLE
-#define SIO_BASE_HANDLE 0x48000022
-#endif
 
 /* clang-format off */
 static const GUID _AFD_PROVIDER_GUID_LIST[] = {
@@ -103,24 +100,6 @@ int afd_poll(SOCKET driver_socket,
     return_error(-1, RtlNtStatusToDosError(status));
 }
 
-static SOCKET _afd_get_base_socket(SOCKET socket) {
-  SOCKET base_socket;
-  DWORD bytes;
-
-  if (WSAIoctl(socket,
-               SIO_BASE_HANDLE,
-               NULL,
-               0,
-               &base_socket,
-               sizeof base_socket,
-               &bytes,
-               NULL,
-               NULL) == SOCKET_ERROR)
-    return_error(INVALID_SOCKET);
-
-  return base_socket;
-}
-
 static int _afd_get_protocol_info(SOCKET socket,
                                   WSAPROTOCOL_INFOW* protocol_info) {
   int opt_len;
@@ -166,7 +145,7 @@ WEPOLL_INTERNAL int afd_get_protocol_info(SOCKET socket,
     if (error != ERROR_DEVICE_FEATURE_NOT_SUPPORTED)
       return -1;
 
-    afd_socket = _afd_get_base_socket(socket);
+    afd_socket = ws_get_base_socket(socket);
     if (afd_socket == INVALID_SOCKET || afd_socket == socket)
       return_error(-1, error);
 
