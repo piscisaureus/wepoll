@@ -8,6 +8,7 @@
 #include "poll-group.h"
 #include "port.h"
 #include "sock.h"
+#include "ws.h"
 
 #define _KNOWN_EPOLL_EVENTS                                            \
   (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM | \
@@ -172,14 +173,14 @@ static int _ep_sock_cancel_poll(_ep_sock_private_t* sock_private) {
 
 ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   SOCKET afd_socket;
-  WSAPROTOCOL_INFOW protocol_info;
   poll_group_t* poll_group;
   _ep_sock_private_t* sock_private;
 
   if (socket == 0 || socket == INVALID_SOCKET)
     return_error(NULL, ERROR_INVALID_HANDLE);
 
-  if (afd_get_protocol_info(socket, &afd_socket, &protocol_info) < 0)
+  afd_socket = ws_get_base_socket(socket);
+  if (afd_socket == INVALID_SOCKET)
     return NULL;
 
   poll_group = ep_port_acquire_poll_group(port_info);

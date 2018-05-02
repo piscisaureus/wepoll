@@ -61,8 +61,4 @@ WEPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
                              AFD_POLL_INFO* poll_info,
                              OVERLAPPED* overlapped);
 
-WEPOLL_INTERNAL int afd_get_protocol_info(SOCKET socket,
-                                          SOCKET* afd_socket_out,
-                                          WSAPROTOCOL_INFOW* protocol_info);
-
 #endif /* WEPOLL_AFD_H_ */
