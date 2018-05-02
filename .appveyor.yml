@@ -82,10 +82,6 @@ environment:
       lsp: true
       appveyor_save_cache_on_error: true
 
-matrix:
-  allow_failures:
-  - lsp: true
-
 configuration: Debug
 
 clone_folder: c:\wepoll
