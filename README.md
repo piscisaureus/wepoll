@@ -115,6 +115,60 @@ int epoll_wait(HANDLE ephnd,
 * TODO: expand
 * [Linux man page][man epoll_wait]
 
+### struct epoll_event
+
+```c
+typedef union epoll_data {
+  void* ptr;
+  int fd;
+  uint32_t u32;
+  uint64_t u64;
+  SOCKET sock;        /* Windows specific */
+  HANDLE hnd;         /* Windows specific */
+} epoll_data_t;
+```
+
+```c
+struct epoll_event {
+  uint32_t events;    /* Epoll events and flags */
+  epoll_data_t data;  /* User data variable */
+};
+```
+
+* The `events` field is a bit mask containing the events being
+  monitored/reported, and optional flags.<br>
+  Flags are accepted by [`epoll_ctl()`](#epoll_ctl), but they are not reported
+  back by [`epoll_wait()`](#epoll_wait).
+* The `data` field can be used to associate application-specific information
+  with a socket; its value will be returned unmodified by
+  [`epoll_wait()`](#epoll_wait).
+* [Linux man page][man epoll_ctl]
+
+| Event         | Description                                                          |
+|---------------|----------------------------------------------------------------------|
+| `EPOLLIN`     | incoming data available, or incoming connection ready to be accepted |
+| `EPOLLOUT`    | ready to send data, or outgoing connection successfully established  |
+| `EPOLLRDHUP`  | remote peer initiated graceful socket shutdown                       |
+| `EPOLLPRI`    | out-of-band data available for reading                               |
+| `EPOLLERR`    | socket error<sup>1</sup>                                             |
+| `EPOLLHUP`    | socket hang-up<sup>1</sup>                                           |
+| `EPOLLRDNORM` | same as `EPOLLIN`                                                    |
+| `EPOLLRDBAND` | same as `EPOLLPRI`                                                   |
+| `EPOLLWRNORM` | same as `EPOLLOUT`                                                   |
+| `EPOLLWRBAND` | same as `EPOLLOUT`                                                   |
+| `EPOLLMSG`    | never reported                                                       |
+
+| Flag             | Description               |
+|------------------|---------------------------|
+| `EPOLLONESHOT`   | report event(s) only once |
+| `EPOLLET`        | not supported by wepoll   |
+| `EPOLLEXCLUSIVE` | not supported by wepoll   |
+| `EPOLLWAKEUP`    | not supported by wepoll   |
+
+<sup>1</sup>: the `EPOLLERR` and `EPOLLHUP` events may always be reported by
+[`epoll_wait()`](#epoll_wait), regardless of the event mask that was passed to
+[`epoll_ctl()`](#epoll_ctl).
+
 
 [ci status badge]:  https://ci.appveyor.com/api/projects/status/github/piscisaureus/wepoll?branch=master&svg=true
 [ci status link]:   https://ci.appveyor.com/project/piscisaureus/wepoll/branch/master
