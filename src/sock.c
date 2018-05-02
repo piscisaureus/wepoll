@@ -29,7 +29,7 @@ typedef struct _ep_sock_private {
   ep_sock_t pub;
   _poll_req_t poll_req;
   poll_group_t* poll_group;
-  SOCKET afd_socket;
+  SOCKET base_socket;
   epoll_data_t user_data;
   uint32_t user_events;
   uint32_t pending_events;
@@ -172,15 +172,15 @@ static int _ep_sock_cancel_poll(_ep_sock_private_t* sock_private) {
 }
 
 ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
-  SOCKET afd_socket;
+  SOCKET base_socket;
   poll_group_t* poll_group;
   _ep_sock_private_t* sock_private;
 
   if (socket == 0 || socket == INVALID_SOCKET)
     return_error(NULL, ERROR_INVALID_HANDLE);
 
-  afd_socket = ws_get_base_socket(socket);
-  if (afd_socket == INVALID_SOCKET)
+  base_socket = ws_get_base_socket(socket);
+  if (base_socket == INVALID_SOCKET)
     return NULL;
 
   poll_group = ep_port_acquire_poll_group(port_info);
@@ -193,7 +193,7 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
 
   memset(sock_private, 0, sizeof *sock_private);
 
-  sock_private->afd_socket = afd_socket;
+  sock_private->base_socket = base_socket;
   sock_private->poll_group = poll_group;
 
   tree_node_init(&sock_private->pub.tree_node);
@@ -299,7 +299,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
 
     if (_poll_req_submit(&sock_private->poll_req,
                          sock_private->user_events,
-                         sock_private->afd_socket,
+                         sock_private->base_socket,
                          driver_socket) < 0) {
       if (GetLastError() == ERROR_INVALID_HANDLE)
         /* The socket is broken. It will be dropped from the epoll set. */
