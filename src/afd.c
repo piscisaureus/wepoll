@@ -74,11 +74,11 @@ int afd_global_init(void) {
   if (infos_count < 0)
     return_error(-1);
 
-  /* Find a WSAPROTOCOL_INDOW structure that we can use to create an MSAFD
+  /* Find a WSAPROTOCOL_INFOW structure that we can use to create an MSAFD
    * socket. Preferentially we pick a UDP socket, otherwise try TCP or any
    * other type.
    */
-  do {
+  for (;;) {
     afd_info = _afd_find_protocol_info(infos, infos_count, IPPROTO_UDP);
     if (afd_info != NULL)
       break;
@@ -93,7 +93,7 @@ int afd_global_init(void) {
 
     free(infos);
     return_error(-1, WSAENETDOWN); /* No suitable protocol found. */
-  } while (0);
+  }
 
   /* Copy found protocol information from the catalog to a static buffer. */
   _afd_driver_socket_template = *afd_info;
