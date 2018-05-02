@@ -87,15 +87,21 @@ int epoll_ctl(HANDLE ephnd,
 ```
 
 * Control which socket events are monitored by an epoll port.
-* `ephnd` must be a HANDLE created by `epoll_create` or `epoll_create1`.
+* `ephnd` must be a HANDLE created by
+  [`epoll_create()`](#epoll_createepoll_create1) or
+  [`epoll_create1()`](#epoll_createepoll_create1).
 * `op` must be one of `EPOLL_CTL_ADD`, `EPOLL_CTL_MOD`, `EPOLL_CTL_DEL`.
-* `sock` must be a valid socket created by `socket()` or `
+* `sock` must be a valid socket created by [`socket()`][msdn socket],
+  [`WSASocket()`][msdn wsasocket], or [`accept()`][msdn accept].
+* `event` should be a pointer to a [`struct epoll_event`](#struct-epoll_event).<br>
+  If `op` is `EPOLL_CTL_DEL` then the `event` parameter is ignored, and it
+  may be `NULL`.
+* Returns 0 on success, -1 on failure.
 * It is recommended to always explicitly remove a socket from its epoll
-  set using `EPOLL_CTL_DEL` *before* closing it. As on Linux, sockets
-  are automatically removed from the epoll set when they are closed, but
-  wepoll may not be able to detect this until the next call to
-  `epoll_wait()`.
-* TODO: expand
+  set using `EPOLL_CTL_DEL` *before* closing it.<br>
+  As on Linux, closed sockets are automatically removed from the epoll set, but
+  wepoll may not be able to detect that a socket was closed until the next call
+  to [`epoll_wait()`](#epoll_wait).
 * [Linux man page][man epoll_ctl]
 
 ### epoll_wait
@@ -177,6 +183,9 @@ struct epoll_event {
 [man epoll_create]: http://man7.org/linux/man-pages/man2/epoll_create.2.html
 [man epoll_ctl]:    http://man7.org/linux/man-pages/man2/epoll_ctl.2.html
 [man epoll_wait]:   http://man7.org/linux/man-pages/man2/epoll_wait.2.html
+[msdn accept]:      https://msdn.microsoft.com/en-us/library/windows/desktop/ms737526(v=vs.85).aspx
+[msdn socket]:      https://msdn.microsoft.com/en-us/library/windows/desktop/ms740506(v=vs.85).aspx
+[msdn wsasocket]:   https://msdn.microsoft.com/en-us/library/windows/desktop/ms742212(v=vs.85).aspx
 [select scale]:     https://daniel.haxx.se/docs/poll-vs-select.html
 [wsapoll broken]:   https://daniel.haxx.se/blog/2012/10/10/wsapoll-is-broken/
 [wepoll.c]:         https://github.com/piscisaureus/wepoll/blob/dist/wepoll.c
