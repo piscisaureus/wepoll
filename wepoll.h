@@ -87,7 +87,7 @@ typedef union epoll_data {
 } epoll_data_t;
 
 struct epoll_event {
-  uint32_t events;   /* Epoll events */
+  uint32_t events;   /* Epoll events and flags */
   epoll_data_t data; /* User data variable */
 };
 

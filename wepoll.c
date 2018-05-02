@@ -84,7 +84,7 @@ typedef union epoll_data {
 } epoll_data_t;
 
 struct epoll_event {
-  uint32_t events;   /* Epoll events */
+  uint32_t events;   /* Epoll events and flags */
   epoll_data_t data; /* User data variable */
 };
 
@@ -111,6 +111,9 @@ WEPOLL_EXPORT int epoll_wait(HANDLE ephnd,
 } /* extern "C" */
 #endif
 
+#include <malloc.h>
+#include <stdlib.h>
+
 #define WEPOLL_INTERNAL static
 #define WEPOLL_INTERNAL_VAR static
 
@@ -136,11 +139,6 @@ WEPOLL_EXPORT int epoll_wait(HANDLE ephnd,
 
 #ifndef __GNUC__
 #pragma warning(pop)
-#endif
-
-#ifndef ERROR_DEVICE_FEATURE_NOT_SUPPORTED
-/* Windows headers distributed with MinGW lack a definition for this. */
-#define ERROR_DEVICE_FEATURE_NOT_SUPPORTED 316L
 #endif
 
 WEPOLL_INTERNAL int nt_global_init(void);
@@ -361,31 +359,14 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
+WEPOLL_INTERNAL int afd_global_init(void);
+
+WEPOLL_INTERNAL int afd_create_driver_socket(HANDLE iocp,
+                                             SOCKET* driver_socket_out);
+
 WEPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
                              AFD_POLL_INFO* poll_info,
                              OVERLAPPED* overlapped);
-
-WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
-                                         SOCKET* afd_socket_out,
-                                         WSAPROTOCOL_INFOW* protocol_info);
-
-/* clang-format off */
-
-static const GUID AFD_PROVIDER_GUID_LIST[] = {
-    /* MSAFD Tcpip [TCP+UDP+RAW / IP] */
-    {0xe70f1aa0, 0xab8b, 0x11cf,
-     {0x8c, 0xa3, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92}},
-    /* MSAFD Tcpip [TCP+UDP+RAW / IPv6] */
-    {0xf9eab0c0, 0x26d4, 0x11d0,
-     {0xbb, 0xbf, 0x00, 0xaa, 0x00, 0x6c, 0x34, 0xe4}},
-    /* MSAFD RfComm [Bluetooth] */
-    {0x9fc48064, 0x7298, 0x43e4,
-     {0xb7, 0xbd, 0x18, 0x1f, 0x20, 0x89, 0x79, 0x2a}},
-    /* MSAFD Irda [IrDA] */
-    {0x3972523d, 0x2af1, 0x11d1,
-     {0xb6, 0x55, 0x00, 0x80, 0x5f, 0x36, 0x42, 0xcc}}};
-
-/* clang-format on */
 
 #include <errno.h>
 
@@ -401,6 +382,11 @@ WEPOLL_INTERNAL errno_t err_map_win_error_to_errno(DWORD error);
 WEPOLL_INTERNAL void err_set_win_error(DWORD error);
 WEPOLL_INTERNAL int err_check_handle(HANDLE handle);
 
+WEPOLL_INTERNAL int ws_global_init(void);
+
+WEPOLL_INTERNAL SOCKET ws_get_base_socket(SOCKET socket);
+WEPOLL_INTERNAL ssize_t ws_get_protocol_catalog(WSAPROTOCOL_INFOW** infos_out);
+
 #define FILE_DEVICE_NETWORK 0x00000012
 #define METHOD_BUFFERED 0
 #define AFD_POLL 9
@@ -410,9 +396,118 @@ WEPOLL_INTERNAL int err_check_handle(HANDLE handle);
 
 #define IOCTL_AFD_POLL _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
 
-#ifndef SIO_BASE_HANDLE
-#define SIO_BASE_HANDLE 0x48000022
-#endif
+#define _AFD_ANY_PROTOCOL -1
+
+/* clang-format off */
+static const GUID _AFD_PROVIDER_GUID_LIST[] = {
+  /* MSAFD Tcpip [TCP+UDP+RAW / IP] */
+  {0xe70f1aa0, 0xab8b, 0x11cf,
+   {0x8c, 0xa3, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92}},
+  /* MSAFD Tcpip [TCP+UDP+RAW / IPv6] */
+  {0xf9eab0c0, 0x26d4, 0x11d0,
+   {0xbb, 0xbf, 0x00, 0xaa, 0x00, 0x6c, 0x34, 0xe4}},
+  /* MSAFD RfComm [Bluetooth] */
+  {0x9fc48064, 0x7298, 0x43e4,
+   {0xb7, 0xbd, 0x18, 0x1f, 0x20, 0x89, 0x79, 0x2a}},
+  /* MSAFD Irda [IrDA] */
+  {0x3972523d, 0x2af1, 0x11d1,
+   {0xb6, 0x55, 0x00, 0x80, 0x5f, 0x36, 0x42, 0xcc}}};
+/* clang-format on */
+
+/* This protocol info record is used by afd_create_driver_socket() to create
+ * sockets that can be used as the first argument to afd_poll(). It is
+ * populated on startup by afd_global_init().
+ */
+static WSAPROTOCOL_INFOW _afd_driver_socket_template;
+
+static const WSAPROTOCOL_INFOW* _afd_find_protocol_info(
+    const WSAPROTOCOL_INFOW* infos, size_t infos_count, int protocol_id) {
+  size_t i, j;
+
+  for (i = 0; i < infos_count; i++) {
+    const WSAPROTOCOL_INFOW* info = &infos[i];
+
+    /* Apply protocol id filter. */
+    if (protocol_id != _AFD_ANY_PROTOCOL && protocol_id != info->iProtocol)
+      continue;
+
+    /* Filter out non-MSAFD protocols. */
+    for (j = 0; j < array_count(_AFD_PROVIDER_GUID_LIST); j++) {
+      if (memcmp(&info->ProviderId,
+                 &_AFD_PROVIDER_GUID_LIST[j],
+                 sizeof info->ProviderId) == 0)
+        return info;
+    }
+  }
+
+  return NULL; /* Not found. */
+}
+
+int afd_global_init(void) {
+  WSAPROTOCOL_INFOW* infos;
+  ssize_t infos_count;
+  const WSAPROTOCOL_INFOW* afd_info;
+
+  /* Load the winsock catalog. */
+  infos_count = ws_get_protocol_catalog(&infos);
+  if (infos_count < 0)
+    return_error(-1);
+
+  /* Find a WSAPROTOCOL_INDOW structure that we can use to create an MSAFD
+   * socket. Preferentially we pick a UDP socket, otherwise try TCP or any
+   * other type.
+   */
+  do {
+    afd_info = _afd_find_protocol_info(infos, infos_count, IPPROTO_UDP);
+    if (afd_info != NULL)
+      break;
+
+    afd_info = _afd_find_protocol_info(infos, infos_count, IPPROTO_TCP);
+    if (afd_info != NULL)
+      break;
+
+    afd_info = _afd_find_protocol_info(infos, infos_count, _AFD_ANY_PROTOCOL);
+    if (afd_info != NULL)
+      break;
+
+    free(infos);
+    return_error(-1, WSAENETDOWN); /* No suitable protocol found. */
+  } while (0);
+
+  /* Copy found protocol information from the catalog to a static buffer. */
+  _afd_driver_socket_template = *afd_info;
+
+  free(infos);
+  return 0;
+}
+
+int afd_create_driver_socket(HANDLE iocp, SOCKET* driver_socket_out) {
+  SOCKET socket;
+
+  socket = WSASocketW(_afd_driver_socket_template.iAddressFamily,
+                      _afd_driver_socket_template.iSocketType,
+                      _afd_driver_socket_template.iProtocol,
+                      &_afd_driver_socket_template,
+                      0,
+                      WSA_FLAG_OVERLAPPED);
+  if (socket == INVALID_SOCKET)
+    return_error(-1);
+
+  /* TODO: use WSA_FLAG_NOINHERIT on Windows versions that support it. */
+  if (!SetHandleInformation((HANDLE) socket, HANDLE_FLAG_INHERIT, 0))
+    goto error;
+
+  if (CreateIoCompletionPort((HANDLE) socket, iocp, 0, 0) == NULL)
+    goto error;
+
+  *driver_socket_out = socket;
+  return 0;
+
+error:;
+  DWORD error = GetLastError();
+  closesocket(socket);
+  return_error(-1, error);
+}
 
 int afd_poll(SOCKET driver_socket,
              AFD_POLL_INFO* poll_info,
@@ -484,90 +579,6 @@ int afd_poll(SOCKET driver_socket,
     return_error(-1, RtlNtStatusToDosError(status));
 }
 
-static SOCKET _afd_get_base_socket(SOCKET socket) {
-  SOCKET base_socket;
-  DWORD bytes;
-
-  if (WSAIoctl(socket,
-               SIO_BASE_HANDLE,
-               NULL,
-               0,
-               &base_socket,
-               sizeof base_socket,
-               &bytes,
-               NULL,
-               NULL) == SOCKET_ERROR)
-    return_error(INVALID_SOCKET);
-
-  return base_socket;
-}
-
-static ssize_t _afd_get_protocol_info(SOCKET socket,
-                                      WSAPROTOCOL_INFOW* protocol_info) {
-  int opt_len;
-  ssize_t id;
-  size_t i;
-
-  opt_len = sizeof *protocol_info;
-  if (getsockopt(socket,
-                 SOL_SOCKET,
-                 SO_PROTOCOL_INFOW,
-                 (char*) protocol_info,
-                 &opt_len) != 0)
-    return_error(-1);
-
-  id = -1;
-  for (i = 0; i < array_count(AFD_PROVIDER_GUID_LIST); i++) {
-    if (memcmp(&protocol_info->ProviderId,
-               &AFD_PROVIDER_GUID_LIST[i],
-               sizeof protocol_info->ProviderId) == 0) {
-      id = i;
-      break;
-    }
-  }
-
-  /* Check if the protocol uses an msafd socket. */
-  if (id < 0)
-    return_error(-1, ERROR_DEVICE_FEATURE_NOT_SUPPORTED);
-
-  return id;
-}
-
-WEPOLL_INTERNAL ssize_t afd_get_protocol(SOCKET socket,
-                                         SOCKET* afd_socket_out,
-                                         WSAPROTOCOL_INFOW* protocol_info) {
-  ssize_t id;
-  SOCKET afd_socket;
-
-  /* Try to get protocol information, assuming that the given socket is an AFD
-   * socket. This should almost always be the case, and if it is, that saves us
-   * a call to WSAIoctl(). */
-  afd_socket = socket;
-  id = _afd_get_protocol_info(afd_socket, protocol_info);
-
-  if (id < 0) {
-    /* If getting protocol information failed, it might be due to the socket
-     * not being an AFD socket. If so, attempt to fetch the underlying base
-     * socket, then try again to obtain protocol information. */
-    DWORD error = GetLastError();
-    if (error != ERROR_DEVICE_FEATURE_NOT_SUPPORTED)
-      return -1;
-
-    afd_socket = _afd_get_base_socket(socket);
-    if (afd_socket == INVALID_SOCKET || afd_socket == socket)
-      return_error(-1, error);
-
-    id = _afd_get_protocol_info(afd_socket, protocol_info);
-    if (id < 0)
-      return -1;
-  }
-
-  *afd_socket_out = afd_socket;
-  return id;
-}
-
-#include <stdlib.h>
-
 WEPOLL_INTERNAL int api_global_init(void);
 
 WEPOLL_INTERNAL int init(void);
@@ -601,16 +612,15 @@ WEPOLL_INTERNAL bool queue_empty(const queue_t* queue);
 WEPOLL_INTERNAL bool queue_enqueued(const queue_node_t* node);
 
 typedef struct ep_port ep_port_t;
-typedef struct poll_group_allocator poll_group_allocator_t;
 typedef struct poll_group poll_group_t;
 
-WEPOLL_INTERNAL poll_group_allocator_t* poll_group_allocator_new(
-    ep_port_t* port_info, const WSAPROTOCOL_INFOW* protocol_info);
-WEPOLL_INTERNAL void poll_group_allocator_delete(poll_group_allocator_t* pga);
+WEPOLL_INTERNAL poll_group_t* poll_group_acquire(ep_port_t* port);
+WEPOLL_INTERNAL void poll_group_release(poll_group_t* poll_group);
 
-WEPOLL_INTERNAL poll_group_t* poll_group_acquire(poll_group_allocator_t* pga);
-WEPOLL_INTERNAL void poll_group_release(poll_group_t* ds);
+WEPOLL_INTERNAL void poll_group_delete(poll_group_t* poll_group);
 
+WEPOLL_INTERNAL poll_group_t* poll_group_from_queue_node(
+    queue_node_t* queue_node);
 WEPOLL_INTERNAL SOCKET poll_group_get_socket(poll_group_t* poll_group);
 
 /* The reflock is a special kind of lock that normally prevents a chunk of
@@ -725,11 +735,10 @@ typedef struct ep_sock ep_sock_t;
 
 typedef struct ep_port {
   HANDLE iocp;
-  poll_group_allocator_t*
-      poll_group_allocators[array_count(AFD_PROVIDER_GUID_LIST)];
   tree_t sock_tree;
   queue_t sock_update_queue;
   queue_t sock_deleted_queue;
+  queue_t poll_group_queue;
   reflock_tree_node_t handle_tree_node;
   CRITICAL_SECTION lock;
   size_t active_poll_count;
@@ -748,13 +757,6 @@ WEPOLL_INTERNAL int ep_port_ctl(ep_port_t* port_info,
                                 int op,
                                 SOCKET sock,
                                 struct epoll_event* ev);
-
-WEPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(
-    ep_port_t* port_info,
-    size_t protocol_id,
-    const WSAPROTOCOL_INFOW* protocol_info);
-WEPOLL_INTERNAL void ep_port_release_poll_group(ep_port_t* port_info,
-                                                poll_group_t* poll_group);
 
 WEPOLL_INTERNAL int ep_port_register_socket_handle(ep_port_t* port_info,
                                                    ep_sock_t* sock_info,
@@ -916,104 +918,108 @@ err:
   return -1;
 }
 
-#define _ERROR_ERRNO_MAP(X)                    \
-  X(ERROR_ACCESS_DENIED, EACCES)               \
-  X(ERROR_ALREADY_EXISTS, EEXIST)              \
-  X(ERROR_BAD_COMMAND, EACCES)                 \
-  X(ERROR_BAD_EXE_FORMAT, ENOEXEC)             \
-  X(ERROR_BAD_LENGTH, EACCES)                  \
-  X(ERROR_BAD_NETPATH, ENOENT)                 \
-  X(ERROR_BAD_NET_NAME, ENOENT)                \
-  X(ERROR_BAD_NET_RESP, ENETDOWN)              \
-  X(ERROR_BAD_PATHNAME, ENOENT)                \
-  X(ERROR_BROKEN_PIPE, EPIPE)                  \
-  X(ERROR_CANNOT_MAKE, EACCES)                 \
-  X(ERROR_COMMITMENT_LIMIT, ENOMEM)            \
-  X(ERROR_CONNECTION_ABORTED, ECONNABORTED)    \
-  X(ERROR_CONNECTION_ACTIVE, EISCONN)          \
-  X(ERROR_CONNECTION_REFUSED, ECONNREFUSED)    \
-  X(ERROR_CRC, EACCES)                         \
-  X(ERROR_DEVICE_FEATURE_NOT_SUPPORTED, EPERM) \
-  X(ERROR_DIR_NOT_EMPTY, ENOTEMPTY)            \
-  X(ERROR_DISK_FULL, ENOSPC)                   \
-  X(ERROR_DUP_NAME, EADDRINUSE)                \
-  X(ERROR_FILENAME_EXCED_RANGE, ENOENT)        \
-  X(ERROR_FILE_NOT_FOUND, ENOENT)              \
-  X(ERROR_GEN_FAILURE, EACCES)                 \
-  X(ERROR_GRACEFUL_DISCONNECT, EPIPE)          \
-  X(ERROR_HOST_DOWN, EHOSTUNREACH)             \
-  X(ERROR_HOST_UNREACHABLE, EHOSTUNREACH)      \
-  X(ERROR_INSUFFICIENT_BUFFER, EFAULT)         \
-  X(ERROR_INVALID_ADDRESS, EADDRNOTAVAIL)      \
-  X(ERROR_INVALID_FUNCTION, EINVAL)            \
-  X(ERROR_INVALID_HANDLE, EBADF)               \
-  X(ERROR_INVALID_NETNAME, EADDRNOTAVAIL)      \
-  X(ERROR_INVALID_PARAMETER, EINVAL)           \
-  X(ERROR_INVALID_USER_BUFFER, EMSGSIZE)       \
-  X(ERROR_IO_PENDING, EINPROGRESS)             \
-  X(ERROR_LOCK_VIOLATION, EACCES)              \
-  X(ERROR_MORE_DATA, EMSGSIZE)                 \
-  X(ERROR_NETNAME_DELETED, ECONNABORTED)       \
-  X(ERROR_NETWORK_ACCESS_DENIED, EACCES)       \
-  X(ERROR_NETWORK_BUSY, ENETDOWN)              \
-  X(ERROR_NETWORK_UNREACHABLE, ENETUNREACH)    \
-  X(ERROR_NOACCESS, EFAULT)                    \
-  X(ERROR_NONPAGED_SYSTEM_RESOURCES, ENOMEM)   \
-  X(ERROR_NOT_ENOUGH_MEMORY, ENOMEM)           \
-  X(ERROR_NOT_ENOUGH_QUOTA, ENOMEM)            \
-  X(ERROR_NOT_FOUND, ENOENT)                   \
-  X(ERROR_NOT_LOCKED, EACCES)                  \
-  X(ERROR_NOT_READY, EACCES)                   \
-  X(ERROR_NOT_SAME_DEVICE, EXDEV)              \
-  X(ERROR_NOT_SUPPORTED, ENOTSUP)              \
-  X(ERROR_NO_MORE_FILES, ENOENT)               \
-  X(ERROR_NO_SYSTEM_RESOURCES, ENOMEM)         \
-  X(ERROR_OPERATION_ABORTED, EINTR)            \
-  X(ERROR_OUT_OF_PAPER, EACCES)                \
-  X(ERROR_PAGED_SYSTEM_RESOURCES, ENOMEM)      \
-  X(ERROR_PAGEFILE_QUOTA, ENOMEM)              \
-  X(ERROR_PATH_NOT_FOUND, ENOENT)              \
-  X(ERROR_PIPE_NOT_CONNECTED, EPIPE)           \
-  X(ERROR_PORT_UNREACHABLE, ECONNRESET)        \
-  X(ERROR_PROTOCOL_UNREACHABLE, ENETUNREACH)   \
-  X(ERROR_REM_NOT_LIST, ECONNREFUSED)          \
-  X(ERROR_REQUEST_ABORTED, EINTR)              \
-  X(ERROR_REQ_NOT_ACCEP, EWOULDBLOCK)          \
-  X(ERROR_SECTOR_NOT_FOUND, EACCES)            \
-  X(ERROR_SEM_TIMEOUT, ETIMEDOUT)              \
-  X(ERROR_SHARING_VIOLATION, EACCES)           \
-  X(ERROR_TOO_MANY_NAMES, ENOMEM)              \
-  X(ERROR_TOO_MANY_OPEN_FILES, EMFILE)         \
-  X(ERROR_UNEXP_NET_ERR, ECONNABORTED)         \
-  X(ERROR_WAIT_NO_CHILDREN, ECHILD)            \
-  X(ERROR_WORKING_SET_QUOTA, ENOMEM)           \
-  X(ERROR_WRITE_PROTECT, EACCES)               \
-  X(ERROR_WRONG_DISK, EACCES)                  \
-  X(WSAEACCES, EACCES)                         \
-  X(WSAEADDRINUSE, EADDRINUSE)                 \
-  X(WSAEADDRNOTAVAIL, EADDRNOTAVAIL)           \
-  X(WSAEAFNOSUPPORT, EAFNOSUPPORT)             \
-  X(WSAECONNABORTED, ECONNABORTED)             \
-  X(WSAECONNREFUSED, ECONNREFUSED)             \
-  X(WSAECONNRESET, ECONNRESET)                 \
-  X(WSAEDISCON, EPIPE)                         \
-  X(WSAEFAULT, EFAULT)                         \
-  X(WSAEHOSTDOWN, EHOSTUNREACH)                \
-  X(WSAEHOSTUNREACH, EHOSTUNREACH)             \
-  X(WSAEINTR, EINTR)                           \
-  X(WSAEINVAL, EINVAL)                         \
-  X(WSAEISCONN, EISCONN)                       \
-  X(WSAEMSGSIZE, EMSGSIZE)                     \
-  X(WSAENETDOWN, ENETDOWN)                     \
-  X(WSAENETRESET, EHOSTUNREACH)                \
-  X(WSAENETUNREACH, ENETUNREACH)               \
-  X(WSAENOBUFS, ENOMEM)                        \
-  X(WSAENOTCONN, ENOTCONN)                     \
-  X(WSAENOTSOCK, ENOTSOCK)                     \
-  X(WSAEOPNOTSUPP, EOPNOTSUPP)                 \
-  X(WSAESHUTDOWN, EPIPE)                       \
-  X(WSAETIMEDOUT, ETIMEDOUT)                   \
-  X(WSAEWOULDBLOCK, EWOULDBLOCK)
+#define _ERROR_ERRNO_MAP(X)                  \
+  X(ERROR_ACCESS_DENIED, EACCES)             \
+  X(ERROR_ALREADY_EXISTS, EEXIST)            \
+  X(ERROR_BAD_COMMAND, EACCES)               \
+  X(ERROR_BAD_EXE_FORMAT, ENOEXEC)           \
+  X(ERROR_BAD_LENGTH, EACCES)                \
+  X(ERROR_BAD_NETPATH, ENOENT)               \
+  X(ERROR_BAD_NET_NAME, ENOENT)              \
+  X(ERROR_BAD_NET_RESP, ENETDOWN)            \
+  X(ERROR_BAD_PATHNAME, ENOENT)              \
+  X(ERROR_BROKEN_PIPE, EPIPE)                \
+  X(ERROR_CANNOT_MAKE, EACCES)               \
+  X(ERROR_COMMITMENT_LIMIT, ENOMEM)          \
+  X(ERROR_CONNECTION_ABORTED, ECONNABORTED)  \
+  X(ERROR_CONNECTION_ACTIVE, EISCONN)        \
+  X(ERROR_CONNECTION_REFUSED, ECONNREFUSED)  \
+  X(ERROR_CRC, EACCES)                       \
+  X(ERROR_DIR_NOT_EMPTY, ENOTEMPTY)          \
+  X(ERROR_DISK_FULL, ENOSPC)                 \
+  X(ERROR_DUP_NAME, EADDRINUSE)              \
+  X(ERROR_FILENAME_EXCED_RANGE, ENOENT)      \
+  X(ERROR_FILE_NOT_FOUND, ENOENT)            \
+  X(ERROR_GEN_FAILURE, EACCES)               \
+  X(ERROR_GRACEFUL_DISCONNECT, EPIPE)        \
+  X(ERROR_HOST_DOWN, EHOSTUNREACH)           \
+  X(ERROR_HOST_UNREACHABLE, EHOSTUNREACH)    \
+  X(ERROR_INSUFFICIENT_BUFFER, EFAULT)       \
+  X(ERROR_INVALID_ADDRESS, EADDRNOTAVAIL)    \
+  X(ERROR_INVALID_FUNCTION, EINVAL)          \
+  X(ERROR_INVALID_HANDLE, EBADF)             \
+  X(ERROR_INVALID_NETNAME, EADDRNOTAVAIL)    \
+  X(ERROR_INVALID_PARAMETER, EINVAL)         \
+  X(ERROR_INVALID_USER_BUFFER, EMSGSIZE)     \
+  X(ERROR_IO_PENDING, EINPROGRESS)           \
+  X(ERROR_LOCK_VIOLATION, EACCES)            \
+  X(ERROR_MORE_DATA, EMSGSIZE)               \
+  X(ERROR_NETNAME_DELETED, ECONNABORTED)     \
+  X(ERROR_NETWORK_ACCESS_DENIED, EACCES)     \
+  X(ERROR_NETWORK_BUSY, ENETDOWN)            \
+  X(ERROR_NETWORK_UNREACHABLE, ENETUNREACH)  \
+  X(ERROR_NOACCESS, EFAULT)                  \
+  X(ERROR_NONPAGED_SYSTEM_RESOURCES, ENOMEM) \
+  X(ERROR_NOT_ENOUGH_MEMORY, ENOMEM)         \
+  X(ERROR_NOT_ENOUGH_QUOTA, ENOMEM)          \
+  X(ERROR_NOT_FOUND, ENOENT)                 \
+  X(ERROR_NOT_LOCKED, EACCES)                \
+  X(ERROR_NOT_READY, EACCES)                 \
+  X(ERROR_NOT_SAME_DEVICE, EXDEV)            \
+  X(ERROR_NOT_SUPPORTED, ENOTSUP)            \
+  X(ERROR_NO_MORE_FILES, ENOENT)             \
+  X(ERROR_NO_SYSTEM_RESOURCES, ENOMEM)       \
+  X(ERROR_OPERATION_ABORTED, EINTR)          \
+  X(ERROR_OUT_OF_PAPER, EACCES)              \
+  X(ERROR_PAGED_SYSTEM_RESOURCES, ENOMEM)    \
+  X(ERROR_PAGEFILE_QUOTA, ENOMEM)            \
+  X(ERROR_PATH_NOT_FOUND, ENOENT)            \
+  X(ERROR_PIPE_NOT_CONNECTED, EPIPE)         \
+  X(ERROR_PORT_UNREACHABLE, ECONNRESET)      \
+  X(ERROR_PROTOCOL_UNREACHABLE, ENETUNREACH) \
+  X(ERROR_REM_NOT_LIST, ECONNREFUSED)        \
+  X(ERROR_REQUEST_ABORTED, EINTR)            \
+  X(ERROR_REQ_NOT_ACCEP, EWOULDBLOCK)        \
+  X(ERROR_SECTOR_NOT_FOUND, EACCES)          \
+  X(ERROR_SEM_TIMEOUT, ETIMEDOUT)            \
+  X(ERROR_SHARING_VIOLATION, EACCES)         \
+  X(ERROR_TOO_MANY_NAMES, ENOMEM)            \
+  X(ERROR_TOO_MANY_OPEN_FILES, EMFILE)       \
+  X(ERROR_UNEXP_NET_ERR, ECONNABORTED)       \
+  X(ERROR_WAIT_NO_CHILDREN, ECHILD)          \
+  X(ERROR_WORKING_SET_QUOTA, ENOMEM)         \
+  X(ERROR_WRITE_PROTECT, EACCES)             \
+  X(ERROR_WRONG_DISK, EACCES)                \
+  X(WSAEACCES, EACCES)                       \
+  X(WSAEADDRINUSE, EADDRINUSE)               \
+  X(WSAEADDRNOTAVAIL, EADDRNOTAVAIL)         \
+  X(WSAEAFNOSUPPORT, EAFNOSUPPORT)           \
+  X(WSAECONNABORTED, ECONNABORTED)           \
+  X(WSAECONNREFUSED, ECONNREFUSED)           \
+  X(WSAECONNRESET, ECONNRESET)               \
+  X(WSAEDISCON, EPIPE)                       \
+  X(WSAEFAULT, EFAULT)                       \
+  X(WSAEHOSTDOWN, EHOSTUNREACH)              \
+  X(WSAEHOSTUNREACH, EHOSTUNREACH)           \
+  X(WSAEINPROGRESS, EBUSY)                   \
+  X(WSAEINTR, EINTR)                         \
+  X(WSAEINVAL, EINVAL)                       \
+  X(WSAEISCONN, EISCONN)                     \
+  X(WSAEMSGSIZE, EMSGSIZE)                   \
+  X(WSAENETDOWN, ENETDOWN)                   \
+  X(WSAENETRESET, EHOSTUNREACH)              \
+  X(WSAENETUNREACH, ENETUNREACH)             \
+  X(WSAENOBUFS, ENOMEM)                      \
+  X(WSAENOTCONN, ENOTCONN)                   \
+  X(WSAENOTSOCK, ENOTSOCK)                   \
+  X(WSAEOPNOTSUPP, EOPNOTSUPP)               \
+  X(WSAEPROCLIM, ENOMEM)                     \
+  X(WSAESHUTDOWN, EPIPE)                     \
+  X(WSAETIMEDOUT, ETIMEDOUT)                 \
+  X(WSAEWOULDBLOCK, EWOULDBLOCK)             \
+  X(WSANOTINITIALISED, ENETDOWN)             \
+  X(WSASYSNOTREADY, ENETDOWN)                \
+  X(WSAVERNOTSUPPORTED, ENOSYS)
 
 errno_t err_map_win_error_to_errno(DWORD error) {
   switch (error) {
@@ -1051,17 +1057,6 @@ int err_check_handle(HANDLE handle) {
 static bool _initialized = false;
 static INIT_ONCE _once = INIT_ONCE_STATIC_INIT;
 
-static int _winsock_global_init(void) {
-  int r;
-  WSADATA wsa_data;
-
-  r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-  if (r != 0)
-    return_error(-1);
-
-  return 0;
-}
-
 static BOOL CALLBACK _init_once_callback(INIT_ONCE* once,
                                          void* parameter,
                                          void** context) {
@@ -1069,7 +1064,8 @@ static BOOL CALLBACK _init_once_callback(INIT_ONCE* once,
   unused_var(parameter);
   unused_var(context);
 
-  if (_winsock_global_init() < 0 || nt_global_init() < 0 ||
+  /* N.b. that initialization order matters here. */
+  if (ws_global_init() < 0 || nt_global_init() < 0 || afd_global_init() < 0 ||
       reflock_global_init() < 0 || api_global_init() < 0)
     return FALSE;
 
@@ -1108,53 +1104,17 @@ int nt_global_init(void) {
 }
 
 #include <assert.h>
-#include <malloc.h>
 
 static const size_t _POLL_GROUP_MAX_SIZE = 32;
 
-typedef struct poll_group_allocator {
-  ep_port_t* port_info;
-  queue_t poll_group_queue;
-  WSAPROTOCOL_INFOW protocol_info;
-} poll_group_allocator_t;
-
 typedef struct poll_group {
-  poll_group_allocator_t* allocator;
+  ep_port_t* port_info;
   queue_node_t queue_node;
   SOCKET socket;
   size_t group_size;
 } poll_group_t;
 
-static int _poll_group_create_socket(poll_group_t* poll_group,
-                                     WSAPROTOCOL_INFOW* protocol_info,
-                                     HANDLE iocp) {
-  SOCKET socket;
-
-  socket = WSASocketW(protocol_info->iAddressFamily,
-                      protocol_info->iSocketType,
-                      protocol_info->iProtocol,
-                      protocol_info,
-                      0,
-                      WSA_FLAG_OVERLAPPED);
-  if (socket == INVALID_SOCKET)
-    return_error(-1);
-
-  if (!SetHandleInformation((HANDLE) socket, HANDLE_FLAG_INHERIT, 0))
-    goto error;
-
-  if (CreateIoCompletionPort((HANDLE) socket, iocp, 0, 0) == NULL)
-    goto error;
-
-  poll_group->socket = socket;
-  return 0;
-
-error:;
-  DWORD error = GetLastError();
-  closesocket(socket);
-  return_error(-1, error);
-}
-
-static poll_group_t* _poll_group_new(poll_group_allocator_t* pga) {
+static poll_group_t* _poll_group_new(ep_port_t* port_info) {
   poll_group_t* poll_group = malloc(sizeof *poll_group);
   if (poll_group == NULL)
     return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
@@ -1162,83 +1122,60 @@ static poll_group_t* _poll_group_new(poll_group_allocator_t* pga) {
   memset(poll_group, 0, sizeof *poll_group);
 
   queue_node_init(&poll_group->queue_node);
-  poll_group->allocator = pga;
+  poll_group->port_info = port_info;
 
-  if (_poll_group_create_socket(
-          poll_group, &pga->protocol_info, pga->port_info->iocp) < 0) {
+  if (afd_create_driver_socket(port_info->iocp, &poll_group->socket) < 0) {
     free(poll_group);
     return NULL;
   }
 
-  queue_append(&pga->poll_group_queue, &poll_group->queue_node);
+  queue_append(&port_info->poll_group_queue, &poll_group->queue_node);
 
   return poll_group;
 }
 
-static void _poll_group_delete(poll_group_t* poll_group) {
+void poll_group_delete(poll_group_t* poll_group) {
   assert(poll_group->group_size == 0);
   closesocket(poll_group->socket);
   queue_remove(&poll_group->queue_node);
   free(poll_group);
 }
 
+poll_group_t* poll_group_from_queue_node(queue_node_t* queue_node) {
+  return container_of(queue_node, poll_group_t, queue_node);
+}
+
 SOCKET poll_group_get_socket(poll_group_t* poll_group) {
   return poll_group->socket;
 }
 
-poll_group_allocator_t* poll_group_allocator_new(
-    ep_port_t* port_info, const WSAPROTOCOL_INFOW* protocol_info) {
-  poll_group_allocator_t* pga = malloc(sizeof *pga);
-  if (pga == NULL)
-    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
-
-  queue_init(&pga->poll_group_queue);
-  pga->port_info = port_info;
-  pga->protocol_info = *protocol_info;
-
-  return pga;
-}
-
-void poll_group_allocator_delete(poll_group_allocator_t* pga) {
-  queue_t* poll_group_queue = &pga->poll_group_queue;
-
-  while (!queue_empty(poll_group_queue)) {
-    queue_node_t* queue_node = queue_first(poll_group_queue);
-    poll_group_t* poll_group =
-        container_of(queue_node, poll_group_t, queue_node);
-    _poll_group_delete(poll_group);
-  }
-
-  free(pga);
-}
-
-poll_group_t* poll_group_acquire(poll_group_allocator_t* pga) {
-  queue_t* queue = &pga->poll_group_queue;
+poll_group_t* poll_group_acquire(ep_port_t* port_info) {
+  queue_t* queue = &port_info->poll_group_queue;
   poll_group_t* poll_group =
       !queue_empty(queue)
           ? container_of(queue_last(queue), poll_group_t, queue_node)
           : NULL;
 
   if (poll_group == NULL || poll_group->group_size >= _POLL_GROUP_MAX_SIZE)
-    poll_group = _poll_group_new(pga);
+    poll_group = _poll_group_new(port_info);
   if (poll_group == NULL)
     return NULL;
 
   if (++poll_group->group_size == _POLL_GROUP_MAX_SIZE)
-    queue_move_first(&pga->poll_group_queue, &poll_group->queue_node);
+    queue_move_first(&port_info->poll_group_queue, &poll_group->queue_node);
 
   return poll_group;
 }
 
 void poll_group_release(poll_group_t* poll_group) {
-  poll_group_allocator_t* pga = poll_group->allocator;
+  ep_port_t* port_info = poll_group->port_info;
 
   poll_group->group_size--;
   assert(poll_group->group_size < _POLL_GROUP_MAX_SIZE);
 
-  queue_move_last(&pga->poll_group_queue, &poll_group->queue_node);
+  queue_move_last(&port_info->poll_group_queue, &poll_group->queue_node);
 
-  /* TODO: free the poll_group_t* item at some point. */
+  /* Poll groups are currently only freed when the epoll port is closed. */
 }
 
 #define _PORT_MAX_ON_STACK_COMPLETIONS 256
@@ -1279,9 +1216,10 @@ ep_port_t* ep_port_new(HANDLE* iocp_out) {
   memset(port_info, 0, sizeof *port_info);
 
   port_info->iocp = iocp;
+  tree_init(&port_info->sock_tree);
   queue_init(&port_info->sock_update_queue);
   queue_init(&port_info->sock_deleted_queue);
-  tree_init(&port_info->sock_tree);
+  queue_init(&port_info->poll_group_queue);
   reflock_tree_node_init(&port_info->handle_tree_node);
   InitializeCriticalSection(&port_info->lock);
 
@@ -1317,12 +1255,9 @@ int ep_port_close(ep_port_t* port_info) {
 int ep_port_delete(ep_port_t* port_info) {
   tree_node_t* tree_node;
   queue_node_t* queue_node;
-  size_t i;
 
-  EnterCriticalSection(&port_info->lock);
-
-  if (port_info->iocp != NULL)
-    _ep_port_close_iocp(port_info);
+  /* At this point the IOCP port should have been closed. */
+  assert(port_info->iocp == NULL);
 
   while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
     ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
@@ -1334,13 +1269,10 @@ int ep_port_delete(ep_port_t* port_info) {
     ep_sock_force_delete(port_info, sock_info);
   }
 
-  for (i = 0; i < array_count(port_info->poll_group_allocators); i++) {
-    poll_group_allocator_t* pga = port_info->poll_group_allocators[i];
-    if (pga != NULL)
-      poll_group_allocator_delete(pga);
+  while ((queue_node = queue_first(&port_info->poll_group_queue)) != NULL) {
+    poll_group_t* poll_group = poll_group_from_queue_node(queue_node);
+    poll_group_delete(poll_group);
   }
-
-  LeaveCriticalSection(&port_info->lock);
 
   DeleteCriticalSection(&port_info->lock);
 
@@ -1462,7 +1394,7 @@ int ep_port_wait(ep_port_t* port_info,
   /* Dequeue completion packets until either at least one interesting event
    * has been discovered, or the timeout is reached.
    */
-  do {
+  for (;;) {
     ULONGLONG now;
 
     result =
@@ -1471,16 +1403,20 @@ int ep_port_wait(ep_port_t* port_info,
       break; /* Result, error, or time-out. */
 
     if (timeout < 0)
-      continue; /* _ep_port_wait() never times out. */
+      continue; /* When timeout is negative, never time out. */
 
-    /* Check for time-out. */
+    /* Update time. */
     now = GetTickCount64();
-    if (now >= due)
-      break;
 
-    /* Recompute timeout. */
+    /* Do not allow the due time to be in the past. */
+    if (now >= due) {
+      SetLastError(WAIT_TIMEOUT);
+      break;
+    }
+
+    /* Recompute time-out argument for GetQueuedCompletionStatus. */
     gqcs_timeout = (DWORD)(due - now);
-  } while (gqcs_timeout > 0);
+  }
 
   _ep_port_update_events_if_polling(port_info);
 
@@ -1587,36 +1523,6 @@ ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
   if (sock_info == NULL)
     return_error(NULL, ERROR_NOT_FOUND);
   return sock_info;
-}
-
-static poll_group_allocator_t* _ep_port_get_poll_group_allocator(
-    ep_port_t* port_info,
-    size_t protocol_id,
-    const WSAPROTOCOL_INFOW* protocol_info) {
-  poll_group_allocator_t** pga;
-
-  assert(protocol_id < array_count(port_info->poll_group_allocators));
-
-  pga = &port_info->poll_group_allocators[protocol_id];
-  if (*pga == NULL)
-    *pga = poll_group_allocator_new(port_info, protocol_info);
-
-  return *pga;
-}
-
-poll_group_t* ep_port_acquire_poll_group(
-    ep_port_t* port_info,
-    size_t protocol_id,
-    const WSAPROTOCOL_INFOW* protocol_info) {
-  poll_group_allocator_t* pga =
-      _ep_port_get_poll_group_allocator(port_info, protocol_id, protocol_info);
-  return poll_group_acquire(pga);
-}
-
-void ep_port_release_poll_group(ep_port_t* port_info,
-                                poll_group_t* poll_group) {
-  unused_var(port_info);
-  poll_group_release(poll_group);
 }
 
 void ep_port_request_socket_update(ep_port_t* port_info,
@@ -1815,12 +1721,6 @@ static inline uint32_t _sync_add_and_fetch(volatile uint32_t* target,
   return InterlockedAdd((volatile long*) target, value);
 }
 
-static inline uint32_t _sync_sub_and_fetch(volatile uint32_t* target,
-                                           uint32_t value) {
-  uint32_t add_value = -(int32_t) value;
-  return _sync_add_and_fetch(target, add_value);
-}
-
 static inline uint32_t _sync_fetch_and_set(volatile uint32_t* target,
                                            uint32_t value) {
   static_assert(sizeof(*target) == sizeof(long), "");
@@ -1834,7 +1734,7 @@ void reflock_ref(reflock_t* reflock) {
 }
 
 void reflock_unref(reflock_t* reflock) {
-  uint32_t state = _sync_sub_and_fetch(&reflock->state, _REF);
+  uint32_t state = _sync_add_and_fetch(&reflock->state, -(int32_t) _REF);
   uint32_t ref_count = state & _REF_MASK;
   uint32_t destroy = state & _DESTROY_MASK;
 
@@ -1880,7 +1780,7 @@ typedef struct _ep_sock_private {
   ep_sock_t pub;
   _poll_req_t poll_req;
   poll_group_t* poll_group;
-  SOCKET afd_socket;
+  SOCKET base_socket;
   epoll_data_t user_data;
   uint32_t user_events;
   uint32_t pending_events;
@@ -2023,21 +1923,18 @@ static int _ep_sock_cancel_poll(_ep_sock_private_t* sock_private) {
 }
 
 ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
-  SOCKET afd_socket;
-  ssize_t protocol_id;
-  WSAPROTOCOL_INFOW protocol_info;
+  SOCKET base_socket;
   poll_group_t* poll_group;
   _ep_sock_private_t* sock_private;
 
   if (socket == 0 || socket == INVALID_SOCKET)
     return_error(NULL, ERROR_INVALID_HANDLE);
 
-  protocol_id = afd_get_protocol(socket, &afd_socket, &protocol_info);
-  if (protocol_id < 0)
+  base_socket = ws_get_base_socket(socket);
+  if (base_socket == INVALID_SOCKET)
     return NULL;
 
-  poll_group =
-      ep_port_acquire_poll_group(port_info, protocol_id, &protocol_info);
+  poll_group = poll_group_acquire(port_info);
   if (poll_group == NULL)
     return NULL;
 
@@ -2047,7 +1944,7 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
 
   memset(sock_private, 0, sizeof *sock_private);
 
-  sock_private->afd_socket = afd_socket;
+  sock_private->base_socket = base_socket;
   sock_private->poll_group = poll_group;
 
   tree_node_init(&sock_private->pub.tree_node);
@@ -2062,7 +1959,7 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
 err2:
   _ep_sock_free(sock_private);
 err1:
-  ep_port_release_poll_group(port_info, poll_group);
+  poll_group_release(poll_group);
 
   return NULL;
 }
@@ -2088,7 +1985,7 @@ static void _ep_sock_delete(ep_port_t* port_info,
   if (force || sock_private->poll_status == _POLL_IDLE) {
     /* Free the sock_info now. */
     ep_port_remove_deleted_socket(port_info, sock_info);
-    ep_port_release_poll_group(port_info, sock_private->poll_group);
+    poll_group_release(sock_private->poll_group);
     _ep_sock_free(sock_private);
   } else {
     /* Free the socket later. */
@@ -2153,7 +2050,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
 
     if (_poll_req_submit(&sock_private->poll_req,
                          sock_private->user_events,
-                         sock_private->afd_socket,
+                         sock_private->base_socket,
                          driver_socket) < 0) {
       if (GetLastError() == ERROR_INVALID_HANDLE)
         /* The socket is broken. It will be dropped from the epoll set. */
@@ -2231,50 +2128,6 @@ int ep_sock_feed_event(ep_port_t* port_info,
 
 #include <string.h>
 
-static void _tree_rotate_left(tree_t* tree, tree_node_t* node) {
-  tree_node_t* p = node;
-  tree_node_t* q = node->right;
-  tree_node_t* parent = p->parent;
-
-  if (parent) {
-    if (parent->left == p)
-      parent->left = q;
-    else
-      parent->right = q;
-  } else {
-    tree->root = q;
-  }
-
-  q->parent = parent;
-  p->parent = q;
-  p->right = q->left;
-  if (p->right)
-    p->right->parent = p;
-  q->left = p;
-}
-
-static void _tree_rotate_right(tree_t* tree, tree_node_t* node) {
-  tree_node_t* p = node;
-  tree_node_t* q = node->left;
-  tree_node_t* parent = p->parent;
-
-  if (parent) {
-    if (parent->left == p)
-      parent->left = q;
-    else
-      parent->right = q;
-  } else {
-    tree->root = q;
-  }
-
-  q->parent = parent;
-  p->parent = q;
-  p->left = q->right;
-  if (p->left)
-    p->left->parent = p;
-  q->right = p;
-}
-
 void tree_init(tree_t* tree) {
   memset(tree, 0, sizeof *tree);
 }
@@ -2283,28 +2136,66 @@ void tree_node_init(tree_node_t* node) {
   memset(node, 0, sizeof *node);
 }
 
+#define _tree_rotate(cis, trans, tree, node) \
+  do {                                       \
+    tree_node_t* p = node;                   \
+    tree_node_t* q = node->trans;            \
+    tree_node_t* parent1 = p->parent;        \
+                                             \
+    if (parent1) {                           \
+      if (parent1->left == p)                \
+        parent1->left = q;                   \
+      else                                   \
+        parent1->right = q;                  \
+    } else {                                 \
+      tree->root = q;                        \
+    }                                        \
+                                             \
+    q->parent = parent1;                     \
+    p->parent = q;                           \
+    p->trans = q->cis;                       \
+    if (p->trans)                            \
+      p->trans->parent = p;                  \
+    q->cis = p;                              \
+  } while (0)
+
+#define _tree_add_insert_or_descend(side, parent, node) \
+  if (parent->side) {                                   \
+    parent = parent->side;                              \
+  } else {                                              \
+    parent->side = node;                                \
+    break;                                              \
+  }
+
+#define _tree_add_fixup(cis, trans, tree, parent, node) \
+  tree_node_t* grandparent = parent->parent;            \
+  tree_node_t* uncle = grandparent->trans;              \
+                                                        \
+  if (uncle && uncle->red) {                            \
+    parent->red = uncle->red = false;                   \
+    grandparent->red = true;                            \
+    node = grandparent;                                 \
+  } else {                                              \
+    if (node == parent->trans) {                        \
+      _tree_rotate(cis, trans, tree, parent);           \
+      node = parent;                                    \
+      parent = node->parent;                            \
+    }                                                   \
+    parent->red = false;                                \
+    grandparent->red = true;                            \
+    _tree_rotate(trans, cis, tree, grandparent);        \
+  }
+
 int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   tree_node_t* parent;
-  tree_node_t* grandparent;
-  tree_node_t* uncle;
 
   parent = tree->root;
   if (parent) {
     for (;;) {
       if (key < parent->key) {
-        if (parent->left) {
-          parent = parent->left;
-        } else {
-          parent->left = node;
-          break;
-        }
+        _tree_add_insert_or_descend(left, parent, node);
       } else if (key > parent->key) {
-        if (parent->right) {
-          parent = parent->right;
-        } else {
-          parent->right = node;
-          break;
-        }
+        _tree_add_insert_or_descend(right, parent, node);
       } else {
         return -1;
       }
@@ -2318,54 +2209,48 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   node->parent = parent;
   node->red = true;
 
-  while (parent && parent->red) {
-    grandparent = parent->parent;
-    if (parent == grandparent->left) {
-      uncle = grandparent->right;
-      if (uncle && uncle->red) {
-        parent->red = uncle->red = false;
-        grandparent->red = true;
-        node = grandparent;
-      } else {
-        if (node == parent->right) {
-          _tree_rotate_left(tree, parent);
-          node = parent;
-          parent = node->parent;
-        }
-        parent->red = false;
-        grandparent->red = true;
-        _tree_rotate_right(tree, grandparent);
-      }
+  for (; parent && parent->red; parent = node->parent) {
+    if (parent == parent->parent->left) {
+      _tree_add_fixup(left, right, tree, parent, node);
     } else {
-      uncle = grandparent->left;
-      if (uncle && uncle->red) {
-        parent->red = uncle->red = false;
-        grandparent->red = true;
-        node = grandparent;
-      } else {
-        if (node == parent->left) {
-          _tree_rotate_right(tree, parent);
-          node = parent;
-          parent = node->parent;
-        }
-        parent->red = false;
-        grandparent->red = true;
-        _tree_rotate_left(tree, grandparent);
-      }
+      _tree_add_fixup(right, left, tree, parent, node);
     }
-    parent = node->parent;
   }
   tree->root->red = false;
 
   return 0;
 }
 
+#define _tree_del_fixup(cis, trans, tree, node)    \
+  tree_node_t* sibling = parent->trans;            \
+                                                   \
+  if (sibling->red) {                              \
+    sibling->red = false;                          \
+    parent->red = true;                            \
+    _tree_rotate(cis, trans, tree, parent);        \
+    sibling = parent->trans;                       \
+  }                                                \
+  if ((sibling->left && sibling->left->red) ||     \
+      (sibling->right && sibling->right->red)) {   \
+    if (!sibling->trans || !sibling->trans->red) { \
+      sibling->cis->red = false;                   \
+      sibling->red = true;                         \
+      _tree_rotate(trans, cis, tree, sibling);     \
+      sibling = parent->trans;                     \
+    }                                              \
+    sibling->red = parent->red;                    \
+    parent->red = sibling->trans->red = false;     \
+    _tree_rotate(cis, trans, tree, parent);        \
+    node = tree->root;                             \
+    break;                                         \
+  }                                                \
+  sibling->red = true;
+
 void tree_del(tree_t* tree, tree_node_t* node) {
   tree_node_t* parent = node->parent;
   tree_node_t* left = node->left;
   tree_node_t* right = node->right;
   tree_node_t* next;
-  tree_node_t* sibling;
   bool red;
 
   if (!left) {
@@ -2422,51 +2307,10 @@ void tree_del(tree_t* tree, tree_node_t* node) {
     if (node == tree->root)
       break;
     if (node == parent->left) {
-      sibling = parent->right;
-      if (sibling->red) {
-        sibling->red = false;
-        parent->red = true;
-        _tree_rotate_left(tree, parent);
-        sibling = parent->right;
-      }
-      if ((sibling->left && sibling->left->red) ||
-          (sibling->right && sibling->right->red)) {
-        if (!sibling->right || !sibling->right->red) {
-          sibling->left->red = false;
-          sibling->red = true;
-          _tree_rotate_right(tree, sibling);
-          sibling = parent->right;
-        }
-        sibling->red = parent->red;
-        parent->red = sibling->right->red = false;
-        _tree_rotate_left(tree, parent);
-        node = tree->root;
-        break;
-      }
+      _tree_del_fixup(left, right, tree, node);
     } else {
-      sibling = parent->left;
-      if (sibling->red) {
-        sibling->red = false;
-        parent->red = true;
-        _tree_rotate_right(tree, parent);
-        sibling = parent->left;
-      }
-      if ((sibling->left && sibling->left->red) ||
-          (sibling->right && sibling->right->red)) {
-        if (!sibling->left || !sibling->left->red) {
-          sibling->right->red = false;
-          sibling->red = true;
-          _tree_rotate_left(tree, sibling);
-          sibling = parent->left;
-        }
-        sibling->red = parent->red;
-        parent->red = sibling->left->red = false;
-        _tree_rotate_right(tree, parent);
-        node = tree->root;
-        break;
-      }
+      _tree_del_fixup(right, left, tree, node);
     }
-    sibling->red = true;
     node = parent;
     parent = parent->parent;
   } while (!node->red);
@@ -2497,4 +2341,66 @@ void* util_safe_container_of_helper(void* ptr, size_t offset) {
     return NULL;
   else
     return (char*) ptr - offset;
+}
+
+#ifndef SIO_BASE_HANDLE
+#define SIO_BASE_HANDLE 0x48000022
+#endif
+
+#define _WS_INITIAL_CATALOG_BUFFER_SIZE 0x4000 /* 16kb. */
+
+int ws_global_init(void) {
+  int r;
+  WSADATA wsa_data;
+
+  r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+  if (r != 0)
+    return_error(-1, r);
+
+  return 0;
+}
+
+SOCKET ws_get_base_socket(SOCKET socket) {
+  SOCKET base_socket;
+  DWORD bytes;
+
+  if (WSAIoctl(socket,
+               SIO_BASE_HANDLE,
+               NULL,
+               0,
+               &base_socket,
+               sizeof base_socket,
+               &bytes,
+               NULL,
+               NULL) == SOCKET_ERROR)
+    return_error(INVALID_SOCKET);
+
+  return base_socket;
+}
+
+/* Retrieves a copy of the winsock catalog.
+ * The infos pointer must be released by the caller with free().
+ */
+ssize_t ws_get_protocol_catalog(WSAPROTOCOL_INFOW** infos_out) {
+  DWORD buffer_size = _WS_INITIAL_CATALOG_BUFFER_SIZE;
+  int count;
+  WSAPROTOCOL_INFOW* infos;
+
+  for (;;) {
+    infos = malloc(buffer_size);
+    if (infos == NULL)
+      return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
+
+    count = WSAEnumProtocolsW(NULL, infos, &buffer_size);
+    if (count == SOCKET_ERROR) {
+      free(infos);
+      if (WSAGetLastError() == WSAENOBUFS)
+        continue; /* Try again with bigger buffer size. */
+      else
+        return_error(-1);
+    }
+
+    *infos_out = infos;
+    return count;
+  }
 }
