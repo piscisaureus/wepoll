@@ -16,10 +16,10 @@ typedef struct ep_sock ep_sock_t;
 
 typedef struct ep_port {
   HANDLE iocp;
-  poll_group_allocator_t* poll_group_allocator;
   tree_t sock_tree;
   queue_t sock_update_queue;
   queue_t sock_deleted_queue;
+  queue_t poll_group_queue;
   reflock_tree_node_t handle_tree_node;
   CRITICAL_SECTION lock;
   size_t active_poll_count;

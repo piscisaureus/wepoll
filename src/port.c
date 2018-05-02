@@ -50,9 +50,10 @@ ep_port_t* ep_port_new(HANDLE* iocp_out) {
   memset(port_info, 0, sizeof *port_info);
 
   port_info->iocp = iocp;
+  tree_init(&port_info->sock_tree);
   queue_init(&port_info->sock_update_queue);
   queue_init(&port_info->sock_deleted_queue);
-  tree_init(&port_info->sock_tree);
+  queue_init(&port_info->poll_group_queue);
   reflock_tree_node_init(&port_info->handle_tree_node);
   InitializeCriticalSection(&port_info->lock);
 
@@ -102,8 +103,10 @@ int ep_port_delete(ep_port_t* port_info) {
     ep_sock_force_delete(port_info, sock_info);
   }
 
-  if (port_info->poll_group_allocator != NULL)
-    poll_group_allocator_delete(port_info->poll_group_allocator);
+  while ((queue_node = queue_first(&port_info->poll_group_queue)) != NULL) {
+    poll_group_t* poll_group = poll_group_from_queue_node(queue_node);
+    poll_group_delete(poll_group);
+  }
 
   DeleteCriticalSection(&port_info->lock);
 
@@ -356,18 +359,8 @@ ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
   return sock_info;
 }
 
-static poll_group_allocator_t* _ep_port_get_poll_group_allocator(
-    ep_port_t* port_info) {
-  if (port_info->poll_group_allocator == NULL) {
-    port_info->poll_group_allocator = poll_group_allocator_new(port_info);
-  }
-
-  return port_info->poll_group_allocator;
-}
-
 poll_group_t* ep_port_acquire_poll_group(ep_port_t* port_info) {
-  poll_group_allocator_t* pga = _ep_port_get_poll_group_allocator(port_info);
-  return poll_group_acquire(pga);
+  return poll_group_acquire(port_info);
 }
 
 void ep_port_release_poll_group(ep_port_t* port_info,

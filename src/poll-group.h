@@ -7,16 +7,15 @@
 #include "win.h"
 
 typedef struct ep_port ep_port_t;
-typedef struct poll_group_allocator poll_group_allocator_t;
 typedef struct poll_group poll_group_t;
 
-WEPOLL_INTERNAL poll_group_allocator_t* poll_group_allocator_new(
-    ep_port_t* port_info);
-WEPOLL_INTERNAL void poll_group_allocator_delete(poll_group_allocator_t* pga);
+WEPOLL_INTERNAL poll_group_t* poll_group_acquire(ep_port_t* port);
+WEPOLL_INTERNAL void poll_group_release(poll_group_t* poll_group);
 
-WEPOLL_INTERNAL poll_group_t* poll_group_acquire(poll_group_allocator_t* pga);
-WEPOLL_INTERNAL void poll_group_release(poll_group_t* ds);
+WEPOLL_INTERNAL void poll_group_delete(poll_group_t* poll_group);
 
+WEPOLL_INTERNAL poll_group_t* poll_group_from_queue_node(
+    queue_node_t* queue_node);
 WEPOLL_INTERNAL SOCKET poll_group_get_socket(poll_group_t* poll_group);
 
 #endif /* WEPOLL_POLL_GROUP_H_ */
