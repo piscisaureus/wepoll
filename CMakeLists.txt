@@ -4,9 +4,9 @@ project(wepoll)
 link_libraries(ws2_32)
 
 if(MSVC)
-  add_compile_options(/Wall /wd4127 /wd4201 /wd4242 /wd4710 /wd4711 /wd4820)
+  add_compile_options(/Wall /WX /wd4127 /wd4201 /wd4242 /wd4710 /wd4711 /wd4820)
 else()
-  add_compile_options(-Wall -Wextra)
+  add_compile_options(-Wall -Wextra -Werror)
 endif()
 
 file(GLOB SOURCES_SRC src/*.c src/*.h)
