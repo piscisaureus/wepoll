@@ -65,7 +65,7 @@ HANDLE epoll_create1(int flags);
 * `size` is ignored but most be greater than zero.
 * `flags` must be zero as there are no supported flags.
 * Returns `NULL` on failure.
-* [man page][man epoll_create]
+* [Linux man page][man epoll_create]
 
 ### epoll_close
 
@@ -89,13 +89,14 @@ int epoll_ctl(HANDLE ephnd,
 * Control which socket events are monitored by an epoll port.
 * `ephnd` must be a HANDLE created by `epoll_create` or `epoll_create1`.
 * `op` must be one of `EPOLL_CTL_ADD`, `EPOLL_CTL_MOD`, `EPOLL_CTL_DEL`.
+* `sock` must be a valid socket created by `socket()` or `
 * It is recommended to always explicitly remove a socket from its epoll
   set using `EPOLL_CTL_DEL` *before* closing it. As on Linux, sockets
   are automatically removed from the epoll set when they are closed, but
   wepoll may not be able to detect this until the next call to
   `epoll_wait()`.
 * TODO: expand
-* [man page][man epoll_ctl]
+* [Linux man page][man epoll_ctl]
 
 ### epoll_wait
 
@@ -112,7 +113,7 @@ int epoll_wait(HANDLE ephnd,
   -  0 when a timeout occurs
   - ≥1 the number of evens received
 * TODO: expand
-* [man page][man epoll_wait]
+* [Linux man page][man epoll_wait]
 
 
 [ci status badge]:  https://ci.appveyor.com/api/projects/status/github/piscisaureus/wepoll?branch=master&svg=true
