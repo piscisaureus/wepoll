@@ -8,7 +8,6 @@
 #include "poll-group.h"
 #include "port.h"
 #include "sock.h"
-#include "wepoll.h"
 
 #define _KNOWN_EPOLL_EVENTS                                            \
   (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM | \
