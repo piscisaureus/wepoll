@@ -39,10 +39,6 @@ WEPOLL_INTERNAL int ep_port_ctl(ep_port_t* port_info,
                                 SOCKET sock,
                                 struct epoll_event* ev);
 
-WEPOLL_INTERNAL poll_group_t* ep_port_acquire_poll_group(ep_port_t* port_info);
-WEPOLL_INTERNAL void ep_port_release_poll_group(ep_port_t* port_info,
-                                                poll_group_t* poll_group);
-
 WEPOLL_INTERNAL int ep_port_register_socket_handle(ep_port_t* port_info,
                                                    ep_sock_t* sock_info,
                                                    SOCKET socket);

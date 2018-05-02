@@ -183,7 +183,7 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   if (base_socket == INVALID_SOCKET)
     return NULL;
 
-  poll_group = ep_port_acquire_poll_group(port_info);
+  poll_group = poll_group_acquire(port_info);
   if (poll_group == NULL)
     return NULL;
 
@@ -208,7 +208,7 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
 err2:
   _ep_sock_free(sock_private);
 err1:
-  ep_port_release_poll_group(port_info, poll_group);
+  poll_group_release(poll_group);
 
   return NULL;
 }
@@ -234,7 +234,7 @@ static void _ep_sock_delete(ep_port_t* port_info,
   if (force || sock_private->poll_status == _POLL_IDLE) {
     /* Free the sock_info now. */
     ep_port_remove_deleted_socket(port_info, sock_info);
-    ep_port_release_poll_group(port_info, sock_private->poll_group);
+    poll_group_release(sock_private->poll_group);
     _ep_sock_free(sock_private);
   } else {
     /* Free the socket later. */

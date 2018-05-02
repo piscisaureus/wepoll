@@ -359,16 +359,6 @@ ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
   return sock_info;
 }
 
-poll_group_t* ep_port_acquire_poll_group(ep_port_t* port_info) {
-  return poll_group_acquire(port_info);
-}
-
-void ep_port_release_poll_group(ep_port_t* port_info,
-                                poll_group_t* poll_group) {
-  unused_var(port_info);
-  poll_group_release(poll_group);
-}
-
 void ep_port_request_socket_update(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
   if (queue_enqueued(&sock_info->queue_node))
