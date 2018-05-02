@@ -99,9 +99,8 @@ init:
   - cmd: set
 
 install:
+  - ps: Install-Product node 'Current'
   - ps: >-
-      Install-Product node 'Current'
-
       if ($env:lsp) {
         echo "Installing Proxifier LSP..."
         if (!(Test-Path c:\proxif\setup.exe)) {
