@@ -103,6 +103,7 @@ install:
       Install-Product node 'Current'
 
       if ($env:lsp) {
+        echo "Installing Proxifier LSP..."
         if (!(Test-Path c:\proxif\setup.exe)) {
           $null = &mkdir -Force c:\proxif
           Invoke-WebRequest -Uri http://www.proxifier.com/download/ProxifierSetup.exe -OutFile "c:\proxif\setup.exe"
@@ -111,7 +112,6 @@ install:
         Start-Process -Wait c:\proxif\setup.exe -ArgumentList /silent,/norestart
 
         $catalog = &netsh winsock show catalog
-        echo $catalog
         if (!($catalog -like "*Layered Chain Entry*")) {
           throw "LSP not installed"
         }
