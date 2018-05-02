@@ -52,6 +52,11 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
+WEPOLL_INTERNAL int afd_global_init(void);
+
+WEPOLL_INTERNAL int afd_create_driver_socket(HANDLE iocp,
+                                             SOCKET* driver_socket_out);
+
 WEPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
                              AFD_POLL_INFO* poll_info,
                              OVERLAPPED* overlapped);

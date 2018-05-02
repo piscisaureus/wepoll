@@ -357,19 +357,16 @@ ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
 }
 
 static poll_group_allocator_t* _ep_port_get_poll_group_allocator(
-    ep_port_t* port_info, const WSAPROTOCOL_INFOW* protocol_info) {
+    ep_port_t* port_info) {
   if (port_info->poll_group_allocator == NULL) {
-    port_info->poll_group_allocator =
-        poll_group_allocator_new(port_info, protocol_info);
+    port_info->poll_group_allocator = poll_group_allocator_new(port_info);
   }
 
   return port_info->poll_group_allocator;
 }
 
-poll_group_t* ep_port_acquire_poll_group(
-    ep_port_t* port_info, const WSAPROTOCOL_INFOW* protocol_info) {
-  poll_group_allocator_t* pga =
-      _ep_port_get_poll_group_allocator(port_info, protocol_info);
+poll_group_t* ep_port_acquire_poll_group(ep_port_t* port_info) {
+  poll_group_allocator_t* pga = _ep_port_get_poll_group_allocator(port_info);
   return poll_group_acquire(pga);
 }
 
