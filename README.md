@@ -114,11 +114,19 @@ int epoll_wait(HANDLE ephnd,
 ```
 
 * Receive socket events from an epoll port.
-* Returns
-  - -1 on failure
-  -  0 when a timeout occurs
-  - ≥1 the number of evens received
-* TODO: expand
+* `events` should point to a caller-allocated array of
+  [`epoll_event`](#struct-epoll_event) structs, which will receive the
+  reported events.
+* `maxevents` is the maximum number of events that will be written to the
+  `events` array, and must be greater than zero.
+* `timeout` specifies whether to block when no events are immediately available.
+  - `<0` block indefinitely
+  - `0`  report any events that are already waiting, but don't block
+  - `≥1` block for at most N milliseconds
+* Return value:
+  - `-1` an error occurred
+  - `0`  timed out without any events to report
+  - `≥1` the number of events stored in the `events` buffer
 * [Linux man page][man epoll_wait]
 
 ### struct epoll_event
