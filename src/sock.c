@@ -2,6 +2,7 @@
 #include <malloc.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "afd.h"
 #include "error.h"
