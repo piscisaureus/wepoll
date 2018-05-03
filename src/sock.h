@@ -11,7 +11,6 @@
 #include "win.h"
 
 typedef struct ep_port ep_port_t;
-typedef struct poll_req poll_req_t;
 
 typedef struct ep_sock {
   tree_node_t tree_node;
