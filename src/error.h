@@ -1,8 +1,6 @@
 #ifndef WEPOLL_ERROR_H_
 #define WEPOLL_ERROR_H_
 
-#include <errno.h>
-
 #include "internal.h"
 #include "win.h"
 
