@@ -7,10 +7,9 @@
 #include "internal.h"
 #include "util.h"
 
-/* NB: the tree functions do not set errno or LastError when they fail. Each of
- * the API functions has at most one failure mode. It is up to the caller to
- * set an appropriate error code when necessary.
- */
+/* N.b.: the tree functions do not set errno or LastError when they fail. Each
+ * of the API functions has at most one failure mode. It is up to the caller to
+ * set an appropriate error code when necessary. */
 
 typedef struct tree tree_t;
 typedef struct tree_node tree_node_t;

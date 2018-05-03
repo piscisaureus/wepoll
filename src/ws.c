@@ -42,8 +42,7 @@ SOCKET ws_get_base_socket(SOCKET socket) {
 }
 
 /* Retrieves a copy of the winsock catalog.
- * The infos pointer must be released by the caller with free().
- */
+ * The infos pointer must be released by the caller with free(). */
 ssize_t ws_get_protocol_catalog(WSAPROTOCOL_INFOW** infos_out) {
   DWORD buffer_size = _WS_INITIAL_CATALOG_BUFFER_SIZE;
   int count;

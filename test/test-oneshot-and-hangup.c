@@ -200,10 +200,9 @@ int main(void) {
   }
 
   {
-    /* Add the *write* socket to the epoll set. The event mask is empty,
-     * but since EPOLLHUP and EPOLLERR are always reportable, the next call to
-     * epoll_wait() should be able to detect that the connection is now closed.
-     */
+    /* Add the *write* socket to the epoll set. The event mask is empty, but
+     * since EPOLLHUP and EPOLLERR are always reportable, the next call to
+     * epoll_wait() should detect that the connection has been closed. */
     struct epoll_event ev;
     int r;
 

@@ -214,8 +214,7 @@ int ep_port_wait(ep_port_t* port_info,
   }
 
   /* Compute the timeout for GetQueuedCompletionStatus, and the wait end
-   * time, if the user specified a timeout other than zero or infinite.
-   */
+   * time, if the user specified a timeout other than zero or infinite. */
   if (timeout > 0) {
     due = GetTickCount64() + timeout;
     gqcs_timeout = (DWORD) timeout;
@@ -228,8 +227,7 @@ int ep_port_wait(ep_port_t* port_info,
   EnterCriticalSection(&port_info->lock);
 
   /* Dequeue completion packets until either at least one interesting event
-   * has been discovered, or the timeout is reached.
-   */
+   * has been discovered, or the timeout is reached. */
   for (;;) {
     ULONGLONG now;
 

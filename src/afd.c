@@ -37,8 +37,7 @@ static const GUID _AFD_PROVIDER_GUID_LIST[] = {
 
 /* This protocol info record is used by afd_create_driver_socket() to create
  * sockets that can be used as the first argument to afd_poll(). It is
- * populated on startup by afd_global_init().
- */
+ * populated on startup by afd_global_init(). */
 static WSAPROTOCOL_INFOW _afd_driver_socket_template;
 
 static const WSAPROTOCOL_INFOW* _afd_find_protocol_info(
@@ -76,8 +75,7 @@ int afd_global_init(void) {
 
   /* Find a WSAPROTOCOL_INFOW structure that we can use to create an MSAFD
    * socket. Preferentially we pick a UDP socket, otherwise try TCP or any
-   * other type.
-   */
+   * other type. */
   for (;;) {
     afd_info = _afd_find_protocol_info(infos, infos_count, IPPROTO_UDP);
     if (afd_info != NULL)
@@ -174,9 +172,8 @@ int afd_poll(SOCKET driver_socket,
                                  sizeof *poll_info);
 
   if (overlapped == NULL) {
-    /* If this is a blocking operation, wait for the event to become
-     * signaled, and then grab the real status from the io status block.
-     */
+    /* If this is a blocking operation, wait for the event to become signaled,
+     * and then grab the real status from the io status block. */
     if (status == STATUS_PENDING) {
       DWORD r = WaitForSingleObject(event, INFINITE);
 

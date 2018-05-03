@@ -53,8 +53,7 @@ int main(void) {
 
     r = connect(sock, (struct sockaddr*) &address, sizeof address);
     /* Unlike unix, windows sets the error to EWOULDBLOCK when the connection
-     * is being established in the background.
-     */
+     * is being established in the background. */
     check(r == 0 || WSAGetLastError() == WSAEWOULDBLOCK);
 
     ev.events = EPOLLOUT | EPOLLERR | EPOLLONESHOT;
