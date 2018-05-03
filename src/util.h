@@ -26,13 +26,13 @@ typedef intptr_t ssize_t;
 #define unused_fn /* nothing */
 #endif
 
+/* Polyfill `inline` for older versions of msvc (up to Visual Studio 2013) */
 #if defined(_MSC_VER) && _MSC_VER < 1900
-/* Polyfill `inline` for msvc 12 (Visual Studio 2013) */
 #define inline __inline
 #endif
 
-#if (defined(__clang__) || defined(__GNUC__)) && !defined(static_assert)
 /* Polyfill `static_assert` for some versions of clang and gcc. */
+#if (defined(__clang__) || defined(__GNUC__)) && !defined(static_assert)
 #define static_assert(condition, message) typedef __attribute__( \
     (__unused__)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
 #endif
