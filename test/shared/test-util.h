@@ -20,7 +20,8 @@ void no_inline no_return check_fail(const char* message);
 
 #define check(expression)                                           \
   (void) ((!!(expression)) ||                                       \
-          (check_fail("Check failed:\n"                             \
+          (check_fail("\n"                                          \
+                      "Check failed:\n"                             \
                       "  test: " #expression "\n"                   \
                       "  file: " __FILE__ "\n"                      \
                       "  line: " __check_to_string(__LINE__) "\n"), \
