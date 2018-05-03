@@ -96,12 +96,12 @@ int ep_port_delete(ep_port_t* port_info) {
   assert(port_info->iocp == NULL);
 
   while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
-    ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
+    ep_sock_t* sock_info = ep_sock_from_tree_node(tree_node);
     ep_sock_force_delete(port_info, sock_info);
   }
 
   while ((queue_node = queue_first(&port_info->sock_deleted_queue)) != NULL) {
-    ep_sock_t* sock_info = container_of(queue_node, ep_sock_t, queue_node);
+    ep_sock_t* sock_info = ep_sock_from_queue_node(queue_node);
     ep_sock_force_delete(port_info, sock_info);
   }
 
@@ -126,7 +126,7 @@ static int _ep_port_update_events(ep_port_t* port_info) {
    * it. */
   while (!queue_empty(sock_update_queue)) {
     queue_node_t* queue_node = queue_first(sock_update_queue);
-    ep_sock_t* sock_info = container_of(queue_node, ep_sock_t, queue_node);
+    ep_sock_t* sock_info = ep_sock_from_queue_node(queue_node);
 
     if (ep_sock_update(port_info, sock_info) < 0)
       return -1;
@@ -342,48 +342,50 @@ int ep_port_ctl(ep_port_t* port_info,
 int ep_port_register_socket_handle(ep_port_t* port_info,
                                    ep_sock_t* sock_info,
                                    SOCKET socket) {
-  if (tree_add(&port_info->sock_tree, &sock_info->tree_node, socket) < 0)
+  if (tree_add(
+          &port_info->sock_tree, ep_sock_to_tree_node(sock_info), socket) < 0)
     return_error(-1, ERROR_ALREADY_EXISTS);
   return 0;
 }
 
 void ep_port_unregister_socket_handle(ep_port_t* port_info,
                                       ep_sock_t* sock_info) {
-  tree_del(&port_info->sock_tree, &sock_info->tree_node);
+  tree_del(&port_info->sock_tree, ep_sock_to_tree_node(sock_info));
 }
 
 ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
-  ep_sock_t* sock_info = safe_container_of(
-      tree_find(&port_info->sock_tree, socket), ep_sock_t, tree_node);
-  if (sock_info == NULL)
+  tree_node_t* tree_node = tree_find(&port_info->sock_tree, socket);
+  if (tree_node == NULL)
     return_error(NULL, ERROR_NOT_FOUND);
-  return sock_info;
+  return ep_sock_from_tree_node(tree_node);
 }
 
 void ep_port_request_socket_update(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
-  if (queue_enqueued(&sock_info->queue_node))
+  if (queue_enqueued(ep_sock_to_queue_node(sock_info)))
     return;
-  queue_append(&port_info->sock_update_queue, &sock_info->queue_node);
+  queue_append(&port_info->sock_update_queue,
+               ep_sock_to_queue_node(sock_info));
 }
 
 void ep_port_cancel_socket_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   unused_var(port_info);
-  if (!queue_enqueued(&sock_info->queue_node))
+  if (!queue_enqueued(ep_sock_to_queue_node(sock_info)))
     return;
-  queue_remove(&sock_info->queue_node);
+  queue_remove(ep_sock_to_queue_node(sock_info));
 }
 
 void ep_port_add_deleted_socket(ep_port_t* port_info, ep_sock_t* sock_info) {
-  if (queue_enqueued(&sock_info->queue_node))
+  if (queue_enqueued(ep_sock_to_queue_node(sock_info)))
     return;
-  queue_append(&port_info->sock_deleted_queue, &sock_info->queue_node);
+  queue_append(&port_info->sock_deleted_queue,
+               ep_sock_to_queue_node(sock_info));
 }
 
 void ep_port_remove_deleted_socket(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
   unused_var(port_info);
-  if (!queue_enqueued(&sock_info->queue_node))
+  if (!queue_enqueued(ep_sock_to_queue_node(sock_info)))
     return;
-  queue_remove(&sock_info->queue_node);
+  queue_remove(ep_sock_to_queue_node(sock_info));
 }

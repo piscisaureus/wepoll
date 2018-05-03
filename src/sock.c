@@ -375,3 +375,19 @@ int ep_sock_feed_event(ep_port_t* port_info,
 
   return ev_count;
 }
+
+queue_node_t* ep_sock_to_queue_node(ep_sock_t* sock_info) {
+  return &sock_info->queue_node;
+}
+
+ep_sock_t* ep_sock_from_tree_node(tree_node_t* tree_node) {
+  return container_of(tree_node, ep_sock_t, tree_node);
+}
+
+tree_node_t* ep_sock_to_tree_node(ep_sock_t* sock_info) {
+  return &sock_info->tree_node;
+}
+
+ep_sock_t* ep_sock_from_queue_node(queue_node_t* queue_node) {
+  return container_of(queue_node, ep_sock_t, queue_node);
+}

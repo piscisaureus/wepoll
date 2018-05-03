@@ -32,4 +32,9 @@ WEPOLL_INTERNAL int ep_sock_feed_event(ep_port_t* port_info,
                                        OVERLAPPED* overlapped,
                                        struct epoll_event* ev);
 
+WEPOLL_INTERNAL ep_sock_t* ep_sock_from_queue_node(queue_node_t* queue_node);
+WEPOLL_INTERNAL queue_node_t* ep_sock_to_queue_node(ep_sock_t* sock_info);
+WEPOLL_INTERNAL ep_sock_t* ep_sock_from_tree_node(tree_node_t* tree_node);
+WEPOLL_INTERNAL tree_node_t* ep_sock_to_tree_node(ep_sock_t* sock_info);
+
 #endif /* WEPOLL_SOCK_H_ */
