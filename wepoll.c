@@ -453,11 +453,11 @@ int afd_global_init(void) {
   if (infos_count < 0)
     return_error(-1);
 
-  /* Find a WSAPROTOCOL_INDOW structure that we can use to create an MSAFD
+  /* Find a WSAPROTOCOL_INFOW structure that we can use to create an MSAFD
    * socket. Preferentially we pick a UDP socket, otherwise try TCP or any
    * other type.
    */
-  do {
+  for (;;) {
     afd_info = _afd_find_protocol_info(infos, infos_count, IPPROTO_UDP);
     if (afd_info != NULL)
       break;
@@ -472,7 +472,7 @@ int afd_global_init(void) {
 
     free(infos);
     return_error(-1, WSAENETDOWN); /* No suitable protocol found. */
-  } while (0);
+  }
 
   /* Copy found protocol information from the catalog to a static buffer. */
   _afd_driver_socket_template = *afd_info;
@@ -623,35 +623,6 @@ WEPOLL_INTERNAL poll_group_t* poll_group_from_queue_node(
     queue_node_t* queue_node);
 WEPOLL_INTERNAL SOCKET poll_group_get_socket(poll_group_t* poll_group);
 
-/* The reflock is a special kind of lock that normally prevents a chunk of
- * memory from being freed, but does allow the chunk of memory to eventually be
- * released in a coordinated fashion.
- *
- * Under normal operation, threads increase and decrease the reference count,
- * which are wait-free operations.
- *
- * Exactly once during the reflock's lifecycle, a thread holding a reference to
- * the lock may "destroy" the lock; this operation blocks until all other
- * threads holding a reference to the lock have dereferenced it. After
- * "destroy" returns, the calling thread may assume that no other threads have
- * a reference to the lock.
- *
- * Attemmpting to lock or destroy a lock after reflock_unref_and_destroy() has
- * been called is invalid and results in undefined behavior. Therefore the user
- * should use another lock to guarantee that this can't happen.
- */
-
-typedef struct reflock {
-  uint32_t state;
-} reflock_t;
-
-WEPOLL_INTERNAL int reflock_global_init(void);
-
-WEPOLL_INTERNAL void reflock_init(reflock_t* reflock);
-WEPOLL_INTERNAL void reflock_ref(reflock_t* reflock);
-WEPOLL_INTERNAL void reflock_unref(reflock_t* reflock);
-WEPOLL_INTERNAL void reflock_unref_and_destroy(reflock_t* reflock);
-
 /* NB: the tree functions do not set errno or LastError when they fail. Each of
  * the API functions has at most one failure mode. It is up to the caller to
  * set an appropriate error code when necessary.
@@ -681,32 +652,6 @@ WEPOLL_INTERNAL void tree_del(tree_t* tree, tree_node_t* node);
 WEPOLL_INTERNAL tree_node_t* tree_find(const tree_t* tree, uintptr_t key);
 WEPOLL_INTERNAL tree_node_t* tree_root(const tree_t* tree);
 
-typedef struct reflock_tree {
-  tree_t tree;
-  SRWLOCK lock;
-} reflock_tree_t;
-
-typedef struct reflock_tree_node {
-  tree_node_t tree_node;
-  reflock_t reflock;
-} reflock_tree_node_t;
-
-WEPOLL_INTERNAL void reflock_tree_init(reflock_tree_t* rtl);
-WEPOLL_INTERNAL void reflock_tree_node_init(reflock_tree_node_t* node);
-
-WEPOLL_INTERNAL int reflock_tree_add(reflock_tree_t* rlt,
-                                     reflock_tree_node_t* node,
-                                     uintptr_t key);
-
-WEPOLL_INTERNAL reflock_tree_node_t* reflock_tree_del_and_ref(
-    reflock_tree_t* rlt, uintptr_t key);
-WEPOLL_INTERNAL reflock_tree_node_t* reflock_tree_find_and_ref(
-    reflock_tree_t* rlt, uintptr_t key);
-
-WEPOLL_INTERNAL void reflock_tree_node_unref(reflock_tree_node_t* node);
-WEPOLL_INTERNAL void reflock_tree_node_unref_and_destroy(
-    reflock_tree_node_t* node);
-
 typedef struct ep_port ep_port_t;
 typedef struct poll_req poll_req_t;
 
@@ -730,6 +675,60 @@ WEPOLL_INTERNAL int ep_sock_feed_event(ep_port_t* port_info,
                                        OVERLAPPED* overlapped,
                                        struct epoll_event* ev);
 
+/* The reflock is a special kind of lock that normally prevents a chunk of
+ * memory from being freed, but does allow the chunk of memory to eventually be
+ * released in a coordinated fashion.
+ *
+ * Under normal operation, threads increase and decrease the reference count,
+ * which are wait-free operations.
+ *
+ * Exactly once during the reflock's lifecycle, a thread holding a reference to
+ * the lock may "destroy" the lock; this operation blocks until all other
+ * threads holding a reference to the lock have dereferenced it. After
+ * "destroy" returns, the calling thread may assume that no other threads have
+ * a reference to the lock.
+ *
+ * Attemmpting to lock or destroy a lock after reflock_unref_and_destroy() has
+ * been called is invalid and results in undefined behavior. Therefore the user
+ * should use another lock to guarantee that this can't happen.
+ */
+
+typedef struct reflock {
+  uint32_t state;
+} reflock_t;
+
+WEPOLL_INTERNAL int reflock_global_init(void);
+
+WEPOLL_INTERNAL void reflock_init(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_ref(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_unref(reflock_t* reflock);
+WEPOLL_INTERNAL void reflock_unref_and_destroy(reflock_t* reflock);
+
+typedef struct ts_tree {
+  tree_t tree;
+  SRWLOCK lock;
+} ts_tree_t;
+
+typedef struct ts_tree_node {
+  tree_node_t tree_node;
+  reflock_t reflock;
+} ts_tree_node_t;
+
+WEPOLL_INTERNAL void ts_tree_init(ts_tree_t* rtl);
+WEPOLL_INTERNAL void ts_tree_node_init(ts_tree_node_t* node);
+
+WEPOLL_INTERNAL int ts_tree_add(ts_tree_t* ts_tree,
+                                ts_tree_node_t* node,
+                                uintptr_t key);
+
+WEPOLL_INTERNAL ts_tree_node_t* ts_tree_del_and_ref(ts_tree_t* ts_tree,
+                                                    uintptr_t key);
+WEPOLL_INTERNAL ts_tree_node_t* ts_tree_find_and_ref(ts_tree_t* ts_tree,
+                                                     uintptr_t key);
+
+WEPOLL_INTERNAL void ts_tree_node_unref(ts_tree_node_t* node);
+WEPOLL_INTERNAL void ts_tree_node_unref_and_destroy(ts_tree_node_t* node);
+
 typedef struct ep_port ep_port_t;
 typedef struct ep_sock ep_sock_t;
 
@@ -739,7 +738,7 @@ typedef struct ep_port {
   queue_t sock_update_queue;
   queue_t sock_deleted_queue;
   queue_t poll_group_queue;
-  reflock_tree_node_t handle_tree_node;
+  ts_tree_node_t handle_tree_node;
   CRITICAL_SECTION lock;
   size_t active_poll_count;
 } ep_port_t;
@@ -776,15 +775,14 @@ WEPOLL_INTERNAL void ep_port_add_deleted_socket(ep_port_t* port_info,
 WEPOLL_INTERNAL void ep_port_remove_deleted_socket(ep_port_t* port_info,
                                                    ep_sock_t* sock_info);
 
-static reflock_tree_t _epoll_handle_tree;
+static ts_tree_t _epoll_handle_tree;
 
-static inline ep_port_t* _handle_tree_node_to_port(
-    reflock_tree_node_t* tree_node) {
+static inline ep_port_t* _handle_tree_node_to_port(ts_tree_node_t* tree_node) {
   return container_of(tree_node, ep_port_t, handle_tree_node);
 }
 
 int api_global_init(void) {
-  reflock_tree_init(&_epoll_handle_tree);
+  ts_tree_init(&_epoll_handle_tree);
   return 0;
 }
 
@@ -799,9 +797,9 @@ static HANDLE _epoll_create(void) {
   if (port_info == NULL)
     return NULL;
 
-  if (reflock_tree_add(&_epoll_handle_tree,
-                       &port_info->handle_tree_node,
-                       (uintptr_t) ephnd) < 0) {
+  if (ts_tree_add(&_epoll_handle_tree,
+                  &port_info->handle_tree_node,
+                  (uintptr_t) ephnd) < 0) {
     /* This should never happen. */
     ep_port_delete(port_info);
     return_error(NULL, ERROR_ALREADY_EXISTS);
@@ -825,13 +823,13 @@ HANDLE epoll_create1(int flags) {
 }
 
 int epoll_close(HANDLE ephnd) {
-  reflock_tree_node_t* tree_node;
+  ts_tree_node_t* tree_node;
   ep_port_t* port_info;
 
   if (init() < 0)
     return -1;
 
-  tree_node = reflock_tree_del_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
+  tree_node = ts_tree_del_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL) {
     err_set_win_error(ERROR_INVALID_PARAMETER);
     goto err;
@@ -840,7 +838,7 @@ int epoll_close(HANDLE ephnd) {
   port_info = _handle_tree_node_to_port(tree_node);
   ep_port_close(port_info);
 
-  reflock_tree_node_unref_and_destroy(tree_node);
+  ts_tree_node_unref_and_destroy(tree_node);
 
   return ep_port_delete(port_info);
 
@@ -850,15 +848,14 @@ err:
 }
 
 int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
-  reflock_tree_node_t* tree_node;
+  ts_tree_node_t* tree_node;
   ep_port_t* port_info;
   int r;
 
   if (init() < 0)
     return -1;
 
-  tree_node =
-      reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
+  tree_node = ts_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL) {
     err_set_win_error(ERROR_INVALID_PARAMETER);
     goto err;
@@ -867,7 +864,7 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   port_info = _handle_tree_node_to_port(tree_node);
   r = ep_port_ctl(port_info, op, sock, ev);
 
-  reflock_tree_node_unref(tree_node);
+  ts_tree_node_unref(tree_node);
 
   if (r < 0)
     goto err;
@@ -886,7 +883,7 @@ int epoll_wait(HANDLE ephnd,
                struct epoll_event* events,
                int maxevents,
                int timeout) {
-  reflock_tree_node_t* tree_node;
+  ts_tree_node_t* tree_node;
   ep_port_t* port_info;
   int num_events;
 
@@ -896,8 +893,7 @@ int epoll_wait(HANDLE ephnd,
   if (init() < 0)
     return -1;
 
-  tree_node =
-      reflock_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
+  tree_node = ts_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL) {
     err_set_win_error(ERROR_INVALID_PARAMETER);
     goto err;
@@ -906,7 +902,7 @@ int epoll_wait(HANDLE ephnd,
   port_info = _handle_tree_node_to_port(tree_node);
   num_events = ep_port_wait(port_info, events, maxevents, timeout);
 
-  reflock_tree_node_unref(tree_node);
+  ts_tree_node_unref(tree_node);
 
   if (num_events < 0)
     goto err;
@@ -1220,7 +1216,7 @@ ep_port_t* ep_port_new(HANDLE* iocp_out) {
   queue_init(&port_info->sock_update_queue);
   queue_init(&port_info->sock_deleted_queue);
   queue_init(&port_info->poll_group_queue);
-  reflock_tree_node_init(&port_info->handle_tree_node);
+  ts_tree_node_init(&port_info->handle_tree_node);
   InitializeCriticalSection(&port_info->lock);
 
   *iocp_out = iocp;
@@ -1610,73 +1606,6 @@ bool queue_empty(const queue_t* queue) {
 
 bool queue_enqueued(const queue_node_t* node) {
   return node->prev != node;
-}
-
-void reflock_tree_init(reflock_tree_t* rlt) {
-  tree_init(&rlt->tree);
-  InitializeSRWLock(&rlt->lock);
-}
-
-void reflock_tree_node_init(reflock_tree_node_t* node) {
-  tree_node_init(&node->tree_node);
-  reflock_init(&node->reflock);
-}
-
-int reflock_tree_add(reflock_tree_t* rlt,
-                     reflock_tree_node_t* node,
-                     uintptr_t key) {
-  int r;
-
-  AcquireSRWLockExclusive(&rlt->lock);
-  r = tree_add(&rlt->tree, &node->tree_node, key);
-  ReleaseSRWLockExclusive(&rlt->lock);
-
-  return r;
-}
-
-reflock_tree_node_t* reflock_tree_del_and_ref(reflock_tree_t* rlt,
-                                              uintptr_t key) {
-  tree_node_t* tree_node;
-  reflock_tree_node_t* rlt_node;
-
-  AcquireSRWLockExclusive(&rlt->lock);
-
-  tree_node = tree_find(&rlt->tree, key);
-  rlt_node = safe_container_of(tree_node, reflock_tree_node_t, tree_node);
-
-  if (rlt_node != NULL) {
-    tree_del(&rlt->tree, tree_node);
-    reflock_ref(&rlt_node->reflock);
-  }
-
-  ReleaseSRWLockExclusive(&rlt->lock);
-
-  return rlt_node;
-}
-
-reflock_tree_node_t* reflock_tree_find_and_ref(reflock_tree_t* rlt,
-                                               uintptr_t key) {
-  tree_node_t* tree_node;
-  reflock_tree_node_t* rlt_node;
-
-  AcquireSRWLockShared(&rlt->lock);
-
-  tree_node = tree_find(&rlt->tree, key);
-  rlt_node = safe_container_of(tree_node, reflock_tree_node_t, tree_node);
-  if (rlt_node != NULL)
-    reflock_ref(&rlt_node->reflock);
-
-  ReleaseSRWLockShared(&rlt->lock);
-
-  return rlt_node;
-}
-
-void reflock_tree_node_unref(reflock_tree_node_t* node) {
-  reflock_unref(&node->reflock);
-}
-
-void reflock_tree_node_unref_and_destroy(reflock_tree_node_t* node) {
-  reflock_unref_and_destroy(&node->reflock);
 }
 
 /* clang-format off */
@@ -2126,6 +2055,69 @@ int ep_sock_feed_event(ep_port_t* port_info,
   return ev_count;
 }
 
+void ts_tree_init(ts_tree_t* ts_tree) {
+  tree_init(&ts_tree->tree);
+  InitializeSRWLock(&ts_tree->lock);
+}
+
+void ts_tree_node_init(ts_tree_node_t* node) {
+  tree_node_init(&node->tree_node);
+  reflock_init(&node->reflock);
+}
+
+int ts_tree_add(ts_tree_t* ts_tree, ts_tree_node_t* node, uintptr_t key) {
+  int r;
+
+  AcquireSRWLockExclusive(&ts_tree->lock);
+  r = tree_add(&ts_tree->tree, &node->tree_node, key);
+  ReleaseSRWLockExclusive(&ts_tree->lock);
+
+  return r;
+}
+
+ts_tree_node_t* ts_tree_del_and_ref(ts_tree_t* ts_tree, uintptr_t key) {
+  tree_node_t* tree_node;
+  ts_tree_node_t* ts_tree_node;
+
+  AcquireSRWLockExclusive(&ts_tree->lock);
+
+  tree_node = tree_find(&ts_tree->tree, key);
+  ts_tree_node = safe_container_of(tree_node, ts_tree_node_t, tree_node);
+
+  if (ts_tree_node != NULL) {
+    tree_del(&ts_tree->tree, tree_node);
+    reflock_ref(&ts_tree_node->reflock);
+  }
+
+  ReleaseSRWLockExclusive(&ts_tree->lock);
+
+  return ts_tree_node;
+}
+
+ts_tree_node_t* ts_tree_find_and_ref(ts_tree_t* ts_tree, uintptr_t key) {
+  tree_node_t* tree_node;
+  ts_tree_node_t* ts_tree_node;
+
+  AcquireSRWLockShared(&ts_tree->lock);
+
+  tree_node = tree_find(&ts_tree->tree, key);
+  ts_tree_node = safe_container_of(tree_node, ts_tree_node_t, tree_node);
+  if (ts_tree_node != NULL)
+    reflock_ref(&ts_tree_node->reflock);
+
+  ReleaseSRWLockShared(&ts_tree->lock);
+
+  return ts_tree_node;
+}
+
+void ts_tree_node_unref(ts_tree_node_t* node) {
+  reflock_unref(&node->reflock);
+}
+
+void ts_tree_node_unref_and_destroy(ts_tree_node_t* node) {
+  reflock_unref_and_destroy(&node->reflock);
+}
+
 #include <string.h>
 
 void tree_init(tree_t* tree) {
@@ -2136,54 +2128,60 @@ void tree_node_init(tree_node_t* node) {
   memset(node, 0, sizeof *node);
 }
 
-#define _tree_rotate(cis, trans, tree, node) \
-  do {                                       \
-    tree_node_t* p = node;                   \
-    tree_node_t* q = node->trans;            \
-    tree_node_t* parent1 = p->parent;        \
-                                             \
-    if (parent1) {                           \
-      if (parent1->left == p)                \
-        parent1->left = q;                   \
-      else                                   \
-        parent1->right = q;                  \
-    } else {                                 \
-      tree->root = q;                        \
-    }                                        \
-                                             \
-    q->parent = parent1;                     \
-    p->parent = q;                           \
-    p->trans = q->cis;                       \
-    if (p->trans)                            \
-      p->trans->parent = p;                  \
-    q->cis = p;                              \
-  } while (0)
+#define _TREE_ROTATE(cis, trans)   \
+  tree_node_t* p = node;           \
+  tree_node_t* q = node->trans;    \
+  tree_node_t* parent = p->parent; \
+                                   \
+  if (parent) {                    \
+    if (parent->left == p)         \
+      parent->left = q;            \
+    else                           \
+      parent->right = q;           \
+  } else {                         \
+    tree->root = q;                \
+  }                                \
+                                   \
+  q->parent = parent;              \
+  p->parent = q;                   \
+  p->trans = q->cis;               \
+  if (p->trans)                    \
+    p->trans->parent = p;          \
+  q->cis = p;
 
-#define _tree_add_insert_or_descend(side, parent, node) \
-  if (parent->side) {                                   \
-    parent = parent->side;                              \
-  } else {                                              \
-    parent->side = node;                                \
-    break;                                              \
+static inline void _tree_rotate_left(tree_t* tree, tree_node_t* node) {
+  _TREE_ROTATE(left, right)
+}
+
+static inline void _tree_rotate_right(tree_t* tree, tree_node_t* node) {
+  _TREE_ROTATE(right, left)
+}
+
+#define _TREE_INSERT_OR_DESCEND(side) \
+  if (parent->side) {                 \
+    parent = parent->side;            \
+  } else {                            \
+    parent->side = node;              \
+    break;                            \
   }
 
-#define _tree_add_fixup(cis, trans, tree, parent, node) \
-  tree_node_t* grandparent = parent->parent;            \
-  tree_node_t* uncle = grandparent->trans;              \
-                                                        \
-  if (uncle && uncle->red) {                            \
-    parent->red = uncle->red = false;                   \
-    grandparent->red = true;                            \
-    node = grandparent;                                 \
-  } else {                                              \
-    if (node == parent->trans) {                        \
-      _tree_rotate(cis, trans, tree, parent);           \
-      node = parent;                                    \
-      parent = node->parent;                            \
-    }                                                   \
-    parent->red = false;                                \
-    grandparent->red = true;                            \
-    _tree_rotate(trans, cis, tree, grandparent);        \
+#define _TREE_FIXUP_AFTER_INSERT(cis, trans) \
+  tree_node_t* grandparent = parent->parent; \
+  tree_node_t* uncle = grandparent->trans;   \
+                                             \
+  if (uncle && uncle->red) {                 \
+    parent->red = uncle->red = false;        \
+    grandparent->red = true;                 \
+    node = grandparent;                      \
+  } else {                                   \
+    if (node == parent->trans) {             \
+      _tree_rotate_##cis(tree, parent);      \
+      node = parent;                         \
+      parent = node->parent;                 \
+    }                                        \
+    parent->red = false;                     \
+    grandparent->red = true;                 \
+    _tree_rotate_##trans(tree, grandparent); \
   }
 
 int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
@@ -2193,9 +2191,9 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   if (parent) {
     for (;;) {
       if (key < parent->key) {
-        _tree_add_insert_or_descend(left, parent, node);
+        _TREE_INSERT_OR_DESCEND(left)
       } else if (key > parent->key) {
-        _tree_add_insert_or_descend(right, parent, node);
+        _TREE_INSERT_OR_DESCEND(right)
       } else {
         return -1;
       }
@@ -2211,9 +2209,9 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
 
   for (; parent && parent->red; parent = node->parent) {
     if (parent == parent->parent->left) {
-      _tree_add_fixup(left, right, tree, parent, node);
+      _TREE_FIXUP_AFTER_INSERT(left, right)
     } else {
-      _tree_add_fixup(right, left, tree, parent, node);
+      _TREE_FIXUP_AFTER_INSERT(right, left)
     }
   }
   tree->root->red = false;
@@ -2221,13 +2219,13 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   return 0;
 }
 
-#define _tree_del_fixup(cis, trans, tree, node)    \
+#define _TREE_FIXUP_AFTER_REMOVE(cis, trans)       \
   tree_node_t* sibling = parent->trans;            \
                                                    \
   if (sibling->red) {                              \
     sibling->red = false;                          \
     parent->red = true;                            \
-    _tree_rotate(cis, trans, tree, parent);        \
+    _tree_rotate_##cis(tree, parent);              \
     sibling = parent->trans;                       \
   }                                                \
   if ((sibling->left && sibling->left->red) ||     \
@@ -2235,12 +2233,12 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
     if (!sibling->trans || !sibling->trans->red) { \
       sibling->cis->red = false;                   \
       sibling->red = true;                         \
-      _tree_rotate(trans, cis, tree, sibling);     \
+      _tree_rotate_##trans(tree, sibling);         \
       sibling = parent->trans;                     \
     }                                              \
     sibling->red = parent->red;                    \
     parent->red = sibling->trans->red = false;     \
-    _tree_rotate(cis, trans, tree, parent);        \
+    _tree_rotate_##cis(tree, parent);              \
     node = tree->root;                             \
     break;                                         \
   }                                                \
@@ -2307,9 +2305,9 @@ void tree_del(tree_t* tree, tree_node_t* node) {
     if (node == tree->root)
       break;
     if (node == parent->left) {
-      _tree_del_fixup(left, right, tree, node);
+      _TREE_FIXUP_AFTER_REMOVE(left, right)
     } else {
-      _tree_del_fixup(right, left, tree, node);
+      _TREE_FIXUP_AFTER_REMOVE(right, left)
     }
     node = parent;
     parent = parent->parent;
