@@ -131,8 +131,7 @@ static int _ep_port_update_events(ep_port_t* port_info) {
     if (ep_sock_update(port_info, sock_info) < 0)
       return -1;
 
-    /* ep_sock_update() removes the socket from the update list if
-     * successfull. */
+    /* ep_sock_update() removes the socket from the update queue. */
   }
 
   return 0;

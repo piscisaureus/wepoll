@@ -106,8 +106,8 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   return 0;
 
 err:
-  /* On Linux, in the case of epoll_ctl_mod(), EBADF takes precendence over
-   * other errors. Wepoll copies this behavior. */
+  /* On Linux, in the case of epoll_ctl_mod(), EBADF takes priority over other
+   * errors. Wepoll mimics this behavior. */
   err_check_handle(ephnd);
   err_check_handle((HANDLE) sock);
   return -1;
