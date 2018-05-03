@@ -110,6 +110,8 @@ int ep_port_delete(ep_port_t* port_info) {
     poll_group_delete(poll_group);
   }
 
+  assert(queue_empty(&port_info->sock_update_queue));
+
   DeleteCriticalSection(&port_info->lock);
 
   _ep_port_free(port_info);
