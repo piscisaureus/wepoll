@@ -26,17 +26,23 @@ int ts_tree_add(ts_tree_t* ts_tree, ts_tree_node_t* node, uintptr_t key) {
   return r;
 }
 
+static inline ts_tree_node_t* _ts_tree_find_node(ts_tree_t* ts_tree,
+                                                 uintptr_t key) {
+  tree_node_t* tree_node = tree_find(&ts_tree->tree, key);
+  if (tree_node == NULL)
+    return NULL;
+
+  return container_of(tree_node, ts_tree_node_t, tree_node);
+}
+
 ts_tree_node_t* ts_tree_del_and_ref(ts_tree_t* ts_tree, uintptr_t key) {
-  tree_node_t* tree_node;
   ts_tree_node_t* ts_tree_node;
 
   AcquireSRWLockExclusive(&ts_tree->lock);
 
-  tree_node = tree_find(&ts_tree->tree, key);
-  ts_tree_node = safe_container_of(tree_node, ts_tree_node_t, tree_node);
-
+  ts_tree_node = _ts_tree_find_node(ts_tree, key);
   if (ts_tree_node != NULL) {
-    tree_del(&ts_tree->tree, tree_node);
+    tree_del(&ts_tree->tree, &ts_tree_node->tree_node);
     reflock_ref(&ts_tree_node->reflock);
   }
 
@@ -46,13 +52,11 @@ ts_tree_node_t* ts_tree_del_and_ref(ts_tree_t* ts_tree, uintptr_t key) {
 }
 
 ts_tree_node_t* ts_tree_find_and_ref(ts_tree_t* ts_tree, uintptr_t key) {
-  tree_node_t* tree_node;
   ts_tree_node_t* ts_tree_node;
 
   AcquireSRWLockShared(&ts_tree->lock);
 
-  tree_node = tree_find(&ts_tree->tree, key);
-  ts_tree_node = safe_container_of(tree_node, ts_tree_node_t, tree_node);
+  ts_tree_node = _ts_tree_find_node(ts_tree, key);
   if (ts_tree_node != NULL)
     reflock_ref(&ts_tree_node->reflock);
 
