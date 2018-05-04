@@ -15,9 +15,6 @@ typedef intptr_t ssize_t;
 #define container_of(ptr, type, member) \
   ((type*) ((char*) (ptr) -offsetof(type, member)))
 
-#define safe_container_of(ptr, type, member) \
-  ((type*) util_safe_container_of_helper((ptr), offsetof(type, member)))
-
 #define unused_var(v) ((void) (v))
 
 #if defined(__clang__) || defined(__GNUC__)
@@ -36,7 +33,5 @@ typedef intptr_t ssize_t;
 #define static_assert(condition, message) typedef __attribute__( \
     (__unused__)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
 #endif
-
-WEPOLL_INTERNAL void* util_safe_container_of_helper(void* ptr, size_t offset);
 
 #endif /* WEPOLL_UTIL_H_ */
