@@ -1,6 +1,7 @@
 #ifndef WEPOLL_UTIL_H_
 #define WEPOLL_UTIL_H_
 
+#include <assert.h>
 #include <stddef.h>
 
 #include "internal.h"
