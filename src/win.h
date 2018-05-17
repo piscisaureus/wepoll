@@ -26,9 +26,9 @@
 #pragma warning(push, 1)
 #endif
 
-#include <Windows.h>
-#include <WinSock2.h>
 #include <WS2tcpip.h>
+#include <WinSock2.h>
+#include <Windows.h>
 
 #ifndef __GNUC__
 #pragma warning(pop)

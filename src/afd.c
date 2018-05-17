@@ -65,13 +65,12 @@ static const WSAPROTOCOL_INFOW* _afd_find_protocol_info(
 
 int afd_global_init(void) {
   WSAPROTOCOL_INFOW* infos;
-  ssize_t infos_count;
+  size_t infos_count;
   const WSAPROTOCOL_INFOW* afd_info;
 
   /* Load the winsock catalog. */
-  infos_count = ws_get_protocol_catalog(&infos);
-  if (infos_count < 0)
-    return_map_error(-1);
+  if (ws_get_protocol_catalog(&infos, &infos_count) < 0)
+    return -1;
 
   /* Find a WSAPROTOCOL_INFOW structure that we can use to create an MSAFD
    * socket. Preferentially we pick a UDP socket, otherwise try TCP or any
