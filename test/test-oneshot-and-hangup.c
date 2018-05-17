@@ -8,7 +8,7 @@
 #include "wepoll.h"
 #include "win.h"
 
-int tcp_socketpair(SOCKET socks[2]) {
+static int tcp_socketpair(SOCKET socks[2]) {
   SOCKET listen_sock;
   struct sockaddr_in addr;
   socklen_t addrlen = sizeof addr;
@@ -54,7 +54,7 @@ err1:
   return -1;
 }
 
-int sock_set_nonblock(SOCKET sock, bool enable) {
+static int sock_set_nonblock(SOCKET sock, bool enable) {
   u_long arg = enable;
   return ioctlsocket(sock, FIONBIO, &arg);
 }
