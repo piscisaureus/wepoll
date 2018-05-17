@@ -10,18 +10,18 @@
 /* clang-format off */
 
 enum EPOLL_EVENTS {
-  EPOLLIN      = 1 <<  0,
-  EPOLLPRI     = 1 <<  1,
-  EPOLLOUT     = 1 <<  2,
-  EPOLLERR     = 1 <<  3,
-  EPOLLHUP     = 1 <<  4,
-  EPOLLRDNORM  = 1 <<  6,
-  EPOLLRDBAND  = 1 <<  7,
-  EPOLLWRNORM  = 1 <<  8,
-  EPOLLWRBAND  = 1 <<  9,
-  EPOLLMSG     = 1 << 10, /* Never reported. */
-  EPOLLRDHUP   = 1 << 13,
-  EPOLLONESHOT = 1 << 31
+  EPOLLIN      = (int) (1U <<  0),
+  EPOLLPRI     = (int) (1U <<  1),
+  EPOLLOUT     = (int) (1U <<  2),
+  EPOLLERR     = (int) (1U <<  3),
+  EPOLLHUP     = (int) (1U <<  4),
+  EPOLLRDNORM  = (int) (1U <<  6),
+  EPOLLRDBAND  = (int) (1U <<  7),
+  EPOLLWRNORM  = (int) (1U <<  8),
+  EPOLLWRBAND  = (int) (1U <<  9),
+  EPOLLMSG     = (int) (1U << 10), /* Never reported. */
+  EPOLLRDHUP   = (int) (1U << 13),
+  EPOLLONESHOT = (int) (1U << 31)
 };
 
 #define EPOLLIN      ((uint32_t) EPOLLIN)
