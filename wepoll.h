@@ -41,32 +41,32 @@
 /* clang-format off */
 
 enum EPOLL_EVENTS {
-  EPOLLIN      = 1 <<  0,
-  EPOLLPRI     = 1 <<  1,
-  EPOLLOUT     = 1 <<  2,
-  EPOLLERR     = 1 <<  3,
-  EPOLLHUP     = 1 <<  4,
-  EPOLLRDNORM  = 1 <<  6,
-  EPOLLRDBAND  = 1 <<  7,
-  EPOLLWRNORM  = 1 <<  8,
-  EPOLLWRBAND  = 1 <<  9,
-  EPOLLMSG     = 1 << 10, /* Never reported. */
-  EPOLLRDHUP   = 1 << 13,
-  EPOLLONESHOT = 1 << 31
+  EPOLLIN      = (int) (1U <<  0),
+  EPOLLPRI     = (int) (1U <<  1),
+  EPOLLOUT     = (int) (1U <<  2),
+  EPOLLERR     = (int) (1U <<  3),
+  EPOLLHUP     = (int) (1U <<  4),
+  EPOLLRDNORM  = (int) (1U <<  6),
+  EPOLLRDBAND  = (int) (1U <<  7),
+  EPOLLWRNORM  = (int) (1U <<  8),
+  EPOLLWRBAND  = (int) (1U <<  9),
+  EPOLLMSG     = (int) (1U << 10), /* Never reported. */
+  EPOLLRDHUP   = (int) (1U << 13),
+  EPOLLONESHOT = (int) (1U << 31)
 };
 
-#define EPOLLIN      ((uint32_t) EPOLLIN)
-#define EPOLLPRI     ((uint32_t) EPOLLPRI)
-#define EPOLLOUT     ((uint32_t) EPOLLOUT)
-#define EPOLLERR     ((uint32_t) EPOLLERR)
-#define EPOLLHUP     ((uint32_t) EPOLLHUP)
-#define EPOLLRDNORM  ((uint32_t) EPOLLRDNORM)
-#define EPOLLRDBAND  ((uint32_t) EPOLLRDBAND)
-#define EPOLLWRNORM  ((uint32_t) EPOLLWRNORM)
-#define EPOLLWRBAND  ((uint32_t) EPOLLWRBAND)
-#define EPOLLMSG     ((uint32_t) EPOLLMSG)
-#define EPOLLRDHUP   ((uint32_t) EPOLLRDHUP)
-#define EPOLLONESHOT ((uint32_t) EPOLLONESHOT)
+#define EPOLLIN      (1U <<  0)
+#define EPOLLPRI     (1U <<  1)
+#define EPOLLOUT     (1U <<  2)
+#define EPOLLERR     (1U <<  3)
+#define EPOLLHUP     (1U <<  4)
+#define EPOLLRDNORM  (1U <<  6)
+#define EPOLLRDBAND  (1U <<  7)
+#define EPOLLWRNORM  (1U <<  8)
+#define EPOLLWRBAND  (1U <<  9)
+#define EPOLLMSG     (1U << 10)
+#define EPOLLRDHUP   (1U << 13)
+#define EPOLLONESHOT (1U << 31)
 
 #define EPOLL_CTL_ADD 1
 #define EPOLL_CTL_MOD 2
