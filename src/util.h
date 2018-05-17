@@ -28,7 +28,7 @@ typedef intptr_t ssize_t;
 /* Polyfill `static_assert` for some versions of clang and gcc. */
 #if (defined(__clang__) || defined(__GNUC__)) && !defined(static_assert)
 #define static_assert(condition, message) typedef __attribute__( \
-    (__unused__)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
+    (__unused__)) int __static_assert_##__LINE__[(condition) ? 1 : -1]
 #endif
 
 #endif /* WEPOLL_UTIL_H_ */
