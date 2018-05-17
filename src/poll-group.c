@@ -8,7 +8,7 @@
 #include "util.h"
 #include "win.h"
 
-static const size_t _POLL_GROUP_MAX_SIZE = 32;
+static const size_t _POLL_GROUP_MAX_GROUP_SIZE = 32;
 
 typedef struct poll_group {
   ep_port_t* port_info;
@@ -59,12 +59,13 @@ poll_group_t* poll_group_acquire(ep_port_t* port_info) {
           ? container_of(queue_last(queue), poll_group_t, queue_node)
           : NULL;
 
-  if (poll_group == NULL || poll_group->group_size >= _POLL_GROUP_MAX_SIZE)
+  if (poll_group == NULL ||
+      poll_group->group_size >= _POLL_GROUP_MAX_GROUP_SIZE)
     poll_group = _poll_group_new(port_info);
   if (poll_group == NULL)
     return NULL;
 
-  if (++poll_group->group_size == _POLL_GROUP_MAX_SIZE)
+  if (++poll_group->group_size == _POLL_GROUP_MAX_GROUP_SIZE)
     queue_move_first(&port_info->poll_group_queue, &poll_group->queue_node);
 
   return poll_group;
@@ -74,7 +75,7 @@ void poll_group_release(poll_group_t* poll_group) {
   ep_port_t* port_info = poll_group->port_info;
 
   poll_group->group_size--;
-  assert(poll_group->group_size < _POLL_GROUP_MAX_SIZE);
+  assert(poll_group->group_size < _POLL_GROUP_MAX_GROUP_SIZE);
 
   queue_move_last(&port_info->poll_group_queue, &poll_group->queue_node);
 
