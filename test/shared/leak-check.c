@@ -3,16 +3,16 @@
 
 #include "test-util.h"
 
-#if defined(_MSC_VER) /* msvc */
+#if defined(__clang__) || defined(__GNUC__)
+#define constructor(fn)                              \
+  static void fn(void) __attribute__((constructor)); \
+  static void fn(void)
+#else /* msvc */
 #pragma section(".CRT$XCU", read)
 #define constructor(fn)                                              \
   static void __cdecl fn(void);                                      \
   __declspec(allocate(".CRT$XCU")) void(__cdecl * fn##_)(void) = fn; \
   static void __cdecl fn(void)
-#else /* gcc/clang */
-#define constructor(fn)                              \
-  static void fn(void) __attribute__((constructor)); \
-  static void fn(void)
 #endif
 
 static void __cdecl leak_check_finalize(void);
