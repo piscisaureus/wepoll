@@ -8,16 +8,8 @@
 #include "win.h"
 #include "ws.h"
 
-#define FILE_DEVICE_NETWORK 0x00000012
-#define METHOD_BUFFERED 0
-#define AFD_POLL 9
-
-#define _AFD_CONTROL_CODE(operation, method) \
-  ((FILE_DEVICE_NETWORK) << 12 | (operation << 2) | method)
-
-#define IOCTL_AFD_POLL _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
-
 #define _AFD_ANY_PROTOCOL -1
+#define IOCTL_AFD_POLL 0x00012024
 
 /* clang-format off */
 static const GUID _AFD_PROVIDER_GUID_LIST[] = {
