@@ -1,6 +1,12 @@
 #ifndef TEST_UTIL_H_
 #define TEST_UTIL_H_
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wbad-function-cast"
+#pragma clang diagnostic ignored "-Wcast-qual"
+#pragma clang diagnostic ignored "-Wformat-non-iso"
+#endif
+
 #ifdef _MSC_VER
 #define no_return __declspec(noreturn)
 #else /* GCC/clang */
