@@ -30,16 +30,14 @@ void reflock_init(reflock_t* reflock) {
   reflock->state = 0;
 }
 
-static void _signal_event(const void* address) {
-  NTSTATUS status =
-      NtReleaseKeyedEvent(_keyed_event, (PVOID) address, FALSE, NULL);
+static void _signal_event(void* address) {
+  NTSTATUS status = NtReleaseKeyedEvent(_keyed_event, address, FALSE, NULL);
   if (status != STATUS_SUCCESS)
     abort();
 }
 
-static void _await_event(const void* address) {
-  NTSTATUS status =
-      NtWaitForKeyedEvent(_keyed_event, (PVOID) address, FALSE, NULL);
+static void _await_event(void* address) {
+  NTSTATUS status = NtWaitForKeyedEvent(_keyed_event, address, FALSE, NULL);
   if (status != STATUS_SUCCESS)
     abort();
 }
