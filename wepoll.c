@@ -277,6 +277,7 @@ typedef struct _OBJECT_ATTRIBUTES {
 NTDLL_IMPORT_LIST(X)
 #undef X
 
+#include <assert.h>
 #include <stddef.h>
 
 #ifndef _SSIZE_T_DEFINED
@@ -289,9 +290,6 @@ typedef intptr_t ssize_t;
 #define container_of(ptr, type, member) \
   ((type*) ((char*) (ptr) -offsetof(type, member)))
 
-#define safe_container_of(ptr, type, member) \
-  ((type*) util_safe_container_of_helper((ptr), offsetof(type, member)))
-
 #define unused_var(v) ((void) (v))
 
 #if defined(__clang__) || defined(__GNUC__)
@@ -300,50 +298,27 @@ typedef intptr_t ssize_t;
 #define unused_fn /* nothing */
 #endif
 
+/* Polyfill `inline` for older versions of msvc (up to Visual Studio 2013) */
 #if defined(_MSC_VER) && _MSC_VER < 1900
-/* Polyfill `inline` for msvc 12 (Visual Studio 2013) */
 #define inline __inline
 #endif
 
-#if (defined(__clang__) || defined(__GNUC__)) && !defined(static_assert)
 /* Polyfill `static_assert` for some versions of clang and gcc. */
+#if (defined(__clang__) || defined(__GNUC__)) && !defined(static_assert)
 #define static_assert(condition, message) typedef __attribute__( \
     (__unused__)) int __static_assert_##__LINE__[(condition) ? 1 : -1];
 #endif
 
-WEPOLL_INTERNAL void* util_safe_container_of_helper(void* ptr, size_t offset);
-
 /* clang-format off */
-
-#define AFD_NO_FAST_IO                  0x00000001
-#define AFD_OVERLAPPED                  0x00000002
-#define AFD_IMMEDIATE                   0x00000004
-
-#define AFD_POLL_RECEIVE_BIT            0
-#define AFD_POLL_RECEIVE                (1 << AFD_POLL_RECEIVE_BIT)
-#define AFD_POLL_RECEIVE_EXPEDITED_BIT  1
-#define AFD_POLL_RECEIVE_EXPEDITED      (1 << AFD_POLL_RECEIVE_EXPEDITED_BIT)
-#define AFD_POLL_SEND_BIT               2
-#define AFD_POLL_SEND                   (1 << AFD_POLL_SEND_BIT)
-#define AFD_POLL_DISCONNECT_BIT         3
-#define AFD_POLL_DISCONNECT             (1 << AFD_POLL_DISCONNECT_BIT)
-#define AFD_POLL_ABORT_BIT              4
-#define AFD_POLL_ABORT                  (1 << AFD_POLL_ABORT_BIT)
-#define AFD_POLL_LOCAL_CLOSE_BIT        5
-#define AFD_POLL_LOCAL_CLOSE            (1 << AFD_POLL_LOCAL_CLOSE_BIT)
-#define AFD_POLL_CONNECT_BIT            6
-#define AFD_POLL_CONNECT                (1 << AFD_POLL_CONNECT_BIT)
-#define AFD_POLL_ACCEPT_BIT             7
-#define AFD_POLL_ACCEPT                 (1 << AFD_POLL_ACCEPT_BIT)
-#define AFD_POLL_CONNECT_FAIL_BIT       8
-#define AFD_POLL_CONNECT_FAIL           (1 << AFD_POLL_CONNECT_FAIL_BIT)
-#define AFD_POLL_QOS_BIT                9
-#define AFD_POLL_QOS                    (1 << AFD_POLL_QOS_BIT)
-#define AFD_POLL_GROUP_QOS_BIT          10
-#define AFD_POLL_GROUP_QOS              (1 << AFD_POLL_GROUP_QOS_BIT)
-#define AFD_NUM_POLL_EVENTS             11
-#define AFD_POLL_ALL                    ((1 << AFD_NUM_POLL_EVENTS) - 1)
-
+#define AFD_POLL_RECEIVE           0x0001
+#define AFD_POLL_RECEIVE_EXPEDITED 0x0002
+#define AFD_POLL_SEND              0x0004
+#define AFD_POLL_DISCONNECT        0x0008
+#define AFD_POLL_ABORT             0x0010
+#define AFD_POLL_LOCAL_CLOSE       0x0020
+#define AFD_POLL_CONNECT           0x0040
+#define AFD_POLL_ACCEPT            0x0080
+#define AFD_POLL_CONNECT_FAIL      0x0100
 /* clang-format on */
 
 typedef struct _AFD_POLL_HANDLE_INFO {
@@ -367,8 +342,6 @@ WEPOLL_INTERNAL int afd_create_driver_socket(HANDLE iocp,
 WEPOLL_INTERNAL int afd_poll(SOCKET driver_socket,
                              AFD_POLL_INFO* poll_info,
                              OVERLAPPED* overlapped);
-
-#include <errno.h>
 
 #define _return_error_helper(error, value) \
   do {                                     \
@@ -416,8 +389,7 @@ static const GUID _AFD_PROVIDER_GUID_LIST[] = {
 
 /* This protocol info record is used by afd_create_driver_socket() to create
  * sockets that can be used as the first argument to afd_poll(). It is
- * populated on startup by afd_global_init().
- */
+ * populated on startup by afd_global_init(). */
 static WSAPROTOCOL_INFOW _afd_driver_socket_template;
 
 static const WSAPROTOCOL_INFOW* _afd_find_protocol_info(
@@ -455,8 +427,7 @@ int afd_global_init(void) {
 
   /* Find a WSAPROTOCOL_INFOW structure that we can use to create an MSAFD
    * socket. Preferentially we pick a UDP socket, otherwise try TCP or any
-   * other type.
-   */
+   * other type. */
   for (;;) {
     afd_info = _afd_find_protocol_info(infos, infos_count, IPPROTO_UDP);
     if (afd_info != NULL)
@@ -553,9 +524,8 @@ int afd_poll(SOCKET driver_socket,
                                  sizeof *poll_info);
 
   if (overlapped == NULL) {
-    /* If this is a blocking operation, wait for the event to become
-     * signaled, and then grab the real status from the io status block.
-     */
+    /* If this is a blocking operation, wait for the event to become signaled,
+     * and then grab the real status from the io status block. */
     if (status == STATUS_PENDING) {
       DWORD r = WaitForSingleObject(event, INFINITE);
 
@@ -623,10 +593,9 @@ WEPOLL_INTERNAL poll_group_t* poll_group_from_queue_node(
     queue_node_t* queue_node);
 WEPOLL_INTERNAL SOCKET poll_group_get_socket(poll_group_t* poll_group);
 
-/* NB: the tree functions do not set errno or LastError when they fail. Each of
- * the API functions has at most one failure mode. It is up to the caller to
- * set an appropriate error code when necessary.
- */
+/* N.b.: the tree functions do not set errno or LastError when they fail. Each
+ * of the API functions has at most one failure mode. It is up to the caller to
+ * set an appropriate error code when necessary. */
 
 typedef struct tree tree_t;
 typedef struct tree_node tree_node_t;
@@ -653,12 +622,7 @@ WEPOLL_INTERNAL tree_node_t* tree_find(const tree_t* tree, uintptr_t key);
 WEPOLL_INTERNAL tree_node_t* tree_root(const tree_t* tree);
 
 typedef struct ep_port ep_port_t;
-typedef struct poll_req poll_req_t;
-
-typedef struct ep_sock {
-  tree_node_t tree_node;
-  queue_node_t queue_node;
-} ep_sock_t;
+typedef struct ep_sock ep_sock_t;
 
 WEPOLL_INTERNAL ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket);
 WEPOLL_INTERNAL void ep_sock_delete(ep_port_t* port_info,
@@ -674,6 +638,11 @@ WEPOLL_INTERNAL int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info);
 WEPOLL_INTERNAL int ep_sock_feed_event(ep_port_t* port_info,
                                        OVERLAPPED* overlapped,
                                        struct epoll_event* ev);
+
+WEPOLL_INTERNAL ep_sock_t* ep_sock_from_queue_node(queue_node_t* queue_node);
+WEPOLL_INTERNAL queue_node_t* ep_sock_to_queue_node(ep_sock_t* sock_info);
+WEPOLL_INTERNAL ep_sock_t* ep_sock_from_tree_node(tree_node_t* tree_node);
+WEPOLL_INTERNAL tree_node_t* ep_sock_to_tree_node(ep_sock_t* sock_info);
 
 /* The reflock is a special kind of lock that normally prevents a chunk of
  * memory from being freed, but does allow the chunk of memory to eventually be
@@ -872,8 +841,8 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   return 0;
 
 err:
-  /* On Linux, in the case of epoll_ctl_mod(), EBADF takes precendence over
-   * other errors. Wepoll copies this behavior. */
+  /* On Linux, in the case of epoll_ctl_mod(), EBADF takes priority over other
+   * errors. Wepoll mimics this behavior. */
   err_check_handle(ephnd);
   err_check_handle((HANDLE) sock);
   return -1;
@@ -913,6 +882,8 @@ err:
   err_check_handle(ephnd);
   return -1;
 }
+
+#include <errno.h>
 
 #define _ERROR_ERRNO_MAP(X)                  \
   X(ERROR_ACCESS_DENIED, EACCES)             \
@@ -1099,7 +1070,7 @@ int nt_global_init(void) {
   return 0;
 }
 
-#include <assert.h>
+#include <string.h>
 
 static const size_t _POLL_GROUP_MAX_SIZE = 32;
 
@@ -1256,12 +1227,12 @@ int ep_port_delete(ep_port_t* port_info) {
   assert(port_info->iocp == NULL);
 
   while ((tree_node = tree_root(&port_info->sock_tree)) != NULL) {
-    ep_sock_t* sock_info = container_of(tree_node, ep_sock_t, tree_node);
+    ep_sock_t* sock_info = ep_sock_from_tree_node(tree_node);
     ep_sock_force_delete(port_info, sock_info);
   }
 
   while ((queue_node = queue_first(&port_info->sock_deleted_queue)) != NULL) {
-    ep_sock_t* sock_info = container_of(queue_node, ep_sock_t, queue_node);
+    ep_sock_t* sock_info = ep_sock_from_queue_node(queue_node);
     ep_sock_force_delete(port_info, sock_info);
   }
 
@@ -1269,6 +1240,8 @@ int ep_port_delete(ep_port_t* port_info) {
     poll_group_t* poll_group = poll_group_from_queue_node(queue_node);
     poll_group_delete(poll_group);
   }
+
+  assert(queue_empty(&port_info->sock_update_queue));
 
   DeleteCriticalSection(&port_info->lock);
 
@@ -1284,13 +1257,12 @@ static int _ep_port_update_events(ep_port_t* port_info) {
    * it. */
   while (!queue_empty(sock_update_queue)) {
     queue_node_t* queue_node = queue_first(sock_update_queue);
-    ep_sock_t* sock_info = container_of(queue_node, ep_sock_t, queue_node);
+    ep_sock_t* sock_info = ep_sock_from_queue_node(queue_node);
 
     if (ep_sock_update(port_info, sock_info) < 0)
       return -1;
 
-    /* ep_sock_update() removes the socket from the update list if
-     * successfull. */
+    /* ep_sock_update() removes the socket from the update queue. */
   }
 
   return 0;
@@ -1374,8 +1346,7 @@ int ep_port_wait(ep_port_t* port_info,
   }
 
   /* Compute the timeout for GetQueuedCompletionStatus, and the wait end
-   * time, if the user specified a timeout other than zero or infinite.
-   */
+   * time, if the user specified a timeout other than zero or infinite. */
   if (timeout > 0) {
     due = GetTickCount64() + timeout;
     gqcs_timeout = (DWORD) timeout;
@@ -1388,8 +1359,7 @@ int ep_port_wait(ep_port_t* port_info,
   EnterCriticalSection(&port_info->lock);
 
   /* Dequeue completion packets until either at least one interesting event
-   * has been discovered, or the timeout is reached.
-   */
+   * has been discovered, or the timeout is reached. */
   for (;;) {
     ULONGLONG now;
 
@@ -1503,50 +1473,52 @@ int ep_port_ctl(ep_port_t* port_info,
 int ep_port_register_socket_handle(ep_port_t* port_info,
                                    ep_sock_t* sock_info,
                                    SOCKET socket) {
-  if (tree_add(&port_info->sock_tree, &sock_info->tree_node, socket) < 0)
+  if (tree_add(
+          &port_info->sock_tree, ep_sock_to_tree_node(sock_info), socket) < 0)
     return_error(-1, ERROR_ALREADY_EXISTS);
   return 0;
 }
 
 void ep_port_unregister_socket_handle(ep_port_t* port_info,
                                       ep_sock_t* sock_info) {
-  tree_del(&port_info->sock_tree, &sock_info->tree_node);
+  tree_del(&port_info->sock_tree, ep_sock_to_tree_node(sock_info));
 }
 
 ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
-  ep_sock_t* sock_info = safe_container_of(
-      tree_find(&port_info->sock_tree, socket), ep_sock_t, tree_node);
-  if (sock_info == NULL)
+  tree_node_t* tree_node = tree_find(&port_info->sock_tree, socket);
+  if (tree_node == NULL)
     return_error(NULL, ERROR_NOT_FOUND);
-  return sock_info;
+  return ep_sock_from_tree_node(tree_node);
 }
 
 void ep_port_request_socket_update(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
-  if (queue_enqueued(&sock_info->queue_node))
+  if (queue_enqueued(ep_sock_to_queue_node(sock_info)))
     return;
-  queue_append(&port_info->sock_update_queue, &sock_info->queue_node);
+  queue_append(&port_info->sock_update_queue,
+               ep_sock_to_queue_node(sock_info));
 }
 
 void ep_port_cancel_socket_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   unused_var(port_info);
-  if (!queue_enqueued(&sock_info->queue_node))
+  if (!queue_enqueued(ep_sock_to_queue_node(sock_info)))
     return;
-  queue_remove(&sock_info->queue_node);
+  queue_remove(ep_sock_to_queue_node(sock_info));
 }
 
 void ep_port_add_deleted_socket(ep_port_t* port_info, ep_sock_t* sock_info) {
-  if (queue_enqueued(&sock_info->queue_node))
+  if (queue_enqueued(ep_sock_to_queue_node(sock_info)))
     return;
-  queue_append(&port_info->sock_deleted_queue, &sock_info->queue_node);
+  queue_append(&port_info->sock_deleted_queue,
+               ep_sock_to_queue_node(sock_info));
 }
 
 void ep_port_remove_deleted_socket(ep_port_t* port_info,
                                    ep_sock_t* sock_info) {
   unused_var(port_info);
-  if (!queue_enqueued(&sock_info->queue_node))
+  if (!queue_enqueued(ep_sock_to_queue_node(sock_info)))
     return;
-  queue_remove(&sock_info->queue_node);
+  queue_remove(ep_sock_to_queue_node(sock_info));
 }
 
 void queue_init(queue_t* queue) {
@@ -1694,20 +1666,17 @@ void reflock_unref_and_destroy(reflock_t* reflock) {
   (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM | \
    EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLRDHUP)
 
-typedef struct _poll_req {
-  OVERLAPPED overlapped;
-  AFD_POLL_INFO poll_info;
-} _poll_req_t;
-
 typedef enum _poll_status {
   _POLL_IDLE = 0,
   _POLL_PENDING,
   _POLL_CANCELLED
 } _poll_status_t;
 
-typedef struct _ep_sock_private {
-  ep_sock_t pub;
-  _poll_req_t poll_req;
+typedef struct ep_sock {
+  OVERLAPPED overlapped;
+  AFD_POLL_INFO poll_info;
+  queue_node_t queue_node;
+  tree_node_t tree_node;
   poll_group_t* poll_group;
   SOCKET base_socket;
   epoll_data_t user_data;
@@ -1715,9 +1684,130 @@ typedef struct _ep_sock_private {
   uint32_t pending_events;
   _poll_status_t poll_status;
   bool delete_pending;
-} _ep_sock_private_t;
+} ep_sock_t;
 
-static DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
+static inline ep_sock_t* _ep_sock_alloc(void) {
+  ep_sock_t* sock_info = malloc(sizeof *sock_info);
+  if (sock_info == NULL)
+    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
+  return sock_info;
+}
+
+static inline void _ep_sock_free(ep_sock_t* sock_info) {
+  free(sock_info);
+}
+
+static int _ep_sock_cancel_poll(ep_sock_t* sock_info) {
+  HANDLE driver_handle = (HANDLE) poll_group_get_socket(sock_info->poll_group);
+  assert(sock_info->poll_status == _POLL_PENDING);
+
+  /* CancelIoEx() may fail with ERROR_NOT_FOUND if the overlapped operation has
+   * already completed. This is not a problem and we proceed normally. */
+  if (!CancelIoEx(driver_handle, &sock_info->overlapped) &&
+      GetLastError() != ERROR_NOT_FOUND)
+    return_error(-1);
+
+  sock_info->poll_status = _POLL_CANCELLED;
+  sock_info->pending_events = 0;
+  return 0;
+}
+
+ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
+  SOCKET base_socket;
+  poll_group_t* poll_group;
+  ep_sock_t* sock_info;
+
+  if (socket == 0 || socket == INVALID_SOCKET)
+    return_error(NULL, ERROR_INVALID_HANDLE);
+
+  base_socket = ws_get_base_socket(socket);
+  if (base_socket == INVALID_SOCKET)
+    return NULL;
+
+  poll_group = poll_group_acquire(port_info);
+  if (poll_group == NULL)
+    return NULL;
+
+  sock_info = _ep_sock_alloc();
+  if (sock_info == NULL)
+    goto err1;
+
+  memset(sock_info, 0, sizeof *sock_info);
+
+  sock_info->base_socket = base_socket;
+  sock_info->poll_group = poll_group;
+
+  tree_node_init(&sock_info->tree_node);
+  queue_node_init(&sock_info->queue_node);
+
+  if (ep_port_register_socket_handle(port_info, sock_info, socket) < 0)
+    goto err2;
+
+  return sock_info;
+
+err2:
+  _ep_sock_free(sock_info);
+err1:
+  poll_group_release(poll_group);
+
+  return NULL;
+}
+
+static int _ep_sock_delete(ep_port_t* port_info,
+                           ep_sock_t* sock_info,
+                           bool force) {
+  if (!sock_info->delete_pending) {
+    if (sock_info->poll_status == _POLL_PENDING)
+      _ep_sock_cancel_poll(sock_info);
+
+    ep_port_cancel_socket_update(port_info, sock_info);
+    ep_port_unregister_socket_handle(port_info, sock_info);
+
+    sock_info->delete_pending = true;
+  }
+
+  /* If the poll request still needs to complete, the ep_sock object can't
+   * be free()d yet. `ep_sock_feed_event()` or `ep_port_close()` will take care
+   * of this later. */
+  if (force || sock_info->poll_status == _POLL_IDLE) {
+    /* Free the sock_info now. */
+    ep_port_remove_deleted_socket(port_info, sock_info);
+    poll_group_release(sock_info->poll_group);
+    _ep_sock_free(sock_info);
+  } else {
+    /* Free the socket later. */
+    ep_port_add_deleted_socket(port_info, sock_info);
+  }
+
+  return 0;
+}
+
+void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
+  _ep_sock_delete(port_info, sock_info, false);
+}
+
+void ep_sock_force_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
+  _ep_sock_delete(port_info, sock_info, true);
+}
+
+int ep_sock_set_event(ep_port_t* port_info,
+                      ep_sock_t* sock_info,
+                      const struct epoll_event* ev) {
+  /* EPOLLERR and EPOLLHUP are always reported, even when not requested by the
+   * caller. However they are disabled after a event has been reported for a
+   * socket for which the EPOLLONESHOT flag as set. */
+  uint32_t events = ev->events | EPOLLERR | EPOLLHUP;
+
+  sock_info->user_events = events;
+  sock_info->user_data = ev->data;
+
+  if ((events & _KNOWN_EPOLL_EVENTS & ~sock_info->pending_events) != 0)
+    ep_port_request_socket_update(port_info, sock_info);
+
+  return 0;
+}
+
+static inline ULONG _epoll_events_to_afd_events(uint32_t epoll_events) {
   /* Always monitor for AFD_POLL_LOCAL_CLOSE, which is triggered when the
    * socket is closed with closesocket() or CloseHandle(). */
   DWORD afd_events = AFD_POLL_LOCAL_CLOSE;
@@ -1738,7 +1828,7 @@ static DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
   return afd_events;
 }
 
-static uint32_t _afd_events_to_epoll_events(DWORD afd_events) {
+static inline uint32_t _afd_events_to_epoll_events(ULONG afd_events) {
   uint32_t epoll_events = 0;
 
   if (afd_events & (AFD_POLL_RECEIVE | AFD_POLL_ACCEPT))
@@ -1757,302 +1847,137 @@ static uint32_t _afd_events_to_epoll_events(DWORD afd_events) {
   return epoll_events;
 }
 
-static int _poll_req_submit(_poll_req_t* poll_req,
-                            uint32_t epoll_events,
-                            SOCKET socket,
-                            SOCKET driver_socket) {
-  int r;
-
-  memset(&poll_req->overlapped, 0, sizeof poll_req->overlapped);
-
-  poll_req->poll_info.Exclusive = FALSE;
-  poll_req->poll_info.NumberOfHandles = 1;
-  poll_req->poll_info.Timeout.QuadPart = INT64_MAX;
-  poll_req->poll_info.Handles[0].Handle = (HANDLE) socket;
-  poll_req->poll_info.Handles[0].Status = 0;
-  poll_req->poll_info.Handles[0].Events =
-      _epoll_events_to_afd_events(epoll_events);
-
-  r = afd_poll(driver_socket, &poll_req->poll_info, &poll_req->overlapped);
-  if (r != 0 && GetLastError() != ERROR_IO_PENDING)
-    return_error(-1);
-
-  return 0;
-}
-
-static int _poll_req_cancel(_poll_req_t* poll_req, SOCKET driver_socket) {
-  OVERLAPPED* overlapped = &poll_req->overlapped;
-
-  if (!CancelIoEx((HANDLE) driver_socket, overlapped)) {
-    DWORD error = GetLastError();
-    if (error == ERROR_NOT_FOUND)
-      return 0; /* Already completed or canceled. */
-    else
-      return_error(-1);
-  }
-
-  return 0;
-}
-
-static void _poll_req_complete(const _poll_req_t* poll_req,
-                               uint32_t* epoll_events_out,
-                               bool* socket_closed_out) {
-  const OVERLAPPED* overlapped = &poll_req->overlapped;
-
-  uint32_t epoll_events = 0;
-  bool socket_closed = false;
-
-  if ((NTSTATUS) overlapped->Internal == STATUS_CANCELLED) {
-    /* The poll request was cancelled by CancelIoEx. */
-  } else if (!NT_SUCCESS(overlapped->Internal)) {
-    /* The overlapped request itself failed in an unexpected way. */
-    epoll_events = EPOLLERR;
-  } else if (poll_req->poll_info.NumberOfHandles < 1) {
-    /* This overlapped request succeeded but didn't report any events. */
-  } else {
-    /* Events related to our socket were reported. */
-    DWORD afd_events = poll_req->poll_info.Handles[0].Events;
-
-    if (afd_events & AFD_POLL_LOCAL_CLOSE)
-      socket_closed = true; /* Socket closed locally be silently dropped. */
-    else
-      epoll_events = _afd_events_to_epoll_events(afd_events);
-  }
-
-  *epoll_events_out = epoll_events;
-  *socket_closed_out = socket_closed;
-}
-
-static inline _ep_sock_private_t* _ep_sock_private(ep_sock_t* sock_info) {
-  return container_of(sock_info, _ep_sock_private_t, pub);
-}
-
-static inline _ep_sock_private_t* _ep_sock_alloc(void) {
-  _ep_sock_private_t* sock_private = malloc(sizeof *sock_private);
-  if (sock_private == NULL)
-    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
-  return sock_private;
-}
-
-static inline void _ep_sock_free(_ep_sock_private_t* sock_private) {
-  free(sock_private);
-}
-
-static int _ep_sock_cancel_poll(_ep_sock_private_t* sock_private) {
-  assert(sock_private->poll_status == _POLL_PENDING);
-
-  if (_poll_req_cancel(&sock_private->poll_req,
-                       poll_group_get_socket(sock_private->poll_group)) < 0)
-    return -1;
-
-  sock_private->poll_status = _POLL_CANCELLED;
-  sock_private->pending_events = 0;
-
-  return 0;
-}
-
-ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
-  SOCKET base_socket;
-  poll_group_t* poll_group;
-  _ep_sock_private_t* sock_private;
-
-  if (socket == 0 || socket == INVALID_SOCKET)
-    return_error(NULL, ERROR_INVALID_HANDLE);
-
-  base_socket = ws_get_base_socket(socket);
-  if (base_socket == INVALID_SOCKET)
-    return NULL;
-
-  poll_group = poll_group_acquire(port_info);
-  if (poll_group == NULL)
-    return NULL;
-
-  sock_private = _ep_sock_alloc();
-  if (sock_private == NULL)
-    goto err1;
-
-  memset(sock_private, 0, sizeof *sock_private);
-
-  sock_private->base_socket = base_socket;
-  sock_private->poll_group = poll_group;
-
-  tree_node_init(&sock_private->pub.tree_node);
-  queue_node_init(&sock_private->pub.queue_node);
-
-  if (ep_port_register_socket_handle(port_info, &sock_private->pub, socket) <
-      0)
-    goto err2;
-
-  return &sock_private->pub;
-
-err2:
-  _ep_sock_free(sock_private);
-err1:
-  poll_group_release(poll_group);
-
-  return NULL;
-}
-
-static void _ep_sock_delete(ep_port_t* port_info,
-                            ep_sock_t* sock_info,
-                            bool force) {
-  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-
-  if (!sock_private->delete_pending) {
-    if (sock_private->poll_status == _POLL_PENDING)
-      _ep_sock_cancel_poll(sock_private);
-
-    ep_port_cancel_socket_update(port_info, sock_info);
-    ep_port_unregister_socket_handle(port_info, sock_info);
-
-    sock_private->delete_pending = true;
-  }
-
-  /* If the poll request still needs to complete, the ep_sock object can't
-   * be free()d yet. `ep_sock_feed_event()` or `ep_port_close()` will take care
-   * of this later. */
-  if (force || sock_private->poll_status == _POLL_IDLE) {
-    /* Free the sock_info now. */
-    ep_port_remove_deleted_socket(port_info, sock_info);
-    poll_group_release(sock_private->poll_group);
-    _ep_sock_free(sock_private);
-  } else {
-    /* Free the socket later. */
-    ep_port_add_deleted_socket(port_info, sock_info);
-  }
-}
-
-void ep_sock_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
-  _ep_sock_delete(port_info, sock_info, false);
-}
-
-void ep_sock_force_delete(ep_port_t* port_info, ep_sock_t* sock_info) {
-  _ep_sock_delete(port_info, sock_info, true);
-}
-
-int ep_sock_set_event(ep_port_t* port_info,
-                      ep_sock_t* sock_info,
-                      const struct epoll_event* ev) {
-  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-
-  /* EPOLLERR and EPOLLHUP are always reported, even when not requested by the
-   * caller. However they are disabled after a event has been reported for a
-   * socket for which the EPOLLONESHOT flag as set. */
-  uint32_t events = ev->events | EPOLLERR | EPOLLHUP;
-
-  sock_private->user_events = events;
-  sock_private->user_data = ev->data;
-
-  if ((events & _KNOWN_EPOLL_EVENTS & ~sock_private->pending_events) != 0)
-    ep_port_request_socket_update(port_info, sock_info);
-
-  return 0;
-}
-
 int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
-  _ep_sock_private_t* sock_private = _ep_sock_private(sock_info);
-  bool socket_closed = false;
+  assert(!sock_info->delete_pending);
 
-  assert(!sock_private->delete_pending);
-  if ((sock_private->poll_status == _POLL_PENDING) &&
-      (sock_private->user_events & _KNOWN_EPOLL_EVENTS &
-       ~sock_private->pending_events) == 0) {
-    /* All the events the user is interested in are already being monitored
-     * by the pending poll request. It might spuriously complete because of an
-     * event that we're no longer interested in; if that happens we just
-     * submit another poll request with the right event mask. */
+  if ((sock_info->poll_status == _POLL_PENDING) &&
+      (sock_info->user_events & _KNOWN_EPOLL_EVENTS &
+       ~sock_info->pending_events) == 0) {
+    /* All the events the user is interested in are already being monitored by
+     * the pending poll operation. It might spuriously complete because of an
+     * event that we're no longer interested in; when that happens we'll submit
+     * a new poll operation with the updated event mask. */
 
-  } else if (sock_private->poll_status == _POLL_PENDING) {
-    /* A poll request is already pending, but it's not monitoring for all the
-     * events that the user is interested in. Cancel the pending poll request;
-     * when it completes it will be submitted again with the correct event
-     * mask. */
-    if (_ep_sock_cancel_poll(sock_private) < 0)
+  } else if (sock_info->poll_status == _POLL_PENDING) {
+    /* A poll operation is already pending, but it's not monitoring for all the
+     * events that the user is interested in. Therefore, cancel the pending
+     * poll operation; when we receive it's completion package, a new poll
+     * operation will be submitted with the correct event mask. */
+    if (_ep_sock_cancel_poll(sock_info) < 0)
       return -1;
 
-  } else if (sock_private->poll_status == _POLL_CANCELLED) {
-    /* The poll request has already been cancelled, we're still waiting for it
-     * to return. For now, there's nothing that needs to be done. */
+  } else if (sock_info->poll_status == _POLL_CANCELLED) {
+    /* The poll operation has already been cancelled, we're still waiting for
+     * it to return. For now, there's nothing that needs to be done. */
 
-  } else if (sock_private->poll_status == _POLL_IDLE) {
-    SOCKET driver_socket = poll_group_get_socket(sock_private->poll_group);
+  } else if (sock_info->poll_status == _POLL_IDLE) {
+    /* No poll operation is pending; start one. */
+    sock_info->poll_info.Exclusive = FALSE;
+    sock_info->poll_info.NumberOfHandles = 1;
+    sock_info->poll_info.Timeout.QuadPart = INT64_MAX;
+    sock_info->poll_info.Handles[0].Handle = (HANDLE) sock_info->base_socket;
+    sock_info->poll_info.Handles[0].Status = 0;
+    sock_info->poll_info.Handles[0].Events =
+        _epoll_events_to_afd_events(sock_info->user_events);
 
-    if (_poll_req_submit(&sock_private->poll_req,
-                         sock_private->user_events,
-                         sock_private->base_socket,
-                         driver_socket) < 0) {
-      if (GetLastError() == ERROR_INVALID_HANDLE)
-        /* The socket is broken. It will be dropped from the epoll set. */
-        socket_closed = true;
-      else
-        /* Another error occurred, which is propagated to the caller. */
-        return -1;
+    memset(&sock_info->overlapped, 0, sizeof sock_info->overlapped);
 
-    } else {
-      /* The poll request was successfully submitted. */
-      sock_private->poll_status = _POLL_PENDING;
-      sock_private->pending_events = sock_private->user_events;
+    if (afd_poll(poll_group_get_socket(sock_info->poll_group),
+                 &sock_info->poll_info,
+                 &sock_info->overlapped) < 0) {
+      switch (GetLastError()) {
+        case ERROR_IO_PENDING:
+          /* Overlapped poll operation in progress; this is expected. */
+          break;
+        case ERROR_INVALID_HANDLE:
+          /* Socket closed; it'll be dropped from the epoll set. */
+          return _ep_sock_delete(port_info, sock_info, false);
+        default:
+          /* Other errors are propagated to the caller. */
+          return_error(-1);
+      }
     }
+
+    /* The poll request was successfully submitted. */
+    sock_info->poll_status = _POLL_PENDING;
+    sock_info->pending_events = sock_info->user_events;
+
   } else {
     /* Unreachable. */
     assert(false);
   }
 
   ep_port_cancel_socket_update(port_info, sock_info);
-
-  /* If we saw an ERROR_INVALID_HANDLE error, drop the socket. */
-  if (socket_closed)
-    ep_sock_delete(port_info, sock_info);
-
   return 0;
 }
 
 int ep_sock_feed_event(ep_port_t* port_info,
                        OVERLAPPED* overlapped,
                        struct epoll_event* ev) {
-  _ep_sock_private_t* sock_private =
-      container_of(overlapped, _ep_sock_private_t, poll_req.overlapped);
-  ep_sock_t* sock_info = &sock_private->pub;
-  uint32_t epoll_events;
-  bool socket_closed;
-  int ev_count = 0;
+  ep_sock_t* sock_info = container_of(overlapped, ep_sock_t, overlapped);
+  AFD_POLL_INFO* poll_info = &sock_info->poll_info;
+  uint32_t epoll_events = 0;
 
-  sock_private->poll_status = _POLL_IDLE;
-  sock_private->pending_events = 0;
+  sock_info->poll_status = _POLL_IDLE;
+  sock_info->pending_events = 0;
 
-  if (sock_private->delete_pending) {
-    /* Ignore completion for overlapped poll operation if the socket is pending
-     * deletion; instead, delete the socket. */
-    ep_sock_delete(port_info, sock_info);
+  if (sock_info->delete_pending) {
+    /* Socket has been deleted earlier and can now be freed. */
+    return _ep_sock_delete(port_info, sock_info, false);
+
+  } else if ((NTSTATUS) overlapped->Internal == STATUS_CANCELLED) {
+    /* The poll request was cancelled by CancelIoEx. */
+
+  } else if (!NT_SUCCESS(overlapped->Internal)) {
+    /* The overlapped request itself failed in an unexpected way. */
+    epoll_events = EPOLLERR;
+
+  } else if (poll_info->NumberOfHandles < 1) {
+    /* This poll operation succeeded but didn't report any socket events. */
+
+  } else if (poll_info->Handles[0].Events & AFD_POLL_LOCAL_CLOSE) {
+    /* The poll operation reported that the socket was closed. */
+    return _ep_sock_delete(port_info, sock_info, false);
+
+  } else {
+    /* Events related to our socket were reported. */
+    epoll_events = _afd_events_to_epoll_events(poll_info->Handles[0].Events);
+  }
+
+  /* Requeue the socket so a new poll request will be submitted. */
+  ep_port_request_socket_update(port_info, sock_info);
+
+  /* Filter out events that the user didn't ask for. */
+  epoll_events &= sock_info->user_events;
+
+  /* Return if there are no epoll events to report. */
+  if (epoll_events == 0)
     return 0;
-  }
 
-  _poll_req_complete(&sock_private->poll_req, &epoll_events, &socket_closed);
+  /* If the the socket has the EPOLLONESHOT flag set, unmonitor all events,
+   * even EPOLLERR and EPOLLHUP. But always keep looking for closed sockets. */
+  if (sock_info->user_events & EPOLLONESHOT)
+    sock_info->user_events = 0;
 
-  /* Filter events that the user didn't ask for. */
-  epoll_events &= sock_private->user_events;
+  ev->data = sock_info->user_data;
+  ev->events = epoll_events;
+  return 1;
+}
 
-  /* Clear the event mask if EPOLLONESHOT is set and there are any events
-   * to report. */
-  if (epoll_events != 0 && (sock_private->user_events & EPOLLONESHOT))
-    sock_private->user_events = 0;
+queue_node_t* ep_sock_to_queue_node(ep_sock_t* sock_info) {
+  return &sock_info->queue_node;
+}
 
-  /* Fill the ev structure if there are any events to report. */
-  if (epoll_events != 0) {
-    ev->data = sock_private->user_data;
-    ev->events = epoll_events;
-    ev_count = 1;
-  }
+ep_sock_t* ep_sock_from_tree_node(tree_node_t* tree_node) {
+  return container_of(tree_node, ep_sock_t, tree_node);
+}
 
-  if (socket_closed)
-    /* Drop the socket from the epoll set. */
-    ep_sock_delete(port_info, sock_info);
-  else
-    /* Put the socket back onto the attention list so a new poll request will
-     * be submitted. */
-    ep_port_request_socket_update(port_info, sock_info);
+tree_node_t* ep_sock_to_tree_node(ep_sock_t* sock_info) {
+  return &sock_info->tree_node;
+}
 
-  return ev_count;
+ep_sock_t* ep_sock_from_queue_node(queue_node_t* queue_node) {
+  return container_of(queue_node, ep_sock_t, queue_node);
 }
 
 void ts_tree_init(ts_tree_t* ts_tree) {
@@ -2075,17 +2000,23 @@ int ts_tree_add(ts_tree_t* ts_tree, ts_tree_node_t* node, uintptr_t key) {
   return r;
 }
 
+static inline ts_tree_node_t* _ts_tree_find_node(ts_tree_t* ts_tree,
+                                                 uintptr_t key) {
+  tree_node_t* tree_node = tree_find(&ts_tree->tree, key);
+  if (tree_node == NULL)
+    return NULL;
+
+  return container_of(tree_node, ts_tree_node_t, tree_node);
+}
+
 ts_tree_node_t* ts_tree_del_and_ref(ts_tree_t* ts_tree, uintptr_t key) {
-  tree_node_t* tree_node;
   ts_tree_node_t* ts_tree_node;
 
   AcquireSRWLockExclusive(&ts_tree->lock);
 
-  tree_node = tree_find(&ts_tree->tree, key);
-  ts_tree_node = safe_container_of(tree_node, ts_tree_node_t, tree_node);
-
+  ts_tree_node = _ts_tree_find_node(ts_tree, key);
   if (ts_tree_node != NULL) {
-    tree_del(&ts_tree->tree, tree_node);
+    tree_del(&ts_tree->tree, &ts_tree_node->tree_node);
     reflock_ref(&ts_tree_node->reflock);
   }
 
@@ -2095,13 +2026,11 @@ ts_tree_node_t* ts_tree_del_and_ref(ts_tree_t* ts_tree, uintptr_t key) {
 }
 
 ts_tree_node_t* ts_tree_find_and_ref(ts_tree_t* ts_tree, uintptr_t key) {
-  tree_node_t* tree_node;
   ts_tree_node_t* ts_tree_node;
 
   AcquireSRWLockShared(&ts_tree->lock);
 
-  tree_node = tree_find(&ts_tree->tree, key);
-  ts_tree_node = safe_container_of(tree_node, ts_tree_node_t, tree_node);
+  ts_tree_node = _ts_tree_find_node(ts_tree, key);
   if (ts_tree_node != NULL)
     reflock_ref(&ts_tree_node->reflock);
 
@@ -2117,8 +2046,6 @@ void ts_tree_node_unref(ts_tree_node_t* node) {
 void ts_tree_node_unref_and_destroy(ts_tree_node_t* node) {
   reflock_unref_and_destroy(&node->reflock);
 }
-
-#include <string.h>
 
 void tree_init(tree_t* tree) {
   memset(tree, 0, sizeof *tree);
@@ -2334,13 +2261,6 @@ tree_node_t* tree_root(const tree_t* tree) {
   return tree->root;
 }
 
-void* util_safe_container_of_helper(void* ptr, size_t offset) {
-  if (ptr == NULL)
-    return NULL;
-  else
-    return (char*) ptr - offset;
-}
-
 #ifndef SIO_BASE_HANDLE
 #define SIO_BASE_HANDLE 0x48000022
 #endif
@@ -2377,8 +2297,7 @@ SOCKET ws_get_base_socket(SOCKET socket) {
 }
 
 /* Retrieves a copy of the winsock catalog.
- * The infos pointer must be released by the caller with free().
- */
+ * The infos pointer must be released by the caller with free(). */
 ssize_t ws_get_protocol_catalog(WSAPROTOCOL_INFOW** infos_out) {
   DWORD buffer_size = _WS_INITIAL_CATALOG_BUFFER_SIZE;
   int count;
