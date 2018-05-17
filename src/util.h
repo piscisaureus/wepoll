@@ -20,12 +20,6 @@ typedef intptr_t ssize_t;
 
 #define unused_var(v) ((void) (v))
 
-#if defined(__clang__) || defined(__GNUC__)
-#define unused_fn __attribute__((__unused__))
-#else
-#define unused_fn /* nothing */
-#endif
-
 /* Polyfill `inline` for older versions of msvc (up to Visual Studio 2013) */
 #if defined(_MSC_VER) && _MSC_VER < 1900
 #define inline __inline
