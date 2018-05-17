@@ -106,7 +106,7 @@
   X(WSASYSNOTREADY, ENETDOWN)                \
   X(WSAVERNOTSUPPORTED, ENOSYS)
 
-errno_t err_map_win_error_to_errno(DWORD error) {
+static errno_t _err_map_win_error_to_errno(DWORD error) {
   switch (error) {
 #define X(error_sym, errno_sym) \
   case error_sym:               \
@@ -122,7 +122,7 @@ void err_set_win_error(DWORD error) {
     error = GetLastError();
   else
     SetLastError(error);
-  errno = err_map_win_error_to_errno(error);
+  errno = _err_map_win_error_to_errno(error);
 }
 
 int err_check_handle(HANDLE handle) {
