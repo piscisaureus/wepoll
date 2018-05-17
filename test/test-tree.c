@@ -54,7 +54,7 @@ static void check_tree_count(const tree_t* tree, size_t expected_count) {
 }
 
 static void keys_increasing(tree_t* tree, test_op_t op) {
-  ssize_t i;
+  size_t i;
   for (i = 0; i < NODE_COUNT; i++)
     op(tree, i);
 }
@@ -62,7 +62,7 @@ static void keys_increasing(tree_t* tree, test_op_t op) {
 static void keys_decreasing(tree_t* tree, test_op_t op) {
   ssize_t i;
   for (i = NODE_COUNT - 1; i >= 0; i--)
-    op(tree, i);
+    op(tree, (size_t) i);
 }
 
 static void keys_random(tree_t* tree, test_op_t op) {
@@ -74,7 +74,7 @@ static void keys_random(tree_t* tree, test_op_t op) {
     keys[index] = index;
 
   for (left = NODE_COUNT - 1; left >= 0; left--) {
-    index = left > 0 ? rand() % left : 0;
+    index = left == 0 ? 0 : (uintptr_t)(rand() % left);
     key = keys[index];
     keys[index] = keys[left];
     op(tree, key);

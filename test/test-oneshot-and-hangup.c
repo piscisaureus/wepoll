@@ -56,7 +56,7 @@ err1:
 
 static int sock_set_nonblock(SOCKET sock, bool enable) {
   u_long arg = enable;
-  return ioctlsocket(sock, FIONBIO, &arg);
+  return ioctlsocket(sock, (long) FIONBIO, &arg);
 }
 
 int main(void) {

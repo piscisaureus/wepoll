@@ -18,7 +18,7 @@ int ws_global_init(void) {
 
   r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
   if (r != 0)
-    return_set_error(-1, r);
+    return_set_error(-1, (DWORD) r);
 
   return 0;
 }
@@ -64,7 +64,7 @@ int ws_get_protocol_catalog(WSAPROTOCOL_INFOW** infos_out,
     }
 
     *infos_out = infos;
-    *infos_count_out = count;
+    *infos_count_out = (size_t) count;
     return 0;
   }
 }

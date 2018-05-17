@@ -15,15 +15,14 @@
 
 static SOCKET create_and_add_socket(HANDLE epfd) {
   SOCKET sock;
-  unsigned long one;
+  unsigned long one = 1;
   int r;
   struct epoll_event ev;
 
   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   check(sock > 0);
 
-  one = 1;
-  r = ioctlsocket(sock, FIONBIO, &one);
+  r = ioctlsocket(sock, (long) FIONBIO, &one);
   check(r == 0);
 
   ev.events = 0;
@@ -73,7 +72,7 @@ int main(void) {
     do {
       r = epoll_wait(epfd, ev_out, array_count(ev_out), count > 0 ? 0 : -1);
       check(r >= 0);
-      count += r;
+      count += (uint64_t) r;
     } while (r > 0);
 
     total_events += count;

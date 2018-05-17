@@ -145,9 +145,9 @@ static void _ep_port_update_events_if_polling(ep_port_t* port_info) {
 static int _ep_port_feed_events(ep_port_t* port_info,
                                 struct epoll_event* epoll_events,
                                 OVERLAPPED_ENTRY* iocp_events,
-                                int iocp_event_count) {
+                                DWORD iocp_event_count) {
   int epoll_event_count = 0;
-  int i;
+  DWORD i;
 
   for (i = 0; i < iocp_event_count; i++) {
     OVERLAPPED* overlapped = iocp_events[i].lpOverlapped;
@@ -162,9 +162,9 @@ static int _ep_port_feed_events(ep_port_t* port_info,
 static int _ep_port_poll(ep_port_t* port_info,
                          struct epoll_event* epoll_events,
                          OVERLAPPED_ENTRY* iocp_events,
-                         int maxevents,
+                         DWORD maxevents,
                          DWORD timeout) {
-  ULONG completion_count;
+  DWORD completion_count;
 
   if (_ep_port_update_events(port_info) < 0)
     return -1;
@@ -197,7 +197,7 @@ int ep_port_wait(ep_port_t* port_info,
                  int timeout) {
   OVERLAPPED_ENTRY stack_iocp_events[_PORT_MAX_ON_STACK_COMPLETIONS];
   OVERLAPPED_ENTRY* iocp_events;
-  ULONGLONG due = 0;
+  uint64_t due = 0;
   DWORD gqcs_timeout;
   int result;
 
@@ -209,7 +209,8 @@ int ep_port_wait(ep_port_t* port_info,
    * memory for it on the heap. */
   if ((size_t) maxevents <= array_count(stack_iocp_events)) {
     iocp_events = stack_iocp_events;
-  } else if ((iocp_events = malloc(maxevents * sizeof *iocp_events)) == NULL) {
+  } else if ((iocp_events =
+                  malloc((size_t) maxevents * sizeof *iocp_events)) == NULL) {
     iocp_events = stack_iocp_events;
     maxevents = array_count(stack_iocp_events);
   }
@@ -217,7 +218,7 @@ int ep_port_wait(ep_port_t* port_info,
   /* Compute the timeout for GetQueuedCompletionStatus, and the wait end
    * time, if the user specified a timeout other than zero or infinite. */
   if (timeout > 0) {
-    due = GetTickCount64() + timeout;
+    due = GetTickCount64() + (uint64_t) timeout;
     gqcs_timeout = (DWORD) timeout;
   } else if (timeout == 0) {
     gqcs_timeout = 0;
@@ -230,10 +231,10 @@ int ep_port_wait(ep_port_t* port_info,
   /* Dequeue completion packets until either at least one interesting event
    * has been discovered, or the timeout is reached. */
   for (;;) {
-    ULONGLONG now;
+    uint64_t now;
 
-    result =
-        _ep_port_poll(port_info, events, iocp_events, maxevents, gqcs_timeout);
+    result = _ep_port_poll(
+        port_info, events, iocp_events, (DWORD) maxevents, gqcs_timeout);
     if (result < 0 || result > 0)
       break; /* Result, error, or time-out. */
 

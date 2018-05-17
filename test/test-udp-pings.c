@@ -27,7 +27,7 @@ int main(void) {
   check(epoll_hnd != NULL);
 
   srv = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  r = ioctlsocket(srv, FIONBIO, &one);
+  r = ioctlsocket(srv, (long) FIONBIO, &one);
   check(r == 0);
 
   address.sin_family = AF_INET;
@@ -44,7 +44,7 @@ int main(void) {
   for (i = 0; i < NUM_PINGERS; i++) {
     SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-    r = ioctlsocket(sock, FIONBIO, &one);
+    r = ioctlsocket(sock, (long) FIONBIO, &one);
     check(r == 0);
 
     r = setsockopt(
@@ -88,7 +88,7 @@ int main(void) {
     check(count >= 0);
 
     for (i = 0; i < count; i++) {
-      int revents = events[i].events;
+      uint32_t revents = events[i].events;
 
       if (revents & EPOLLERR) {
         SOCKET sock = events[i].data.sock;

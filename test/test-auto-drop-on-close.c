@@ -17,7 +17,7 @@
 #include "wepoll.h"
 #include "win.h"
 
-static SOCKET create_and_add_socket(HANDLE ephnd, int events) {
+static SOCKET create_and_add_socket(HANDLE ephnd, uint32_t events) {
   SOCKET sock;
   struct epoll_event ev;
   int r;

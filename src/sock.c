@@ -157,7 +157,7 @@ int ep_sock_set_event(ep_port_t* port_info,
   return 0;
 }
 
-static inline ULONG _epoll_events_to_afd_events(uint32_t epoll_events) {
+static inline DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
   /* Always monitor for AFD_POLL_LOCAL_CLOSE, which is triggered when the
    * socket is closed with closesocket() or CloseHandle(). */
   DWORD afd_events = AFD_POLL_LOCAL_CLOSE;
@@ -178,7 +178,7 @@ static inline ULONG _epoll_events_to_afd_events(uint32_t epoll_events) {
   return afd_events;
 }
 
-static inline uint32_t _afd_events_to_epoll_events(ULONG afd_events) {
+static inline uint32_t _afd_events_to_epoll_events(DWORD afd_events) {
   uint32_t epoll_events = 0;
 
   if (afd_events & (AFD_POLL_RECEIVE | AFD_POLL_ACCEPT))

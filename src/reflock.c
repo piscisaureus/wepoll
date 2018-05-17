@@ -45,13 +45,13 @@ static void _await_event(void* address) {
 static inline uint32_t _sync_add_and_fetch(volatile uint32_t* target,
                                            uint32_t value) {
   static_assert(sizeof(*target) == sizeof(long), "");
-  return InterlockedAdd((volatile long*) target, value);
+  return (uint32_t) InterlockedAdd((volatile long*) target, (long) value);
 }
 
 static inline uint32_t _sync_fetch_and_set(volatile uint32_t* target,
                                            uint32_t value) {
   static_assert(sizeof(*target) == sizeof(long), "");
-  return InterlockedExchange((volatile long*) target, value);
+  return (uint32_t) InterlockedExchange((volatile long*) target, (long) value);
 }
 
 void reflock_ref(reflock_t* reflock) {
@@ -61,7 +61,7 @@ void reflock_ref(reflock_t* reflock) {
 }
 
 void reflock_unref(reflock_t* reflock) {
-  uint32_t state = _sync_add_and_fetch(&reflock->state, -(int32_t) _REF);
+  uint32_t state = _sync_add_and_fetch(&reflock->state, 0 - _REF);
   uint32_t ref_count = state & _REF_MASK;
   uint32_t destroy = state & _DESTROY_MASK;
 

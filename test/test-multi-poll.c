@@ -25,7 +25,7 @@ typedef struct test_context {
 static SOCKET create_socket(unsigned short port) {
   SOCKET sock;
   struct sockaddr_in address;
-  unsigned long one;
+  unsigned long one = 1;
   int r;
 
   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -37,8 +37,7 @@ static SOCKET create_socket(unsigned short port) {
   r = bind(sock, (struct sockaddr*) &address, sizeof address);
   check(r == 0);
 
-  one = 1;
-  r = ioctlsocket(sock, FIONBIO, &one);
+  r = ioctlsocket(sock, (long) FIONBIO, &one);
   check(r == 0);
 
   return sock;
@@ -114,7 +113,7 @@ int main(void) {
 
     /* Register recv_sock with the epoll port. */
     ev.events = EPOLLIN;
-    ev.data.u64 = rand();
+    ev.data.u64 = (uint64_t) rand();
     r = epoll_ctl(port, EPOLL_CTL_ADD, recv_sock, &ev);
     check(r == 0);
 

@@ -18,7 +18,7 @@ static void create_and_add_socket(HANDLE epoll_hnd,
   sock = socket(af, type, protocol);
   check(sock != INVALID_SOCKET);
 
-  r = ioctlsocket(sock, FIONBIO, &one);
+  r = ioctlsocket(sock, (long) FIONBIO, &one);
   check(r == 0);
 
   ev.events = EPOLLOUT | EPOLLONESHOT;
