@@ -11,8 +11,9 @@
 
 static ts_tree_t _epoll_handle_tree;
 
-static inline ep_port_t* _handle_tree_node_to_port(ts_tree_node_t* tree_node) {
-  return container_of(tree_node, ep_port_t, handle_tree_node);
+static inline port_state_t* _handle_tree_node_to_port(
+    ts_tree_node_t* tree_node) {
+  return container_of(tree_node, port_state_t, handle_tree_node);
 }
 
 int api_global_init(void) {
@@ -21,21 +22,21 @@ int api_global_init(void) {
 }
 
 static HANDLE _epoll_create(void) {
-  ep_port_t* port_info;
+  port_state_t* port_state;
   HANDLE ephnd;
 
   if (init() < 0)
     return NULL;
 
-  port_info = ep_port_new(&ephnd);
-  if (port_info == NULL)
+  port_state = port_new(&ephnd);
+  if (port_state == NULL)
     return NULL;
 
   if (ts_tree_add(&_epoll_handle_tree,
-                  &port_info->handle_tree_node,
+                  &port_state->handle_tree_node,
                   (uintptr_t) ephnd) < 0) {
     /* This should never happen. */
-    ep_port_delete(port_info);
+    port_delete(port_state);
     return_set_error(NULL, ERROR_ALREADY_EXISTS);
   }
 
@@ -58,7 +59,7 @@ HANDLE epoll_create1(int flags) {
 
 int epoll_close(HANDLE ephnd) {
   ts_tree_node_t* tree_node;
-  ep_port_t* port_info;
+  port_state_t* port_state;
 
   if (init() < 0)
     return -1;
@@ -69,12 +70,12 @@ int epoll_close(HANDLE ephnd) {
     goto err;
   }
 
-  port_info = _handle_tree_node_to_port(tree_node);
-  ep_port_close(port_info);
+  port_state = _handle_tree_node_to_port(tree_node);
+  port_close(port_state);
 
   ts_tree_node_unref_and_destroy(tree_node);
 
-  return ep_port_delete(port_info);
+  return port_delete(port_state);
 
 err:
   err_check_handle(ephnd);
@@ -83,7 +84,7 @@ err:
 
 int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   ts_tree_node_t* tree_node;
-  ep_port_t* port_info;
+  port_state_t* port_state;
   int r;
 
   if (init() < 0)
@@ -95,8 +96,8 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
     goto err;
   }
 
-  port_info = _handle_tree_node_to_port(tree_node);
-  r = ep_port_ctl(port_info, op, sock, ev);
+  port_state = _handle_tree_node_to_port(tree_node);
+  r = port_ctl(port_state, op, sock, ev);
 
   ts_tree_node_unref(tree_node);
 
@@ -118,7 +119,7 @@ int epoll_wait(HANDLE ephnd,
                int maxevents,
                int timeout) {
   ts_tree_node_t* tree_node;
-  ep_port_t* port_info;
+  port_state_t* port_state;
   int num_events;
 
   if (maxevents <= 0)
@@ -133,8 +134,8 @@ int epoll_wait(HANDLE ephnd,
     goto err;
   }
 
-  port_info = _handle_tree_node_to_port(tree_node);
-  num_events = ep_port_wait(port_info, events, maxevents, timeout);
+  port_state = _handle_tree_node_to_port(tree_node);
+  num_events = port_wait(port_state, events, maxevents, timeout);
 
   ts_tree_node_unref(tree_node);
 

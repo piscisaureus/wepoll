@@ -6,10 +6,10 @@
 #include "queue.h"
 #include "win.h"
 
-typedef struct ep_port ep_port_t;
+typedef struct port_state port_state_t;
 typedef struct poll_group poll_group_t;
 
-WEPOLL_INTERNAL poll_group_t* poll_group_acquire(ep_port_t* port);
+WEPOLL_INTERNAL poll_group_t* poll_group_acquire(port_state_t* port);
 WEPOLL_INTERNAL void poll_group_release(poll_group_t* poll_group);
 
 WEPOLL_INTERNAL void poll_group_delete(poll_group_t* poll_group);
