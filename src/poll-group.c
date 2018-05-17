@@ -20,7 +20,7 @@ typedef struct poll_group {
 static poll_group_t* _poll_group_new(ep_port_t* port_info) {
   poll_group_t* poll_group = malloc(sizeof *poll_group);
   if (poll_group == NULL)
-    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
+    return_set_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
 
   memset(poll_group, 0, sizeof *poll_group);
 

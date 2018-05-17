@@ -18,7 +18,7 @@ int ws_global_init(void) {
 
   r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
   if (r != 0)
-    return_error(-1, r);
+    return_set_error(-1, r);
 
   return 0;
 }
@@ -36,7 +36,7 @@ SOCKET ws_get_base_socket(SOCKET socket) {
                &bytes,
                NULL,
                NULL) == SOCKET_ERROR)
-    return_error(INVALID_SOCKET);
+    return_map_error(INVALID_SOCKET);
 
   return base_socket;
 }
@@ -51,7 +51,7 @@ ssize_t ws_get_protocol_catalog(WSAPROTOCOL_INFOW** infos_out) {
   for (;;) {
     infos = malloc(buffer_size);
     if (infos == NULL)
-      return_error(-1, ERROR_NOT_ENOUGH_MEMORY);
+      return_set_error(-1, ERROR_NOT_ENOUGH_MEMORY);
 
     count = WSAEnumProtocolsW(NULL, infos, &buffer_size);
     if (count == SOCKET_ERROR) {
@@ -59,7 +59,7 @@ ssize_t ws_get_protocol_catalog(WSAPROTOCOL_INFOW** infos_out) {
       if (WSAGetLastError() == WSAENOBUFS)
         continue; /* Try again with bigger buffer size. */
       else
-        return_error(-1);
+        return_map_error(-1);
     }
 
     *infos_out = infos;

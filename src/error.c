@@ -117,11 +117,12 @@ static errno_t _err_map_win_error_to_errno(DWORD error) {
   return EINVAL;
 }
 
+void err_map_win_error(void) {
+  errno = _err_map_win_error_to_errno(GetLastError());
+}
+
 void err_set_win_error(DWORD error) {
-  if (error == 0)
-    error = GetLastError();
-  else
-    SetLastError(error);
+  SetLastError(error);
   errno = _err_map_win_error_to_errno(error);
 }
 
@@ -131,10 +132,10 @@ int err_check_handle(HANDLE handle) {
   /* GetHandleInformation() succeeds when passed INVALID_HANDLE_VALUE, so check
    * for this condition explicitly. */
   if (handle == INVALID_HANDLE_VALUE)
-    return_error(-1, ERROR_INVALID_HANDLE);
+    return_set_error(-1, ERROR_INVALID_HANDLE);
 
   if (!GetHandleInformation(handle, &flags))
-    return_error(-1);
+    return_map_error(-1);
 
   return 0;
 }

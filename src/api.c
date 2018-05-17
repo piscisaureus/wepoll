@@ -36,7 +36,7 @@ static HANDLE _epoll_create(void) {
                   (uintptr_t) ephnd) < 0) {
     /* This should never happen. */
     ep_port_delete(port_info);
-    return_error(NULL, ERROR_ALREADY_EXISTS);
+    return_set_error(NULL, ERROR_ALREADY_EXISTS);
   }
 
   return ephnd;
@@ -44,14 +44,14 @@ static HANDLE _epoll_create(void) {
 
 HANDLE epoll_create(int size) {
   if (size <= 0)
-    return_error(NULL, ERROR_INVALID_PARAMETER);
+    return_set_error(NULL, ERROR_INVALID_PARAMETER);
 
   return _epoll_create();
 }
 
 HANDLE epoll_create1(int flags) {
   if (flags != 0)
-    return_error(NULL, ERROR_INVALID_PARAMETER);
+    return_set_error(NULL, ERROR_INVALID_PARAMETER);
 
   return _epoll_create();
 }
@@ -122,7 +122,7 @@ int epoll_wait(HANDLE ephnd,
   int num_events;
 
   if (maxevents <= 0)
-    return_error(-1, ERROR_INVALID_PARAMETER);
+    return_set_error(-1, ERROR_INVALID_PARAMETER);
 
   if (init() < 0)
     return -1;

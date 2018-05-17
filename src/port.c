@@ -19,7 +19,7 @@
 static ep_port_t* _ep_port_alloc(void) {
   ep_port_t* port_info = malloc(sizeof *port_info);
   if (port_info == NULL)
-    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
+    return_set_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
 
   return port_info;
 }
@@ -32,7 +32,7 @@ static void _ep_port_free(ep_port_t* port) {
 static HANDLE _ep_port_create_iocp(void) {
   HANDLE iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   if (iocp == NULL)
-    return_error(NULL);
+    return_map_error(NULL);
 
   return iocp;
 }
@@ -73,7 +73,7 @@ static int _ep_port_close_iocp(ep_port_t* port_info) {
   port_info->iocp = NULL;
 
   if (!CloseHandle(iocp))
-    return_error(-1);
+    return_map_error(-1);
 
   return 0;
 }
@@ -185,7 +185,7 @@ static int _ep_port_poll(ep_port_t* port_info,
   port_info->active_poll_count--;
 
   if (!r)
-    return_error(-1);
+    return_map_error(-1);
 
   return _ep_port_feed_events(
       port_info, epoll_events, iocp_events, completion_count);
@@ -203,7 +203,7 @@ int ep_port_wait(ep_port_t* port_info,
 
   /* Check whether `maxevents` is in range. */
   if (maxevents <= 0)
-    return_error(-1, ERROR_INVALID_PARAMETER);
+    return_set_error(-1, ERROR_INVALID_PARAMETER);
 
   /* Decide whether the IOCP completion list can live on the stack, or allocate
    * memory for it on the heap. */
@@ -322,7 +322,7 @@ static int _ep_port_ctl_op(ep_port_t* port_info,
     case EPOLL_CTL_DEL:
       return _ep_port_ctl_del(port_info, sock);
     default:
-      return_error(-1, ERROR_INVALID_PARAMETER);
+      return_set_error(-1, ERROR_INVALID_PARAMETER);
   }
 }
 
@@ -344,7 +344,7 @@ int ep_port_register_socket_handle(ep_port_t* port_info,
                                    SOCKET socket) {
   if (tree_add(
           &port_info->sock_tree, ep_sock_to_tree_node(sock_info), socket) < 0)
-    return_error(-1, ERROR_ALREADY_EXISTS);
+    return_set_error(-1, ERROR_ALREADY_EXISTS);
   return 0;
 }
 
@@ -356,7 +356,7 @@ void ep_port_unregister_socket_handle(ep_port_t* port_info,
 ep_sock_t* ep_port_find_socket(ep_port_t* port_info, SOCKET socket) {
   tree_node_t* tree_node = tree_find(&port_info->sock_tree, socket);
   if (tree_node == NULL)
-    return_error(NULL, ERROR_NOT_FOUND);
+    return_set_error(NULL, ERROR_NOT_FOUND);
   return ep_sock_from_tree_node(tree_node);
 }
 

@@ -38,7 +38,7 @@ typedef struct ep_sock {
 static inline ep_sock_t* _ep_sock_alloc(void) {
   ep_sock_t* sock_info = malloc(sizeof *sock_info);
   if (sock_info == NULL)
-    return_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
+    return_set_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
   return sock_info;
 }
 
@@ -54,7 +54,7 @@ static int _ep_sock_cancel_poll(ep_sock_t* sock_info) {
    * already completed. This is not a problem and we proceed normally. */
   if (!CancelIoEx(driver_handle, &sock_info->overlapped) &&
       GetLastError() != ERROR_NOT_FOUND)
-    return_error(-1);
+    return_map_error(-1);
 
   sock_info->poll_status = _POLL_CANCELLED;
   sock_info->pending_events = 0;
@@ -67,7 +67,7 @@ ep_sock_t* ep_sock_new(ep_port_t* port_info, SOCKET socket) {
   ep_sock_t* sock_info;
 
   if (socket == 0 || socket == INVALID_SOCKET)
-    return_error(NULL, ERROR_INVALID_HANDLE);
+    return_set_error(NULL, ERROR_INVALID_HANDLE);
 
   base_socket = ws_get_base_socket(socket);
   if (base_socket == INVALID_SOCKET)
@@ -243,7 +243,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
           return _ep_sock_delete(port_info, sock_info, false);
         default:
           /* Other errors are propagated to the caller. */
-          return_error(-1);
+          return_map_error(-1);
       }
     }
 

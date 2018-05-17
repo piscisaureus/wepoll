@@ -71,7 +71,7 @@ int afd_global_init(void) {
   /* Load the winsock catalog. */
   infos_count = ws_get_protocol_catalog(&infos);
   if (infos_count < 0)
-    return_error(-1);
+    return_map_error(-1);
 
   /* Find a WSAPROTOCOL_INFOW structure that we can use to create an MSAFD
    * socket. Preferentially we pick a UDP socket, otherwise try TCP or any
@@ -90,7 +90,7 @@ int afd_global_init(void) {
       break;
 
     free(infos);
-    return_error(-1, WSAENETDOWN); /* No suitable protocol found. */
+    return_set_error(-1, WSAENETDOWN); /* No suitable protocol found. */
   }
 
   /* Copy found protocol information from the catalog to a static buffer. */
@@ -110,7 +110,7 @@ int afd_create_driver_socket(HANDLE iocp, SOCKET* driver_socket_out) {
                       0,
                       WSA_FLAG_OVERLAPPED);
   if (socket == INVALID_SOCKET)
-    return_error(-1);
+    return_map_error(-1);
 
   /* TODO: use WSA_FLAG_NOINHERIT on Windows versions that support it. */
   if (!SetHandleInformation((HANDLE) socket, HANDLE_FLAG_INHERIT, 0))
@@ -125,7 +125,7 @@ int afd_create_driver_socket(HANDLE iocp, SOCKET* driver_socket_out) {
 error:;
   DWORD error = GetLastError();
   closesocket(socket);
-  return_error(-1, error);
+  return_set_error(-1, error);
 }
 
 int afd_poll(SOCKET driver_socket,
@@ -155,7 +155,7 @@ int afd_poll(SOCKET driver_socket,
     iosb_ptr = &iosb;
     event = CreateEventW(NULL, FALSE, FALSE, NULL);
     if (event == NULL)
-      return_error(-1);
+      return_map_error(-1);
     apc_context = NULL;
   }
 
@@ -180,7 +180,7 @@ int afd_poll(SOCKET driver_socket,
       if (r == WAIT_FAILED) {
         DWORD error = GetLastError();
         CloseHandle(event);
-        return_error(-1, error);
+        return_set_error(-1, error);
       }
 
       status = iosb_ptr->Status;
@@ -192,7 +192,7 @@ int afd_poll(SOCKET driver_socket,
   if (status == STATUS_SUCCESS)
     return 0;
   else if (status == STATUS_PENDING)
-    return_error(-1, ERROR_IO_PENDING);
+    return_set_error(-1, ERROR_IO_PENDING);
   else
-    return_error(-1, RtlNtStatusToDosError(status));
+    return_set_error(-1, RtlNtStatusToDosError(status));
 }

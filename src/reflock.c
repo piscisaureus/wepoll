@@ -22,7 +22,7 @@ int reflock_global_init(void) {
   NTSTATUS status =
       NtCreateKeyedEvent(&_keyed_event, ~(ACCESS_MASK) 0, NULL, 0);
   if (status != STATUS_SUCCESS)
-    return_error(-1, RtlNtStatusToDosError(status));
+    return_set_error(-1, RtlNtStatusToDosError(status));
   return 0;
 }
 
