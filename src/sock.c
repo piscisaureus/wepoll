@@ -47,7 +47,8 @@ static inline void _ep_sock_free(ep_sock_t* sock_info) {
 }
 
 static int _ep_sock_cancel_poll(ep_sock_t* sock_info) {
-  HANDLE driver_handle = (HANDLE) poll_group_get_socket(sock_info->poll_group);
+  HANDLE driver_handle =
+      (HANDLE)(uintptr_t) poll_group_get_socket(sock_info->poll_group);
   assert(sock_info->poll_status == _POLL_PENDING);
 
   /* CancelIoEx() may fail with ERROR_NOT_FOUND if the overlapped operation has
