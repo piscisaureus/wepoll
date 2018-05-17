@@ -5,12 +5,21 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreserved-id-macro"
+#endif
+
 #if defined(_WIN32_WINNT) && _WIN32_WINNT < 0x0600
 #undef _WIN32_WINNT
 #endif
 
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0600
+#endif
+
+#ifdef __clang__
+#pragma clang diagnostic pop
 #endif
 
 #ifndef __GNUC__
