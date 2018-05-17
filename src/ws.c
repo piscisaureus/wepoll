@@ -10,7 +10,7 @@
 #define SIO_BASE_HANDLE 0x48000022
 #endif
 
-#define _WS_INITIAL_CATALOG_BUFFER_SIZE 0x4000 /* 16kb. */
+#define WS__INITIAL_CATALOG_BUFFER_SIZE 0x4000 /* 16kb. */
 
 int ws_global_init(void) {
   int r;
@@ -45,7 +45,7 @@ SOCKET ws_get_base_socket(SOCKET socket) {
  * The infos pointer must be released by the caller with free(). */
 int ws_get_protocol_catalog(WSAPROTOCOL_INFOW** infos_out,
                             size_t* infos_count_out) {
-  DWORD buffer_size = _WS_INITIAL_CATALOG_BUFFER_SIZE;
+  DWORD buffer_size = WS__INITIAL_CATALOG_BUFFER_SIZE;
   int count;
   WSAPROTOCOL_INFOW* infos;
 

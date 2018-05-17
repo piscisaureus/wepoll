@@ -11,9 +11,9 @@
 #include "sock.h"
 #include "ws.h"
 
-#define _KNOWN_EPOLL_EVENTS                                            \
-  (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM | \
-   EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLRDHUP)
+static const uint32_t _EP_SOCK_KNOWN_EPOLL_EVENTS =
+    EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM |
+    EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLMSG | EPOLLRDHUP;
 
 typedef enum _poll_status {
   _POLL_IDLE = 0,
@@ -151,7 +151,7 @@ int ep_sock_set_event(ep_port_t* port_info,
   sock_info->user_events = events;
   sock_info->user_data = ev->data;
 
-  if ((events & _KNOWN_EPOLL_EVENTS & ~sock_info->pending_events) != 0)
+  if ((events & _EP_SOCK_KNOWN_EPOLL_EVENTS & ~sock_info->pending_events) != 0)
     ep_port_request_socket_update(port_info, sock_info);
 
   return 0;
@@ -201,7 +201,7 @@ int ep_sock_update(ep_port_t* port_info, ep_sock_t* sock_info) {
   assert(!sock_info->delete_pending);
 
   if ((sock_info->poll_status == _POLL_PENDING) &&
-      (sock_info->user_events & _KNOWN_EPOLL_EVENTS &
+      (sock_info->user_events & _EP_SOCK_KNOWN_EPOLL_EVENTS &
        ~sock_info->pending_events) == 0) {
     /* All the events the user is interested in are already being monitored by
      * the pending poll operation. It might spuriously complete because of an

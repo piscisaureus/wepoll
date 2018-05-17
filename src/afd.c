@@ -8,7 +8,6 @@
 #include "win.h"
 #include "ws.h"
 
-#define _AFD_ANY_PROTOCOL -1
 #define IOCTL_AFD_POLL 0x00012024
 
 /* clang-format off */
@@ -26,6 +25,8 @@ static const GUID _AFD_PROVIDER_GUID_LIST[] = {
   {0x3972523d, 0x2af1, 0x11d1,
    {0xb6, 0x55, 0x00, 0x80, 0x5f, 0x36, 0x42, 0xcc}}};
 /* clang-format on */
+
+static const int _AFD_ANY_PROTOCOL = -1;
 
 /* This protocol info record is used by afd_create_driver_socket() to create
  * sockets that can be used as the first argument to afd_poll(). It is

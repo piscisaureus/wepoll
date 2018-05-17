@@ -14,7 +14,7 @@
 #include "wepoll.h"
 #include "win.h"
 
-#define _PORT_MAX_ON_STACK_COMPLETIONS 256
+#define EP_PORT__MAX_ON_STACK_COMPLETIONS 256
 
 static ep_port_t* _ep_port_alloc(void) {
   ep_port_t* port_info = malloc(sizeof *port_info);
@@ -195,7 +195,7 @@ int ep_port_wait(ep_port_t* port_info,
                  struct epoll_event* events,
                  int maxevents,
                  int timeout) {
-  OVERLAPPED_ENTRY stack_iocp_events[_PORT_MAX_ON_STACK_COMPLETIONS];
+  OVERLAPPED_ENTRY stack_iocp_events[EP_PORT__MAX_ON_STACK_COMPLETIONS];
   OVERLAPPED_ENTRY* iocp_events;
   uint64_t due = 0;
   DWORD gqcs_timeout;

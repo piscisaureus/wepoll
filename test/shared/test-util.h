@@ -21,16 +21,16 @@
 
 void no_inline no_return check_fail(const char* message);
 
-#define __check_to_string_helper(v) #v
-#define __check_to_string(v) __check_to_string_helper(v)
+#define _check_to_string_helper(v) #v
+#define _check_to_string(v) _check_to_string_helper(v)
 
-#define check(expression)                                           \
-  (void) ((!!(expression)) ||                                       \
-          (check_fail("\n"                                          \
-                      "Check failed:\n"                             \
-                      "  test: " #expression "\n"                   \
-                      "  file: " __FILE__ "\n"                      \
-                      "  line: " __check_to_string(__LINE__) "\n"), \
+#define check(expression)                                          \
+  (void) ((!!(expression)) ||                                      \
+          (check_fail("\n"                                         \
+                      "Check failed:\n"                            \
+                      "  test: " #expression "\n"                  \
+                      "  file: " __FILE__ "\n"                     \
+                      "  line: " _check_to_string(__LINE__) "\n"), \
            0))
 
 #endif /* TEST_UTIL_H_ */

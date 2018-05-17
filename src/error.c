@@ -3,7 +3,7 @@
 #include "error.h"
 #include "win.h"
 
-#define _ERROR_ERRNO_MAP(X)                  \
+#define ERR__ERRNO_MAPPINGS(X)               \
   X(ERROR_ACCESS_DENIED, EACCES)             \
   X(ERROR_ALREADY_EXISTS, EEXIST)            \
   X(ERROR_BAD_COMMAND, EACCES)               \
@@ -111,7 +111,7 @@ static errno_t _err_map_win_error_to_errno(DWORD error) {
 #define X(error_sym, errno_sym) \
   case error_sym:               \
     return errno_sym;
-    _ERROR_ERRNO_MAP(X)
+    ERR__ERRNO_MAPPINGS(X)
 #undef X
   }
   return EINVAL;
