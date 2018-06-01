@@ -1,5 +1,7 @@
-cmake_minimum_required(VERSION 2.8.0)
+cmake_minimum_required(VERSION 3.0.0)
 project(wepoll)
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 link_libraries(ws2_32)
 
@@ -30,6 +32,7 @@ source_group(test/shared FILES ${SOURCES_TEST_SHARED})
 foreach(TEST_SOURCE ${SOURCES_TEST})
   get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
   add_executable(${TEST_NAME} ${TEST_SOURCE} ${SOURCES_SRC} ${SOURCES_SRC_REGULAR} ${SOURCES_TEST_SHARED})
+  set_target_properties(${TEST_NAME} PROPERTIES FOLDER Tests)
   target_include_directories(${TEST_NAME} PUBLIC include src src/regular test/shared)
   list(APPEND TEST_TARGETS ${TEST_NAME})
   list(APPEND TEST_OUTPUTS $<TARGET_FILE:${TEST_NAME}>)
