@@ -114,10 +114,9 @@ int afd_create_driver_socket(HANDLE iocp, SOCKET* driver_socket_out) {
   *driver_socket_out = socket;
   return 0;
 
-error:;
-  DWORD error = GetLastError();
+error:
   closesocket(socket);
-  return_set_error(-1, error);
+  return_map_error(-1);
 }
 
 int afd_poll(SOCKET driver_socket,
