@@ -24,7 +24,7 @@
 #include "internal.h"
 
 typedef struct reflock {
-  uint32_t state;
+  volatile long state; /* 32-bit Interlocked APIs operate on `long` values. */
 } reflock_t;
 
 WEPOLL_INTERNAL int reflock_global_init(void);

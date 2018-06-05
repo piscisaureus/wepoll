@@ -9,11 +9,11 @@
 #include "win.h"
 
 /* clang-format off */
-static const uint32_t _REF          = 0x00000001;
-static const uint32_t _REF_MASK     = 0x0fffffff;
-static const uint32_t _DESTROY      = 0x10000000;
-static const uint32_t _DESTROY_MASK = 0xf0000000;
-static const uint32_t _POISON       = 0x300DEAD0;
+static const long _REF          = (long) 0x00000001;
+static const long _REF_MASK     = (long) 0x0fffffff;
+static const long _DESTROY      = (long) 0x10000000;
+static const long _DESTROY_MASK = (long) 0xf0000000;
+static const long _POISON       = (long) 0x300DEAD0;
 /* clang-format on */
 
 static HANDLE _keyed_event = NULL;
@@ -42,28 +42,16 @@ static void _await_event(void* address) {
     abort();
 }
 
-static inline uint32_t _sync_add_and_fetch(volatile uint32_t* target,
-                                           uint32_t value) {
-  static_assert(sizeof(*target) == sizeof(long), "");
-  return (uint32_t) InterlockedAdd((volatile long*) target, (long) value);
-}
-
-static inline uint32_t _sync_fetch_and_set(volatile uint32_t* target,
-                                           uint32_t value) {
-  static_assert(sizeof(*target) == sizeof(long), "");
-  return (uint32_t) InterlockedExchange((volatile long*) target, (long) value);
-}
-
 void reflock_ref(reflock_t* reflock) {
-  uint32_t state = _sync_add_and_fetch(&reflock->state, _REF);
+  long state = InterlockedAdd(&reflock->state, _REF);
   unused_var(state);
   assert((state & _DESTROY_MASK) == 0); /* Overflow or destroyed. */
 }
 
 void reflock_unref(reflock_t* reflock) {
-  uint32_t state = _sync_add_and_fetch(&reflock->state, 0 - _REF);
-  uint32_t ref_count = state & _REF_MASK;
-  uint32_t destroy = state & _DESTROY_MASK;
+  long state = InterlockedAdd(&reflock->state, -_REF);
+  long ref_count = state & _REF_MASK;
+  long destroy = state & _DESTROY_MASK;
 
   unused_var(ref_count);
   unused_var(destroy);
@@ -75,8 +63,8 @@ void reflock_unref(reflock_t* reflock) {
 }
 
 void reflock_unref_and_destroy(reflock_t* reflock) {
-  uint32_t state = _sync_add_and_fetch(&reflock->state, _DESTROY - _REF);
-  uint32_t ref_count = state & _REF_MASK;
+  long state = InterlockedAdd(&reflock->state, _DESTROY - _REF);
+  long ref_count = state & _REF_MASK;
 
   assert((state & _DESTROY_MASK) ==
          _DESTROY); /* Underflow or already destroyed. */
@@ -84,6 +72,6 @@ void reflock_unref_and_destroy(reflock_t* reflock) {
   if (ref_count != 0)
     _await_event(reflock);
 
-  state = _sync_fetch_and_set(&reflock->state, _POISON);
+  state = InterlockedExchange(&reflock->state, _POISON);
   assert(state == _DESTROY);
 }
