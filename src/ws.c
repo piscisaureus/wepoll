@@ -49,22 +49,21 @@ int ws_get_protocol_catalog(WSAPROTOCOL_INFOW** infos_out,
   int count;
   WSAPROTOCOL_INFOW* infos;
 
-  for (;;) {
-    infos = malloc(buffer_size);
-    if (infos == NULL)
-      return_set_error(-1, ERROR_NOT_ENOUGH_MEMORY);
+retry:
+  infos = malloc(buffer_size);
+  if (infos == NULL)
+    return_set_error(-1, ERROR_NOT_ENOUGH_MEMORY);
 
-    count = WSAEnumProtocolsW(NULL, infos, &buffer_size);
-    if (count == SOCKET_ERROR) {
-      free(infos);
-      if (WSAGetLastError() == WSAENOBUFS)
-        continue; /* Try again with bigger buffer size. */
-      else
-        return_map_error(-1);
-    }
-
-    *infos_out = infos;
-    *infos_count_out = (size_t) count;
-    return 0;
+  count = WSAEnumProtocolsW(NULL, infos, &buffer_size);
+  if (count == SOCKET_ERROR) {
+    free(infos);
+    if (WSAGetLastError() == WSAENOBUFS)
+      goto retry; /* Try again with bigger buffer size. */
+    else
+      return_map_error(-1);
   }
+
+  *infos_out = infos;
+  *infos_count_out = (size_t) count;
+  return 0;
 }
