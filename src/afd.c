@@ -111,6 +111,10 @@ int afd_create_driver_socket(HANDLE iocp, SOCKET* driver_socket_out) {
   if (CreateIoCompletionPort((HANDLE) socket, iocp, 0, 0) == NULL)
     goto error;
 
+  if (!SetFileCompletionNotificationModes((HANDLE) socket,
+                                          FILE_SKIP_SET_EVENT_ON_HANDLE))
+    goto error;
+
   *driver_socket_out = socket;
   return 0;
 
