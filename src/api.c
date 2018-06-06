@@ -9,19 +9,19 @@
 #include "util.h"
 #include "win.h"
 
-static ts_tree_t _epoll_handle_tree;
+static ts_tree_t epoll__handle_tree;
 
-static inline port_state_t* _handle_tree_node_to_port(
+static inline port_state_t* epoll__handle_tree_node_to_port(
     ts_tree_node_t* tree_node) {
   return container_of(tree_node, port_state_t, handle_tree_node);
 }
 
-int api_global_init(void) {
-  ts_tree_init(&_epoll_handle_tree);
+int epoll_global_init(void) {
+  ts_tree_init(&epoll__handle_tree);
   return 0;
 }
 
-static HANDLE _epoll_create(void) {
+static HANDLE epoll__create(void) {
   port_state_t* port_state;
   HANDLE ephnd;
 
@@ -32,7 +32,7 @@ static HANDLE _epoll_create(void) {
   if (port_state == NULL)
     return NULL;
 
-  if (ts_tree_add(&_epoll_handle_tree,
+  if (ts_tree_add(&epoll__handle_tree,
                   &port_state->handle_tree_node,
                   (uintptr_t) ephnd) < 0) {
     /* This should never happen. */
@@ -47,14 +47,14 @@ HANDLE epoll_create(int size) {
   if (size <= 0)
     return_set_error(NULL, ERROR_INVALID_PARAMETER);
 
-  return _epoll_create();
+  return epoll__create();
 }
 
 HANDLE epoll_create1(int flags) {
   if (flags != 0)
     return_set_error(NULL, ERROR_INVALID_PARAMETER);
 
-  return _epoll_create();
+  return epoll__create();
 }
 
 int epoll_close(HANDLE ephnd) {
@@ -64,13 +64,13 @@ int epoll_close(HANDLE ephnd) {
   if (init() < 0)
     return -1;
 
-  tree_node = ts_tree_del_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
+  tree_node = ts_tree_del_and_ref(&epoll__handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL) {
     err_set_win_error(ERROR_INVALID_PARAMETER);
     goto err;
   }
 
-  port_state = _handle_tree_node_to_port(tree_node);
+  port_state = epoll__handle_tree_node_to_port(tree_node);
   port_close(port_state);
 
   ts_tree_node_unref_and_destroy(tree_node);
@@ -90,13 +90,13 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   if (init() < 0)
     return -1;
 
-  tree_node = ts_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
+  tree_node = ts_tree_find_and_ref(&epoll__handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL) {
     err_set_win_error(ERROR_INVALID_PARAMETER);
     goto err;
   }
 
-  port_state = _handle_tree_node_to_port(tree_node);
+  port_state = epoll__handle_tree_node_to_port(tree_node);
   r = port_ctl(port_state, op, sock, ev);
 
   ts_tree_node_unref(tree_node);
@@ -128,13 +128,13 @@ int epoll_wait(HANDLE ephnd,
   if (init() < 0)
     return -1;
 
-  tree_node = ts_tree_find_and_ref(&_epoll_handle_tree, (uintptr_t) ephnd);
+  tree_node = ts_tree_find_and_ref(&epoll__handle_tree, (uintptr_t) ephnd);
   if (tree_node == NULL) {
     err_set_win_error(ERROR_INVALID_PARAMETER);
     goto err;
   }
 
-  port_state = _handle_tree_node_to_port(tree_node);
+  port_state = epoll__handle_tree_node_to_port(tree_node);
   num_events = port_wait(port_state, events, maxevents, timeout);
 
   ts_tree_node_unref(tree_node);

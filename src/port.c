@@ -16,7 +16,7 @@
 
 #define PORT__MAX_ON_STACK_COMPLETIONS 256
 
-static port_state_t* _port_alloc(void) {
+static port_state_t* port__alloc(void) {
   port_state_t* port_state = malloc(sizeof *port_state);
   if (port_state == NULL)
     return_set_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
@@ -24,12 +24,12 @@ static port_state_t* _port_alloc(void) {
   return port_state;
 }
 
-static void _port_free(port_state_t* port) {
+static void port__free(port_state_t* port) {
   assert(port != NULL);
   free(port);
 }
 
-static HANDLE _port_create_iocp(void) {
+static HANDLE port__create_iocp(void) {
   HANDLE iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   if (iocp == NULL)
     return_map_error(NULL);
@@ -41,11 +41,11 @@ port_state_t* port_new(HANDLE* iocp_out) {
   port_state_t* port_state;
   HANDLE iocp;
 
-  port_state = _port_alloc();
+  port_state = port__alloc();
   if (port_state == NULL)
     goto err1;
 
-  iocp = _port_create_iocp();
+  iocp = port__create_iocp();
   if (iocp == NULL)
     goto err2;
 
@@ -63,12 +63,12 @@ port_state_t* port_new(HANDLE* iocp_out) {
   return port_state;
 
 err2:
-  _port_free(port_state);
+  port__free(port_state);
 err1:
   return NULL;
 }
 
-static int _port_close_iocp(port_state_t* port_state) {
+static int port__close_iocp(port_state_t* port_state) {
   HANDLE iocp = port_state->iocp;
   port_state->iocp = NULL;
 
@@ -82,7 +82,7 @@ int port_close(port_state_t* port_state) {
   int result;
 
   EnterCriticalSection(&port_state->lock);
-  result = _port_close_iocp(port_state);
+  result = port__close_iocp(port_state);
   LeaveCriticalSection(&port_state->lock);
 
   return result;
@@ -114,12 +114,12 @@ int port_delete(port_state_t* port_state) {
 
   DeleteCriticalSection(&port_state->lock);
 
-  _port_free(port_state);
+  port__free(port_state);
 
   return 0;
 }
 
-static int _port_update_events(port_state_t* port_state) {
+static int port__update_events(port_state_t* port_state) {
   queue_t* sock_update_queue = &port_state->sock_update_queue;
 
   /* Walk the queue, submitting new poll requests for every socket that needs
@@ -137,12 +137,12 @@ static int _port_update_events(port_state_t* port_state) {
   return 0;
 }
 
-static void _port_update_events_if_polling(port_state_t* port_state) {
+static void port__update_events_if_polling(port_state_t* port_state) {
   if (port_state->active_poll_count > 0)
-    _port_update_events(port_state);
+    port__update_events(port_state);
 }
 
-static int _port_feed_events(port_state_t* port_state,
+static int port__feed_events(port_state_t* port_state,
                              struct epoll_event* epoll_events,
                              OVERLAPPED_ENTRY* iocp_events,
                              DWORD iocp_event_count) {
@@ -159,14 +159,14 @@ static int _port_feed_events(port_state_t* port_state,
   return epoll_event_count;
 }
 
-static int _port_poll(port_state_t* port_state,
+static int port__poll(port_state_t* port_state,
                       struct epoll_event* epoll_events,
                       OVERLAPPED_ENTRY* iocp_events,
                       DWORD maxevents,
                       DWORD timeout) {
   DWORD completion_count;
 
-  if (_port_update_events(port_state) < 0)
+  if (port__update_events(port_state) < 0)
     return -1;
 
   port_state->active_poll_count++;
@@ -187,7 +187,7 @@ static int _port_poll(port_state_t* port_state,
   if (!r)
     return_map_error(-1);
 
-  return _port_feed_events(
+  return port__feed_events(
       port_state, epoll_events, iocp_events, completion_count);
 }
 
@@ -233,7 +233,7 @@ int port_wait(port_state_t* port_state,
   for (;;) {
     uint64_t now;
 
-    result = _port_poll(
+    result = port__poll(
         port_state, events, iocp_events, (DWORD) maxevents, gqcs_timeout);
     if (result < 0 || result > 0)
       break; /* Result, error, or time-out. */
@@ -254,7 +254,7 @@ int port_wait(port_state_t* port_state,
     gqcs_timeout = (DWORD)(due - now);
   }
 
-  _port_update_events_if_polling(port_state);
+  port__update_events_if_polling(port_state);
 
   LeaveCriticalSection(&port_state->lock);
 
@@ -269,7 +269,7 @@ int port_wait(port_state_t* port_state,
     return -1;
 }
 
-static int _port_ctl_add(port_state_t* port_state,
+static int port__ctl_add(port_state_t* port_state,
                          SOCKET sock,
                          struct epoll_event* ev) {
   sock_state_t* sock_state = sock_new(port_state, sock);
@@ -281,12 +281,12 @@ static int _port_ctl_add(port_state_t* port_state,
     return -1;
   }
 
-  _port_update_events_if_polling(port_state);
+  port__update_events_if_polling(port_state);
 
   return 0;
 }
 
-static int _port_ctl_mod(port_state_t* port_state,
+static int port__ctl_mod(port_state_t* port_state,
                          SOCKET sock,
                          struct epoll_event* ev) {
   sock_state_t* sock_state = port_find_socket(port_state, sock);
@@ -296,12 +296,12 @@ static int _port_ctl_mod(port_state_t* port_state,
   if (sock_set_event(port_state, sock_state, ev) < 0)
     return -1;
 
-  _port_update_events_if_polling(port_state);
+  port__update_events_if_polling(port_state);
 
   return 0;
 }
 
-static int _port_ctl_del(port_state_t* port_state, SOCKET sock) {
+static int port__ctl_del(port_state_t* port_state, SOCKET sock) {
   sock_state_t* sock_state = port_find_socket(port_state, sock);
   if (sock_state == NULL)
     return -1;
@@ -311,17 +311,17 @@ static int _port_ctl_del(port_state_t* port_state, SOCKET sock) {
   return 0;
 }
 
-static int _port_ctl_op(port_state_t* port_state,
+static int port__ctl_op(port_state_t* port_state,
                         int op,
                         SOCKET sock,
                         struct epoll_event* ev) {
   switch (op) {
     case EPOLL_CTL_ADD:
-      return _port_ctl_add(port_state, sock, ev);
+      return port__ctl_add(port_state, sock, ev);
     case EPOLL_CTL_MOD:
-      return _port_ctl_mod(port_state, sock, ev);
+      return port__ctl_mod(port_state, sock, ev);
     case EPOLL_CTL_DEL:
-      return _port_ctl_del(port_state, sock);
+      return port__ctl_del(port_state, sock);
     default:
       return_set_error(-1, ERROR_INVALID_PARAMETER);
   }
@@ -334,7 +334,7 @@ int port_ctl(port_state_t* port_state,
   int result;
 
   EnterCriticalSection(&port_state->lock);
-  result = _port_ctl_op(port_state, op, sock, ev);
+  result = port__ctl_op(port_state, op, sock, ev);
   LeaveCriticalSection(&port_state->lock);
 
   return result;

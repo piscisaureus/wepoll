@@ -11,7 +11,7 @@
 #define IOCTL_AFD_POLL 0x00012024
 
 /* clang-format off */
-static const GUID _AFD_PROVIDER_GUID_LIST[] = {
+static const GUID AFD__PROVIDER_GUID_LIST[] = {
   /* MSAFD Tcpip [TCP+UDP+RAW / IP] */
   {0xe70f1aa0, 0xab8b, 0x11cf,
    {0x8c, 0xa3, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92}},
@@ -26,14 +26,14 @@ static const GUID _AFD_PROVIDER_GUID_LIST[] = {
    {0xb6, 0x55, 0x00, 0x80, 0x5f, 0x36, 0x42, 0xcc}}};
 /* clang-format on */
 
-static const int _AFD_ANY_PROTOCOL = -1;
+static const int AFD__ANY_PROTOCOL = -1;
 
 /* This protocol info record is used by afd_create_driver_socket() to create
  * sockets that can be used as the first argument to afd_poll(). It is
  * populated on startup by afd_global_init(). */
-static WSAPROTOCOL_INFOW _afd_driver_socket_template;
+static WSAPROTOCOL_INFOW afd__driver_socket_protocol_info;
 
-static const WSAPROTOCOL_INFOW* _afd_find_protocol_info(
+static const WSAPROTOCOL_INFOW* afd__find_protocol_info(
     const WSAPROTOCOL_INFOW* infos, size_t infos_count, int protocol_id) {
   size_t i, j;
 
@@ -41,13 +41,13 @@ static const WSAPROTOCOL_INFOW* _afd_find_protocol_info(
     const WSAPROTOCOL_INFOW* info = &infos[i];
 
     /* Apply protocol id filter. */
-    if (protocol_id != _AFD_ANY_PROTOCOL && protocol_id != info->iProtocol)
+    if (protocol_id != AFD__ANY_PROTOCOL && protocol_id != info->iProtocol)
       continue;
 
     /* Filter out non-MSAFD protocols. */
-    for (j = 0; j < array_count(_AFD_PROVIDER_GUID_LIST); j++) {
+    for (j = 0; j < array_count(AFD__PROVIDER_GUID_LIST); j++) {
       if (memcmp(&info->ProviderId,
-                 &_AFD_PROVIDER_GUID_LIST[j],
+                 &AFD__PROVIDER_GUID_LIST[j],
                  sizeof info->ProviderId) == 0)
         return info;
     }
@@ -69,15 +69,15 @@ int afd_global_init(void) {
    * socket. Preferentially we pick a UDP socket, otherwise try TCP or any
    * other type. */
   for (;;) {
-    afd_info = _afd_find_protocol_info(infos, infos_count, IPPROTO_UDP);
+    afd_info = afd__find_protocol_info(infos, infos_count, IPPROTO_UDP);
     if (afd_info != NULL)
       break;
 
-    afd_info = _afd_find_protocol_info(infos, infos_count, IPPROTO_TCP);
+    afd_info = afd__find_protocol_info(infos, infos_count, IPPROTO_TCP);
     if (afd_info != NULL)
       break;
 
-    afd_info = _afd_find_protocol_info(infos, infos_count, _AFD_ANY_PROTOCOL);
+    afd_info = afd__find_protocol_info(infos, infos_count, AFD__ANY_PROTOCOL);
     if (afd_info != NULL)
       break;
 
@@ -86,7 +86,7 @@ int afd_global_init(void) {
   }
 
   /* Copy found protocol information from the catalog to a static buffer. */
-  _afd_driver_socket_template = *afd_info;
+  afd__driver_socket_protocol_info = *afd_info;
 
   free(infos);
   return 0;
@@ -95,10 +95,10 @@ int afd_global_init(void) {
 int afd_create_driver_socket(HANDLE iocp, SOCKET* driver_socket_out) {
   SOCKET socket;
 
-  socket = WSASocketW(_afd_driver_socket_template.iAddressFamily,
-                      _afd_driver_socket_template.iSocketType,
-                      _afd_driver_socket_template.iProtocol,
-                      &_afd_driver_socket_template,
+  socket = WSASocketW(afd__driver_socket_protocol_info.iAddressFamily,
+                      afd__driver_socket_protocol_info.iSocketType,
+                      afd__driver_socket_protocol_info.iProtocol,
+                      &afd__driver_socket_protocol_info,
                       0,
                       WSA_FLAG_OVERLAPPED);
   if (socket == INVALID_SOCKET)

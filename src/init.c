@@ -8,10 +8,10 @@
 #include "util.h"
 #include "ws.h"
 
-static bool _initialized = false;
-static INIT_ONCE _once = INIT_ONCE_STATIC_INIT;
+static bool init__done = false;
+static INIT_ONCE init__once = INIT_ONCE_STATIC_INIT;
 
-static BOOL CALLBACK _init_once_callback(INIT_ONCE* once,
+static BOOL CALLBACK init__once_callback(INIT_ONCE* once,
                                          void* parameter,
                                          void** context) {
   unused_var(once);
@@ -20,16 +20,16 @@ static BOOL CALLBACK _init_once_callback(INIT_ONCE* once,
 
   /* N.b. that initialization order matters here. */
   if (ws_global_init() < 0 || nt_global_init() < 0 || afd_global_init() < 0 ||
-      reflock_global_init() < 0 || api_global_init() < 0)
+      reflock_global_init() < 0 || epoll_global_init() < 0)
     return FALSE;
 
-  _initialized = true;
+  init__done = true;
   return TRUE;
 }
 
 int init(void) {
-  if (!_initialized &&
-      !InitOnceExecuteOnce(&_once, _init_once_callback, NULL, NULL))
+  if (!init__done &&
+      !InitOnceExecuteOnce(&init__once, init__once_callback, NULL, NULL))
     return -1; /* LastError and errno aren't touched InitOnceExecuteOnce. */
 
   return 0;

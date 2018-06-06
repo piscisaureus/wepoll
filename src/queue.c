@@ -13,7 +13,7 @@ void queue_node_init(queue_node_t* node) {
   node->next = node;
 }
 
-static inline void _queue_detach(queue_node_t* node) {
+static inline void queue__detach_node(queue_node_t* node) {
   node->prev->next = node->next;
   node->next->prev = node->prev;
 }
@@ -41,17 +41,17 @@ void queue_append(queue_t* queue, queue_node_t* node) {
 }
 
 void queue_move_first(queue_t* queue, queue_node_t* node) {
-  _queue_detach(node);
+  queue__detach_node(node);
   queue_prepend(queue, node);
 }
 
 void queue_move_last(queue_t* queue, queue_node_t* node) {
-  _queue_detach(node);
+  queue__detach_node(node);
   queue_append(queue, node);
 }
 
 void queue_remove(queue_node_t* node) {
-  _queue_detach(node);
+  queue__detach_node(node);
   queue_node_init(node);
 }
 

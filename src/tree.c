@@ -34,11 +34,11 @@ void tree_node_init(tree_node_t* node) {
     p->trans->parent = p;          \
   q->cis = p;
 
-static inline void _tree_rotate_left(tree_t* tree, tree_node_t* node) {
+static inline void tree__rotate_left(tree_t* tree, tree_node_t* node) {
   TREE__ROTATE(left, right)
 }
 
-static inline void _tree_rotate_right(tree_t* tree, tree_node_t* node) {
+static inline void tree__rotate_right(tree_t* tree, tree_node_t* node) {
   TREE__ROTATE(right, left)
 }
 
@@ -60,13 +60,13 @@ static inline void _tree_rotate_right(tree_t* tree, tree_node_t* node) {
     node = grandparent;                      \
   } else {                                   \
     if (node == parent->trans) {             \
-      _tree_rotate_##cis(tree, parent);      \
+      tree__rotate_##cis(tree, parent);      \
       node = parent;                         \
       parent = node->parent;                 \
     }                                        \
     parent->red = false;                     \
     grandparent->red = true;                 \
-    _tree_rotate_##trans(tree, grandparent); \
+    tree__rotate_##trans(tree, grandparent); \
   }
 
 int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
@@ -110,7 +110,7 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
   if (sibling->red) {                              \
     sibling->red = false;                          \
     parent->red = true;                            \
-    _tree_rotate_##cis(tree, parent);              \
+    tree__rotate_##cis(tree, parent);              \
     sibling = parent->trans;                       \
   }                                                \
   if ((sibling->left && sibling->left->red) ||     \
@@ -118,12 +118,12 @@ int tree_add(tree_t* tree, tree_node_t* node, uintptr_t key) {
     if (!sibling->trans || !sibling->trans->red) { \
       sibling->cis->red = false;                   \
       sibling->red = true;                         \
-      _tree_rotate_##trans(tree, sibling);         \
+      tree__rotate_##trans(tree, sibling);         \
       sibling = parent->trans;                     \
     }                                              \
     sibling->red = parent->red;                    \
     parent->red = sibling->trans->red = false;     \
-    _tree_rotate_##cis(tree, parent);              \
+    tree__rotate_##cis(tree, parent);              \
     node = tree->root;                             \
     break;                                         \
   }                                                \

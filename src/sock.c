@@ -11,15 +11,15 @@
 #include "sock.h"
 #include "ws.h"
 
-static const uint32_t _SOCK_KNOWN_EPOLL_EVENTS =
+static const uint32_t SOCK__KNOWN_EPOLL_EVENTS =
     EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM |
     EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLMSG | EPOLLRDHUP;
 
-typedef enum _poll_status {
-  _POLL_IDLE = 0,
-  _POLL_PENDING,
-  _POLL_CANCELLED
-} _poll_status_t;
+typedef enum sock__poll_status {
+  SOCK__POLL_IDLE = 0,
+  SOCK__POLL_PENDING,
+  SOCK__POLL_CANCELLED
+} sock__poll_status_t;
 
 typedef struct sock_state {
   OVERLAPPED overlapped;
@@ -31,25 +31,25 @@ typedef struct sock_state {
   epoll_data_t user_data;
   uint32_t user_events;
   uint32_t pending_events;
-  _poll_status_t poll_status;
+  sock__poll_status_t poll_status;
   bool delete_pending;
 } sock_state_t;
 
-static inline sock_state_t* _sock_alloc(void) {
+static inline sock_state_t* sock__alloc(void) {
   sock_state_t* sock_state = malloc(sizeof *sock_state);
   if (sock_state == NULL)
     return_set_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
   return sock_state;
 }
 
-static inline void _sock_free(sock_state_t* sock_state) {
+static inline void sock__free(sock_state_t* sock_state) {
   free(sock_state);
 }
 
-static int _sock_cancel_poll(sock_state_t* sock_state) {
+static int sock__cancel_poll(sock_state_t* sock_state) {
   HANDLE driver_handle =
       (HANDLE)(uintptr_t) poll_group_get_socket(sock_state->poll_group);
-  assert(sock_state->poll_status == _POLL_PENDING);
+  assert(sock_state->poll_status == SOCK__POLL_PENDING);
 
   /* CancelIoEx() may fail with ERROR_NOT_FOUND if the overlapped operation has
    * already completed. This is not a problem and we proceed normally. */
@@ -57,7 +57,7 @@ static int _sock_cancel_poll(sock_state_t* sock_state) {
       GetLastError() != ERROR_NOT_FOUND)
     return_map_error(-1);
 
-  sock_state->poll_status = _POLL_CANCELLED;
+  sock_state->poll_status = SOCK__POLL_CANCELLED;
   sock_state->pending_events = 0;
   return 0;
 }
@@ -78,7 +78,7 @@ sock_state_t* sock_new(port_state_t* port_state, SOCKET socket) {
   if (poll_group == NULL)
     return NULL;
 
-  sock_state = _sock_alloc();
+  sock_state = sock__alloc();
   if (sock_state == NULL)
     goto err1;
 
@@ -96,19 +96,19 @@ sock_state_t* sock_new(port_state_t* port_state, SOCKET socket) {
   return sock_state;
 
 err2:
-  _sock_free(sock_state);
+  sock__free(sock_state);
 err1:
   poll_group_release(poll_group);
 
   return NULL;
 }
 
-static int _sock_delete(port_state_t* port_state,
+static int sock__delete(port_state_t* port_state,
                         sock_state_t* sock_state,
                         bool force) {
   if (!sock_state->delete_pending) {
-    if (sock_state->poll_status == _POLL_PENDING)
-      _sock_cancel_poll(sock_state);
+    if (sock_state->poll_status == SOCK__POLL_PENDING)
+      sock__cancel_poll(sock_state);
 
     port_cancel_socket_update(port_state, sock_state);
     port_unregister_socket_handle(port_state, sock_state);
@@ -119,11 +119,11 @@ static int _sock_delete(port_state_t* port_state,
   /* If the poll request still needs to complete, the sock_state object can't
    * be free()d yet. `sock_feed_event()` or `port_close()` will take care
    * of this later. */
-  if (force || sock_state->poll_status == _POLL_IDLE) {
+  if (force || sock_state->poll_status == SOCK__POLL_IDLE) {
     /* Free the sock_state now. */
     port_remove_deleted_socket(port_state, sock_state);
     poll_group_release(sock_state->poll_group);
-    _sock_free(sock_state);
+    sock__free(sock_state);
   } else {
     /* Free the socket later. */
     port_add_deleted_socket(port_state, sock_state);
@@ -133,11 +133,11 @@ static int _sock_delete(port_state_t* port_state,
 }
 
 void sock_delete(port_state_t* port_state, sock_state_t* sock_state) {
-  _sock_delete(port_state, sock_state, false);
+  sock__delete(port_state, sock_state, false);
 }
 
 void sock_force_delete(port_state_t* port_state, sock_state_t* sock_state) {
-  _sock_delete(port_state, sock_state, true);
+  sock__delete(port_state, sock_state, true);
 }
 
 int sock_set_event(port_state_t* port_state,
@@ -151,13 +151,13 @@ int sock_set_event(port_state_t* port_state,
   sock_state->user_events = events;
   sock_state->user_data = ev->data;
 
-  if ((events & _SOCK_KNOWN_EPOLL_EVENTS & ~sock_state->pending_events) != 0)
+  if ((events & SOCK__KNOWN_EPOLL_EVENTS & ~sock_state->pending_events) != 0)
     port_request_socket_update(port_state, sock_state);
 
   return 0;
 }
 
-static inline DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
+static inline DWORD sock__epoll_events_to_afd_events(uint32_t epoll_events) {
   /* Always monitor for AFD_POLL_LOCAL_CLOSE, which is triggered when the
    * socket is closed with closesocket() or CloseHandle(). */
   DWORD afd_events = AFD_POLL_LOCAL_CLOSE;
@@ -178,7 +178,7 @@ static inline DWORD _epoll_events_to_afd_events(uint32_t epoll_events) {
   return afd_events;
 }
 
-static inline uint32_t _afd_events_to_epoll_events(DWORD afd_events) {
+static inline uint32_t sock__afd_events_to_epoll_events(DWORD afd_events) {
   uint32_t epoll_events = 0;
 
   if (afd_events & (AFD_POLL_RECEIVE | AFD_POLL_ACCEPT))
@@ -200,27 +200,27 @@ static inline uint32_t _afd_events_to_epoll_events(DWORD afd_events) {
 int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
   assert(!sock_state->delete_pending);
 
-  if ((sock_state->poll_status == _POLL_PENDING) &&
-      (sock_state->user_events & _SOCK_KNOWN_EPOLL_EVENTS &
+  if ((sock_state->poll_status == SOCK__POLL_PENDING) &&
+      (sock_state->user_events & SOCK__KNOWN_EPOLL_EVENTS &
        ~sock_state->pending_events) == 0) {
     /* All the events the user is interested in are already being monitored by
      * the pending poll operation. It might spuriously complete because of an
      * event that we're no longer interested in; when that happens we'll submit
      * a new poll operation with the updated event mask. */
 
-  } else if (sock_state->poll_status == _POLL_PENDING) {
+  } else if (sock_state->poll_status == SOCK__POLL_PENDING) {
     /* A poll operation is already pending, but it's not monitoring for all the
      * events that the user is interested in. Therefore, cancel the pending
      * poll operation; when we receive it's completion package, a new poll
      * operation will be submitted with the correct event mask. */
-    if (_sock_cancel_poll(sock_state) < 0)
+    if (sock__cancel_poll(sock_state) < 0)
       return -1;
 
-  } else if (sock_state->poll_status == _POLL_CANCELLED) {
+  } else if (sock_state->poll_status == SOCK__POLL_CANCELLED) {
     /* The poll operation has already been cancelled, we're still waiting for
      * it to return. For now, there's nothing that needs to be done. */
 
-  } else if (sock_state->poll_status == _POLL_IDLE) {
+  } else if (sock_state->poll_status == SOCK__POLL_IDLE) {
     /* No poll operation is pending; start one. */
     sock_state->poll_info.Exclusive = FALSE;
     sock_state->poll_info.NumberOfHandles = 1;
@@ -228,7 +228,7 @@ int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
     sock_state->poll_info.Handles[0].Handle = (HANDLE) sock_state->base_socket;
     sock_state->poll_info.Handles[0].Status = 0;
     sock_state->poll_info.Handles[0].Events =
-        _epoll_events_to_afd_events(sock_state->user_events);
+        sock__epoll_events_to_afd_events(sock_state->user_events);
 
     memset(&sock_state->overlapped, 0, sizeof sock_state->overlapped);
 
@@ -241,7 +241,7 @@ int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
           break;
         case ERROR_INVALID_HANDLE:
           /* Socket closed; it'll be dropped from the epoll set. */
-          return _sock_delete(port_state, sock_state, false);
+          return sock__delete(port_state, sock_state, false);
         default:
           /* Other errors are propagated to the caller. */
           return_map_error(-1);
@@ -249,7 +249,7 @@ int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
     }
 
     /* The poll request was successfully submitted. */
-    sock_state->poll_status = _POLL_PENDING;
+    sock_state->poll_status = SOCK__POLL_PENDING;
     sock_state->pending_events = sock_state->user_events;
 
   } else {
@@ -269,12 +269,12 @@ int sock_feed_event(port_state_t* port_state,
   AFD_POLL_INFO* poll_info = &sock_state->poll_info;
   uint32_t epoll_events = 0;
 
-  sock_state->poll_status = _POLL_IDLE;
+  sock_state->poll_status = SOCK__POLL_IDLE;
   sock_state->pending_events = 0;
 
   if (sock_state->delete_pending) {
     /* Socket has been deleted earlier and can now be freed. */
-    return _sock_delete(port_state, sock_state, false);
+    return sock__delete(port_state, sock_state, false);
 
   } else if ((NTSTATUS) overlapped->Internal == STATUS_CANCELLED) {
     /* The poll request was cancelled by CancelIoEx. */
@@ -288,11 +288,12 @@ int sock_feed_event(port_state_t* port_state,
 
   } else if (poll_info->Handles[0].Events & AFD_POLL_LOCAL_CLOSE) {
     /* The poll operation reported that the socket was closed. */
-    return _sock_delete(port_state, sock_state, false);
+    return sock__delete(port_state, sock_state, false);
 
   } else {
     /* Events related to our socket were reported. */
-    epoll_events = _afd_events_to_epoll_events(poll_info->Handles[0].Events);
+    epoll_events =
+        sock__afd_events_to_epoll_events(poll_info->Handles[0].Events);
   }
 
   /* Requeue the socket so a new poll request will be submitted. */

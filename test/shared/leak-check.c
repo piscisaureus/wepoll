@@ -15,9 +15,9 @@
   static void __cdecl fn(void)
 #endif
 
-static void __cdecl leak_check_finalize(void);
+static void __cdecl leak_check__finalize(void);
 
-constructor(leak_check_init) {
+constructor(leak_check__init) {
   /* Enable leak checking. */
   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF);
 
@@ -30,10 +30,10 @@ constructor(leak_check_init) {
   _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
 
   /* Register the finalization function to run when the program exits. */
-  atexit(leak_check_finalize);
+  atexit(leak_check__finalize);
 }
 
-void leak_check_finalize(void) {
+void leak_check__finalize(void) {
   /* Check if there were memory leaks. */
   int leaks_found = _CrtDumpMemoryLeaks();
   check(!leaks_found);

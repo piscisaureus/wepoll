@@ -23,16 +23,16 @@
 
 void no_inline no_return check_fail(const char* message);
 
-#define _check_to_string_helper(v) #v
-#define _check_to_string(v) _check_to_string_helper(v)
+#define test_util__to_string_helper(v) #v
+#define test_util__to_string(v) test_util__to_string_helper(v)
 
-#define check(expression)                                          \
-  (void) ((!!(expression)) ||                                      \
-          (check_fail("\n"                                         \
-                      "Check failed:\n"                            \
-                      "  test: " #expression "\n"                  \
-                      "  file: " __FILE__ "\n"                     \
-                      "  line: " _check_to_string(__LINE__) "\n"), \
+#define check(expression)                                              \
+  (void) ((!!(expression)) ||                                          \
+          (check_fail("\n"                                             \
+                      "Check failed:\n"                                \
+                      "  test: " #expression "\n"                      \
+                      "  file: " __FILE__ "\n"                         \
+                      "  line: " test_util__to_string(__LINE__) "\n"), \
            0))
 
 /* Polyfill `static_assert` for some versions of clang and gcc. */
