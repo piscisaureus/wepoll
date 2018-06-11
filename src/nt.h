@@ -52,7 +52,7 @@ typedef struct _OBJECT_ATTRIBUTES {
   PVOID SecurityQualityOfService;
 } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
 
-#define NTDLL_IMPORT_LIST(X)                                                 \
+#define NT_NTDLL_IMPORT_LIST(X)                                              \
   X(NTSTATUS,                                                                \
     NTAPI,                                                                   \
     NtDeviceIoControlFile,                                                   \
@@ -89,7 +89,7 @@ typedef struct _OBJECT_ATTRIBUTES {
 
 #define X(return_type, attributes, name, parameters) \
   WEPOLL_INTERNAL_VAR return_type(attributes* name) parameters;
-NTDLL_IMPORT_LIST(X)
+NT_NTDLL_IMPORT_LIST(X)
 #undef X
 
 #endif /* WEPOLL_NT_H_ */

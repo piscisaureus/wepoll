@@ -5,7 +5,7 @@
 
 #define X(return_type, attributes, name, parameters) \
   WEPOLL_INTERNAL return_type(attributes* name) parameters = NULL;
-NTDLL_IMPORT_LIST(X)
+NT_NTDLL_IMPORT_LIST(X)
 #undef X
 
 int nt_global_init(void) {
@@ -19,7 +19,7 @@ int nt_global_init(void) {
   name = (return_type(attributes*) parameters) GetProcAddress(ntdll, #name); \
   if (name == NULL)                                                          \
     return -1;
-  NTDLL_IMPORT_LIST(X)
+  NT_NTDLL_IMPORT_LIST(X)
 #undef X
 
   return 0;
