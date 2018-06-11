@@ -10,7 +10,7 @@
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
 #endif
 
-#if defined(_WIN32_WINNT)
+#ifdef _WIN32_WINNT
 #undef _WIN32_WINNT
 #endif
 
