@@ -95,7 +95,7 @@ init:
   - cmd: set
 
 install:
-  - ps: Install-Product node 'Current'
+  - ps: Install-Product node 10
   - ps: >-
       if ($env:lsp) {
         echo "Installing Proxifier LSP..."
