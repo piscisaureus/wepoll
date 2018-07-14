@@ -70,17 +70,29 @@ environment:
         -DCMAKE_C_FLAGS=-m64
         -DCMAKE_CXX_FLAGS=-m64
 
-    - job: msvc-vs2013-x86-LSP
+    - job: msvc-vs2013-x86-lsp-ifs
       appveyor_build_worker_image: Visual Studio 2013
       cmake_options: -G "Visual Studio 12 2013"
-      lsp: true
-      appveyor_save_cache_on_error: true
+      lsp_name: Proxifier
+      lsp_installer: http://www.proxifier.com/download/ProxifierSetup.exe
 
-    - job: msvc-vs2017-x64-LSP
+    - job: msvc-vs2017-x64-lsp-ifs
       appveyor_build_worker_image: Visual Studio 2017
       cmake_options: -G "Visual Studio 15 2017 Win64"
-      lsp: true
-      appveyor_save_cache_on_error: true
+      lsp_name: Proxifier
+      lsp_installer: http://www.proxifier.com/download/ProxifierSetup.exe
+
+    - job: msvc-vs2013-x86-lsp-nonifs
+      appveyor_build_worker_image: Visual Studio 2013
+      cmake_options: -G "Visual Studio 12 2013"
+      lsp_name: PCTools
+      lsp_installer: http://download.pctools.com/mirror/updates/9.0.0.2308-SDavfree-lite_en.exe
+
+    - job: msvc-vs2017-x64-lsp-nonifs
+      appveyor_build_worker_image: Visual Studio 2017
+      cmake_options: -G "Visual Studio 15 2017 Win64"
+      lsp_name: PCTools
+      lsp_installer: http://download.pctools.com/mirror/updates/9.0.0.2308-SDavfree-lite_en.exe
 
 configuration: Debug
 
@@ -89,7 +101,7 @@ shallow_clone: true
 clone_depth: 1
 
 cache:
-  - c:\proxif
+  - c:\lspinst
 
 init:
   - cmd: set
@@ -97,19 +109,26 @@ init:
 install:
   - ps: Install-Product node 10
   - ps: >-
-      if ($env:lsp) {
-        echo "Installing Proxifier LSP..."
-        if (!(Test-Path c:\proxif\setup.exe)) {
-          $null = &mkdir -Force c:\proxif
-          Invoke-WebRequest -Uri http://www.proxifier.com/download/ProxifierSetup.exe -OutFile "c:\proxif\setup.exe"
+      if ($env:lsp_name) {
+        if (-Not (Test-Path -Path "c:\lspinst\${env:lsp_name}.exe")) {
+          "Downloading ${env:lsp_name} LSP installer..."
+          $null = & New-Item -Path "c:\lspinst" -ItemType directory -Force
+          Invoke-WebRequest -Uri ${env:lsp_installer} `
+                            -OutFile "c:\lspinst\${env:lsp_name}.exe"
         }
 
-        Start-Process -Wait c:\proxif\setup.exe -ArgumentList /silent,/norestart
+        "Installing ${env:lsp_name} LSP..."
+        Start-Process -FilePath "c:\lspinst\${env:lsp_name}.exe" `
+                      -ArgumentList /silent,/norestart `
+                      -Wait
 
-        $catalog = &netsh winsock show catalog
-        if (!($catalog -like "*Layered Chain Entry*")) {
-          throw "LSP not installed"
-        }
+        "Waiting for ${env:lsp_name} LSP to appear in the Winsock Catalog..."
+        do {
+          Start-Sleep -Seconds 1
+          $catalog = & netsh winsock show catalog
+        } until ($catalog -Like "*Layered Chain Entry*")
+
+        $catalog | Select-String -Pattern "Layered Chain Entry" -Context 0,14
       }
   - cmd: set path=%path:C:\Program Files\Git\usr\bin;=%
   - cmd: set path=%path%;%mingw_path%
@@ -125,3 +144,10 @@ build_script:
 
 test_script:
   - cmd: cmake --build . --config "%configuration%" --target test-all
+
+after_test:
+  - ps: >-
+      if ($env:lsp_name) {
+        # Prevent LSPs from interfering with uploading the build cache.
+        netsh winsock reset
+      }
