@@ -40,6 +40,9 @@ typedef struct _LSA_UNICODE_STRING {
   PWSTR Buffer;
 } LSA_UNICODE_STRING, *PLSA_UNICODE_STRING, UNICODE_STRING, *PUNICODE_STRING;
 
+#define RTL_CONSTANT_STRING(s) \
+  { sizeof(s) - sizeof((s)[0]), sizeof(s), s }
+
 typedef struct _OBJECT_ATTRIBUTES {
   ULONG Length;
   HANDLE RootDirectory;
@@ -49,7 +52,29 @@ typedef struct _OBJECT_ATTRIBUTES {
   PVOID SecurityQualityOfService;
 } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
 
+#define RTL_CONSTANT_OBJECT_ATTRIBUTES(ObjectName, Attributes) \
+  { sizeof(OBJECT_ATTRIBUTES), NULL, ObjectName, Attributes, NULL, NULL }
+
+#ifndef FILE_OPEN
+#define FILE_OPEN 0x00000001UL
+#endif
+
 #define NT_NTDLL_IMPORT_LIST(X)                                              \
+  X(NTSTATUS,                                                                \
+    NTAPI,                                                                   \
+    NtCreateFile,                                                            \
+    (PHANDLE FileHandle,                                                     \
+     ACCESS_MASK DesiredAccess,                                              \
+     POBJECT_ATTRIBUTES ObjectAttributes,                                    \
+     PIO_STATUS_BLOCK IoStatusBlock,                                         \
+     PLARGE_INTEGER AllocationSize,                                          \
+     ULONG FileAttributes,                                                   \
+     ULONG ShareAccess,                                                      \
+     ULONG CreateDisposition,                                                \
+     ULONG CreateOptions,                                                    \
+     PVOID EaBuffer,                                                         \
+     ULONG EaLength))                                                        \
+                                                                             \
   X(NTSTATUS,                                                                \
     NTAPI,                                                                   \
     NtDeviceIoControlFile,                                                   \

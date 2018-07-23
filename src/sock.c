@@ -47,13 +47,13 @@ static inline void sock__free(sock_state_t* sock_state) {
 }
 
 static int sock__cancel_poll(sock_state_t* sock_state) {
-  HANDLE driver_handle =
-      (HANDLE)(uintptr_t) poll_group_get_socket(sock_state->poll_group);
+  HANDLE afd_helper_handle =
+      poll_group_get_afd_helper_handle(sock_state->poll_group);
   assert(sock_state->poll_status == SOCK__POLL_PENDING);
 
   /* CancelIoEx() may fail with ERROR_NOT_FOUND if the overlapped operation has
    * already completed. This is not a problem and we proceed normally. */
-  if (!CancelIoEx(driver_handle, &sock_state->overlapped) &&
+  if (!CancelIoEx(afd_helper_handle, &sock_state->overlapped) &&
       GetLastError() != ERROR_NOT_FOUND)
     return_map_error(-1);
 
@@ -232,7 +232,7 @@ int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
 
     memset(&sock_state->overlapped, 0, sizeof sock_state->overlapped);
 
-    if (afd_poll(poll_group_get_socket(sock_state->poll_group),
+    if (afd_poll(poll_group_get_afd_helper_handle(sock_state->poll_group),
                  &sock_state->poll_info,
                  &sock_state->overlapped) < 0) {
       switch (GetLastError()) {

@@ -19,7 +19,7 @@ static BOOL CALLBACK init__once_callback(INIT_ONCE* once,
   unused_var(context);
 
   /* N.b. that initialization order matters here. */
-  if (ws_global_init() < 0 || nt_global_init() < 0 || afd_global_init() < 0 ||
+  if (ws_global_init() < 0 || nt_global_init() < 0 ||
       reflock_global_init() < 0 || epoll_global_init() < 0)
     return FALSE;
 
