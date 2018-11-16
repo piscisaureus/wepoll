@@ -167,7 +167,7 @@ static inline DWORD sock__epoll_events_to_afd_events(uint32_t epoll_events) {
   if (epoll_events & (EPOLLPRI | EPOLLRDBAND))
     afd_events |= AFD_POLL_RECEIVE_EXPEDITED;
   if (epoll_events & (EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND))
-    afd_events |= AFD_POLL_SEND | AFD_POLL_CONNECT;
+    afd_events |= AFD_POLL_SEND;
   if (epoll_events & (EPOLLIN | EPOLLRDNORM | EPOLLRDHUP))
     afd_events |= AFD_POLL_DISCONNECT;
   if (epoll_events & EPOLLHUP)
@@ -185,7 +185,7 @@ static inline uint32_t sock__afd_events_to_epoll_events(DWORD afd_events) {
     epoll_events |= EPOLLIN | EPOLLRDNORM;
   if (afd_events & AFD_POLL_RECEIVE_EXPEDITED)
     epoll_events |= EPOLLPRI | EPOLLRDBAND;
-  if (afd_events & (AFD_POLL_SEND | AFD_POLL_CONNECT))
+  if (afd_events & AFD_POLL_SEND)
     epoll_events |= EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND;
   if (afd_events & AFD_POLL_DISCONNECT)
     epoll_events |= EPOLLIN | EPOLLRDNORM | EPOLLRDHUP;

@@ -13,7 +13,6 @@
 #define AFD_POLL_DISCONNECT        0x0008
 #define AFD_POLL_ABORT             0x0010
 #define AFD_POLL_LOCAL_CLOSE       0x0020
-#define AFD_POLL_CONNECT           0x0040
 #define AFD_POLL_ACCEPT            0x0080
 #define AFD_POLL_CONNECT_FAIL      0x0100
 /* clang-format on */
