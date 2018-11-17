@@ -22,7 +22,7 @@ file(GLOB SOURCES_SRC_REGULAR src/regular/*.c src/regular/*.h)
 file(GLOB SOURCES_SRC_COMBINED src/combined/*.c src/combined/*.h)
 file(GLOB SOURCES_TEST test/*.c)
 file(GLOB SOURCES_TEST_SHARED test/shared/*.c test/shared/*.h)
-file(GLOB SOURCES_DOC *.md)
+file(GLOB SOURCES_DOC LICENSE *.md)
 
 get_filename_component(HEADER_NAME ${SOURCES_HEADER} NAME_WE)
 string(TOUPPER ${HEADER_NAME} HEADER_NAME_UC)
