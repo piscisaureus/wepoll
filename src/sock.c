@@ -192,7 +192,9 @@ static inline uint32_t sock__afd_events_to_epoll_events(DWORD afd_events) {
   if (afd_events & AFD_POLL_ABORT)
     epoll_events |= EPOLLHUP;
   if (afd_events & AFD_POLL_CONNECT_FAIL)
-    epoll_events |= EPOLLERR;
+    /* Linux reports all these events after connect() has failed. */
+    epoll_events |=
+        EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLRDNORM | EPOLLWRNORM | EPOLLRDHUP;
 
   return epoll_events;
 }
