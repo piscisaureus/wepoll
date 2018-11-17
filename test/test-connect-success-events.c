@@ -76,23 +76,29 @@ int main(void) {
 
     /* Wait for client end to become writable. */
     r = epoll_wait(ephnd, evs, array_count(evs), -1);
-    check(r == 1);
-    check(evs[0].data.sock == client_sock);
-    check(evs[0].events == EPOLLOUT);
 
     /* Try to send data until the kernel buffer is full. */
     memset(buf, round, sizeof buf);
     bytes_sent = 0;
     do {
+      /* We shouldn't get here unless epoll_wait() reported that the client
+       * socket is writable. */
+      check(r == 1);
+      check(evs[0].data.sock == client_sock);
+      check(evs[0].events == EPOLLOUT);
+
+      /* The actual send() call should never fail, because epoll_wait() just
+       * reported the socket as writable. */
       r = send(client_sock, buf, sizeof buf, 0);
-      if (r >= 0)
-        bytes_sent += r;
-      else
-        check(WSAGetLastError() == WSAEWOULDBLOCK);
+      check(r > 0);
+      bytes_sent += r;
+
+      /* Call epoll_wait() without blocking to see if there's more space in the
+       * kernel write buffer. */
+      r = epoll_wait(ephnd, evs, array_count(evs), 0);
     } while (r > 0);
 
-    /* The client end should not be writable now. */
-    r = epoll_wait(ephnd, evs, array_count(evs), 0);
+    /* Verify that epoll_wait() reported no events, but did not fail. */
     check(r == 0);
 
     /* Read all data incoming on the server end of the connection. */
