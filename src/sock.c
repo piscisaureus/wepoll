@@ -53,7 +53,8 @@ static int sock__cancel_poll(sock_state_t* sock_state) {
 
   /* CancelIoEx() may fail with ERROR_NOT_FOUND if the overlapped operation has
    * already completed. This is not a problem and we proceed normally. */
-  if (!CancelIoEx(afd_helper_handle, &sock_state->overlapped) &&
+  if (!HasOverlappedIoCompleted(&sock_state->overlapped) &&
+      !CancelIoEx(afd_helper_handle, &sock_state->overlapped) &&
       GetLastError() != ERROR_NOT_FOUND)
     return_map_error(-1);
 
