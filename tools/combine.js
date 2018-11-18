@@ -141,7 +141,8 @@ restart: for (let lno = 0; lno < source.length;) {
 }
 
 source = source
-  .map((line) => line.replace(/\s+$/, ''))
+  .map(line => line.replace(/\/\* clang-format (on|off) \*\//g, ''))
+  .map(line => line.replace(/\s+$/, ''))
   .join('\n')
   .replace(/\n{3,}/g, '\n\n')
   .replace(/\n*$/, '\n');
