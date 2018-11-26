@@ -1,7 +1,7 @@
 const exec = require('child_process').execSync;
 const resolve = require('path').resolve;
 
-const getSHA = (s) => s.match(/^\s*([0-9a-f]{40})\s*$/i)[1];
+const getSHA = s => s.match(/^\s*([0-9a-f]{40})\s*$/i)[1];
 
 const inherit = { stdio: 'inherit' };
 const utf8 = { encoding: 'utf8' };

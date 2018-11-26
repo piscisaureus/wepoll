@@ -11,7 +11,7 @@ let stripGuardsEnabled = false;
 
 process.argv
   .slice(2)
-  .forEach((arg) => {
+  .forEach(arg => {
     let match;
     if ((match = /^-I(.*)$/.exec(arg)))
       includeDirs.push(match[1]);
