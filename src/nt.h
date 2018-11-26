@@ -34,11 +34,11 @@ typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext,
                                      PIO_STATUS_BLOCK IoStatusBlock,
                                      ULONG Reserved);
 
-typedef struct _LSA_UNICODE_STRING {
+typedef struct _UNICODE_STRING {
   USHORT Length;
   USHORT MaximumLength;
   PWSTR Buffer;
-} LSA_UNICODE_STRING, *PLSA_UNICODE_STRING, UNICODE_STRING, *PUNICODE_STRING;
+} UNICODE_STRING, *PUNICODE_STRING;
 
 #define RTL_CONSTANT_STRING(s) \
   { sizeof(s) - sizeof((s)[0]), sizeof(s), s }
