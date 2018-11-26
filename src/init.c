@@ -30,7 +30,11 @@ static BOOL CALLBACK init__once_callback(INIT_ONCE* once,
 int init(void) {
   if (!init__done &&
       !InitOnceExecuteOnce(&init__once, init__once_callback, NULL, NULL))
-    return -1; /* LastError and errno aren't touched InitOnceExecuteOnce. */
+    /* `InitOnceExecuteOnce()` itself is infallible, and it doesn't set any
+     * error code when the once-callback returns FALSE. We return -1 here to
+     * indicate that global initialization failed; the failing init function is
+     * resposible for setting `errno` and calling `SetLastError()`. */
+    return -1;
 
   return 0;
 }
