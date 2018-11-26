@@ -105,12 +105,9 @@ source = source.concat('/*')
   .concat(fs.readFileSync('LICENSE', 'utf8')
     .replace(/^\s+|\s+$/g, '')
     .split(/\r?\n/g)
-    .map(function(s) {
-      return ' * ' + s;
-    })
-    .map(function(s) {
-      return s.replace(/\s+$/, '');
-    }))
+    .map(line => ' * ' + line)
+    .map(line => line.replace(/\s+$/, ''))
+  )
   .concat(' */')
   .concat('');
 
