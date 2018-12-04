@@ -13,7 +13,7 @@ static const long REFLOCK__REF          = (long) 0x00000001;
 static const long REFLOCK__REF_MASK     = (long) 0x0fffffff;
 static const long REFLOCK__DESTROY      = (long) 0x10000000;
 static const long REFLOCK__DESTROY_MASK = (long) 0xf0000000;
-static const long REFLOCK__POISON       = (long) 0x300DEAD0;
+static const long REFLOCK__POISON       = (long) 0x300dead0;
 /* clang-format on */
 
 static HANDLE reflock__keyed_event = NULL;
