@@ -77,6 +77,14 @@ typedef struct _OBJECT_ATTRIBUTES {
                                                                              \
   X(NTSTATUS,                                                                \
     NTAPI,                                                                   \
+    NtCreateKeyedEvent,                                                      \
+    (PHANDLE handle,                                                         \
+     ACCESS_MASK access,                                                     \
+     POBJECT_ATTRIBUTES attr,                                                \
+     ULONG flags))                                                           \
+                                                                             \
+  X(NTSTATUS,                                                                \
+    NTAPI,                                                                   \
     NtDeviceIoControlFile,                                                   \
     (HANDLE FileHandle,                                                      \
      HANDLE Event,                                                           \
@@ -89,25 +97,17 @@ typedef struct _OBJECT_ATTRIBUTES {
      PVOID OutputBuffer,                                                     \
      ULONG OutputBufferLength))                                              \
                                                                              \
-  X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))                 \
-                                                                             \
   X(NTSTATUS,                                                                \
     NTAPI,                                                                   \
-    NtCreateKeyedEvent,                                                      \
-    (PHANDLE handle,                                                         \
-     ACCESS_MASK access,                                                     \
-     POBJECT_ATTRIBUTES attr,                                                \
-     ULONG flags))                                                           \
+    NtReleaseKeyedEvent,                                                     \
+    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout)) \
                                                                              \
   X(NTSTATUS,                                                                \
     NTAPI,                                                                   \
     NtWaitForKeyedEvent,                                                     \
     (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout)) \
                                                                              \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtReleaseKeyedEvent,                                                     \
-    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout))
+  X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))
 
 #define X(return_type, attributes, name, parameters) \
   WEPOLL_INTERNAL_VAR return_type(attributes* name) parameters;
