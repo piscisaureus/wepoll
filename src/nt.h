@@ -59,54 +59,60 @@ typedef struct _OBJECT_ATTRIBUTES {
 #define FILE_OPEN 0x00000001UL
 #endif
 
-#define NT_NTDLL_IMPORT_LIST(X)                                              \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtCreateFile,                                                            \
-    (PHANDLE FileHandle,                                                     \
-     ACCESS_MASK DesiredAccess,                                              \
-     POBJECT_ATTRIBUTES ObjectAttributes,                                    \
-     PIO_STATUS_BLOCK IoStatusBlock,                                         \
-     PLARGE_INTEGER AllocationSize,                                          \
-     ULONG FileAttributes,                                                   \
-     ULONG ShareAccess,                                                      \
-     ULONG CreateDisposition,                                                \
-     ULONG CreateOptions,                                                    \
-     PVOID EaBuffer,                                                         \
-     ULONG EaLength))                                                        \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtCreateKeyedEvent,                                                      \
-    (PHANDLE handle,                                                         \
-     ACCESS_MASK access,                                                     \
-     POBJECT_ATTRIBUTES attr,                                                \
-     ULONG flags))                                                           \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtDeviceIoControlFile,                                                   \
-    (HANDLE FileHandle,                                                      \
-     HANDLE Event,                                                           \
-     PIO_APC_ROUTINE ApcRoutine,                                             \
-     PVOID ApcContext,                                                       \
-     PIO_STATUS_BLOCK IoStatusBlock,                                         \
-     ULONG IoControlCode,                                                    \
-     PVOID InputBuffer,                                                      \
-     ULONG InputBufferLength,                                                \
-     PVOID OutputBuffer,                                                     \
-     ULONG OutputBufferLength))                                              \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtReleaseKeyedEvent,                                                     \
-    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout)) \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtWaitForKeyedEvent,                                                     \
-    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout)) \
-                                                                             \
+#define NT_NTDLL_IMPORT_LIST(X)           \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtCreateFile,                         \
+    (PHANDLE FileHandle,                  \
+     ACCESS_MASK DesiredAccess,           \
+     POBJECT_ATTRIBUTES ObjectAttributes, \
+     PIO_STATUS_BLOCK IoStatusBlock,      \
+     PLARGE_INTEGER AllocationSize,       \
+     ULONG FileAttributes,                \
+     ULONG ShareAccess,                   \
+     ULONG CreateDisposition,             \
+     ULONG CreateOptions,                 \
+     PVOID EaBuffer,                      \
+     ULONG EaLength))                     \
+                                          \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtCreateKeyedEvent,                   \
+    (PHANDLE KeyedEventHandle,            \
+     ACCESS_MASK DesiredAccess,           \
+     POBJECT_ATTRIBUTES ObjectAttributes, \
+     ULONG Flags))                        \
+                                          \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtDeviceIoControlFile,                \
+    (HANDLE FileHandle,                   \
+     HANDLE Event,                        \
+     PIO_APC_ROUTINE ApcRoutine,          \
+     PVOID ApcContext,                    \
+     PIO_STATUS_BLOCK IoStatusBlock,      \
+     ULONG IoControlCode,                 \
+     PVOID InputBuffer,                   \
+     ULONG InputBufferLength,             \
+     PVOID OutputBuffer,                  \
+     ULONG OutputBufferLength))           \
+                                          \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtReleaseKeyedEvent,                  \
+    (HANDLE KeyedEventHandle,             \
+     PVOID KeyValue,                      \
+     BOOLEAN Alertable,                   \
+     PLARGE_INTEGER Timeout))             \
+                                          \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtWaitForKeyedEvent,                  \
+    (HANDLE KeyedEventHandle,             \
+     PVOID KeyValue,                      \
+     BOOLEAN Alertable,                   \
+     PLARGE_INTEGER Timeout))             \
+                                          \
   X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))
 
 #define X(return_type, attributes, name, parameters) \
