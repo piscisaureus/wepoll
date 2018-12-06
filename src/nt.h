@@ -59,6 +59,11 @@ typedef struct _OBJECT_ATTRIBUTES {
 #define FILE_OPEN 0x00000001UL
 #endif
 
+#define KEYEDEVENT_WAIT 0x00000001UL
+#define KEYEDEVENT_WAKE 0x00000002UL
+#define KEYEDEVENT_ALL_ACCESS \
+  (STANDARD_RIGHTS_REQUIRED | KEYEDEVENT_WAIT | KEYEDEVENT_WAKE)
+
 #define NT_NTDLL_IMPORT_LIST(X)           \
   X(NTSTATUS,                             \
     NTAPI,                                \

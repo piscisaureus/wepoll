@@ -20,7 +20,7 @@ static HANDLE reflock__keyed_event = NULL;
 
 int reflock_global_init(void) {
   NTSTATUS status =
-      NtCreateKeyedEvent(&reflock__keyed_event, ~(ACCESS_MASK) 0, NULL, 0);
+      NtCreateKeyedEvent(&reflock__keyed_event, KEYEDEVENT_ALL_ACCESS, NULL, 0);
   if (status != STATUS_SUCCESS)
     return_set_error(-1, RtlNtStatusToDosError(status));
   return 0;
