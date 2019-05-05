@@ -2,7 +2,7 @@
  * wepoll - epoll for Windows
  * https://github.com/piscisaureus/wepoll
  *
- * Copyright 2012-2018, Bert Belder <bertbelder@gmail.com>
+ * Copyright 2012-2019, Bert Belder <bertbelder@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,6 @@
 
 #include <stdint.h>
 
-/* clang-format off */
-
 enum EPOLL_EVENTS {
   EPOLLIN      = (int) (1U <<  0),
   EPOLLPRI     = (int) (1U <<  1),
@@ -68,8 +66,6 @@ enum EPOLL_EVENTS {
 #define EPOLL_CTL_ADD 1
 #define EPOLL_CTL_MOD 2
 #define EPOLL_CTL_DEL 3
-
-/* clang-format on */
 
 typedef void* HANDLE;
 typedef uintptr_t SOCKET;
@@ -178,11 +174,11 @@ typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext,
                                      PIO_STATUS_BLOCK IoStatusBlock,
                                      ULONG Reserved);
 
-typedef struct _LSA_UNICODE_STRING {
+typedef struct _UNICODE_STRING {
   USHORT Length;
   USHORT MaximumLength;
   PWSTR Buffer;
-} LSA_UNICODE_STRING, *PLSA_UNICODE_STRING, UNICODE_STRING, *PUNICODE_STRING;
+} UNICODE_STRING, *PUNICODE_STRING;
 
 #define RTL_CONSTANT_STRING(s) \
   { sizeof(s) - sizeof((s)[0]), sizeof(s), s }
@@ -203,55 +199,66 @@ typedef struct _OBJECT_ATTRIBUTES {
 #define FILE_OPEN 0x00000001UL
 #endif
 
-#define NT_NTDLL_IMPORT_LIST(X)                                              \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtCreateFile,                                                            \
-    (PHANDLE FileHandle,                                                     \
-     ACCESS_MASK DesiredAccess,                                              \
-     POBJECT_ATTRIBUTES ObjectAttributes,                                    \
-     PIO_STATUS_BLOCK IoStatusBlock,                                         \
-     PLARGE_INTEGER AllocationSize,                                          \
-     ULONG FileAttributes,                                                   \
-     ULONG ShareAccess,                                                      \
-     ULONG CreateDisposition,                                                \
-     ULONG CreateOptions,                                                    \
-     PVOID EaBuffer,                                                         \
-     ULONG EaLength))                                                        \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtDeviceIoControlFile,                                                   \
-    (HANDLE FileHandle,                                                      \
-     HANDLE Event,                                                           \
-     PIO_APC_ROUTINE ApcRoutine,                                             \
-     PVOID ApcContext,                                                       \
-     PIO_STATUS_BLOCK IoStatusBlock,                                         \
-     ULONG IoControlCode,                                                    \
-     PVOID InputBuffer,                                                      \
-     ULONG InputBufferLength,                                                \
-     PVOID OutputBuffer,                                                     \
-     ULONG OutputBufferLength))                                              \
-                                                                             \
-  X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))                 \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtCreateKeyedEvent,                                                      \
-    (PHANDLE handle,                                                         \
-     ACCESS_MASK access,                                                     \
-     POBJECT_ATTRIBUTES attr,                                                \
-     ULONG flags))                                                           \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtWaitForKeyedEvent,                                                     \
-    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout)) \
-                                                                             \
-  X(NTSTATUS,                                                                \
-    NTAPI,                                                                   \
-    NtReleaseKeyedEvent,                                                     \
-    (HANDLE handle, PVOID key, BOOLEAN alertable, PLARGE_INTEGER mstimeout))
+#define KEYEDEVENT_WAIT 0x00000001UL
+#define KEYEDEVENT_WAKE 0x00000002UL
+#define KEYEDEVENT_ALL_ACCESS \
+  (STANDARD_RIGHTS_REQUIRED | KEYEDEVENT_WAIT | KEYEDEVENT_WAKE)
+
+#define NT_NTDLL_IMPORT_LIST(X)           \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtCreateFile,                         \
+    (PHANDLE FileHandle,                  \
+     ACCESS_MASK DesiredAccess,           \
+     POBJECT_ATTRIBUTES ObjectAttributes, \
+     PIO_STATUS_BLOCK IoStatusBlock,      \
+     PLARGE_INTEGER AllocationSize,       \
+     ULONG FileAttributes,                \
+     ULONG ShareAccess,                   \
+     ULONG CreateDisposition,             \
+     ULONG CreateOptions,                 \
+     PVOID EaBuffer,                      \
+     ULONG EaLength))                     \
+                                          \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtCreateKeyedEvent,                   \
+    (PHANDLE KeyedEventHandle,            \
+     ACCESS_MASK DesiredAccess,           \
+     POBJECT_ATTRIBUTES ObjectAttributes, \
+     ULONG Flags))                        \
+                                          \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtDeviceIoControlFile,                \
+    (HANDLE FileHandle,                   \
+     HANDLE Event,                        \
+     PIO_APC_ROUTINE ApcRoutine,          \
+     PVOID ApcContext,                    \
+     PIO_STATUS_BLOCK IoStatusBlock,      \
+     ULONG IoControlCode,                 \
+     PVOID InputBuffer,                   \
+     ULONG InputBufferLength,             \
+     PVOID OutputBuffer,                  \
+     ULONG OutputBufferLength))           \
+                                          \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtReleaseKeyedEvent,                  \
+    (HANDLE KeyedEventHandle,             \
+     PVOID KeyValue,                      \
+     BOOLEAN Alertable,                   \
+     PLARGE_INTEGER Timeout))             \
+                                          \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtWaitForKeyedEvent,                  \
+    (HANDLE KeyedEventHandle,             \
+     PVOID KeyValue,                      \
+     BOOLEAN Alertable,                   \
+     PLARGE_INTEGER Timeout))             \
+                                          \
+  X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))
 
 #define X(return_type, attributes, name, parameters) \
   WEPOLL_INTERNAL_VAR return_type(attributes* name) parameters;
@@ -267,10 +274,8 @@ typedef intptr_t ssize_t;
 
 #define array_count(a) (sizeof(a) / (sizeof((a)[0])))
 
-/* clang-format off */
 #define container_of(ptr, type, member) \
   ((type*) ((uintptr_t) (ptr) - offsetof(type, member)))
-/* clang-format on */
 
 #define unused_var(v) ((void) (v))
 
@@ -279,7 +284,6 @@ typedef intptr_t ssize_t;
 #define inline __inline
 #endif
 
-/* clang-format off */
 #define AFD_POLL_RECEIVE           0x0001
 #define AFD_POLL_RECEIVE_EXPEDITED 0x0002
 #define AFD_POLL_SEND              0x0004
@@ -288,7 +292,6 @@ typedef intptr_t ssize_t;
 #define AFD_POLL_LOCAL_CLOSE       0x0020
 #define AFD_POLL_ACCEPT            0x0080
 #define AFD_POLL_CONNECT_FAIL      0x0100
-/* clang-format on */
 
 typedef struct _AFD_POLL_HANDLE_INFO {
   HANDLE Handle;
@@ -919,7 +922,11 @@ static BOOL CALLBACK init__once_callback(INIT_ONCE* once,
 int init(void) {
   if (!init__done &&
       !InitOnceExecuteOnce(&init__once, init__once_callback, NULL, NULL))
-    return -1; /* LastError and errno aren't touched InitOnceExecuteOnce. */
+    /* `InitOnceExecuteOnce()` itself is infallible, and it doesn't set any
+     * error code when the once-callback returns FALSE. We return -1 here to
+     * indicate that global initialization failed; the failing init function is
+     * resposible for setting `errno` and calling `SetLastError()`. */
+    return -1;
 
   return 0;
 }
@@ -1476,19 +1483,17 @@ bool queue_enqueued(const queue_node_t* node) {
   return node->prev != node;
 }
 
-/* clang-format off */
 static const long REFLOCK__REF          = (long) 0x00000001;
 static const long REFLOCK__REF_MASK     = (long) 0x0fffffff;
 static const long REFLOCK__DESTROY      = (long) 0x10000000;
 static const long REFLOCK__DESTROY_MASK = (long) 0xf0000000;
-static const long REFLOCK__POISON       = (long) 0x300DEAD0;
-/* clang-format on */
+static const long REFLOCK__POISON       = (long) 0x300dead0;
 
 static HANDLE reflock__keyed_event = NULL;
 
 int reflock_global_init(void) {
   NTSTATUS status =
-      NtCreateKeyedEvent(&reflock__keyed_event, ~(ACCESS_MASK) 0, NULL, 0);
+      NtCreateKeyedEvent(&reflock__keyed_event, KEYEDEVENT_ALL_ACCESS, NULL, 0);
   if (status != STATUS_SUCCESS)
     return_set_error(-1, RtlNtStatusToDosError(status));
   return 0;
@@ -1514,22 +1519,20 @@ static void reflock__await_event(void* address) {
 
 void reflock_ref(reflock_t* reflock) {
   long state = InterlockedAdd(&reflock->state, REFLOCK__REF);
+
+  /* Verify that the counter didn't overflow and the lock isn't destroyed. */
+  assert((state & REFLOCK__DESTROY_MASK) == 0);
   unused_var(state);
-  assert((state & REFLOCK__DESTROY_MASK) == 0); /* Overflow or destroyed. */
 }
 
 void reflock_unref(reflock_t* reflock) {
   long state = InterlockedAdd(&reflock->state, -REFLOCK__REF);
-  long ref_count = state & REFLOCK__REF_MASK;
-  long destroy = state & REFLOCK__DESTROY_MASK;
 
-  unused_var(ref_count);
-  unused_var(destroy);
+  /* Verify that the lock was referenced and not already destroyed. */
+  assert((state & REFLOCK__DESTROY_MASK & ~REFLOCK__DESTROY) == 0);
 
   if (state == REFLOCK__DESTROY)
     reflock__signal_event(reflock);
-  else
-    assert(destroy == 0 || ref_count > 0);
 }
 
 void reflock_unref_and_destroy(reflock_t* reflock) {
@@ -1537,8 +1540,8 @@ void reflock_unref_and_destroy(reflock_t* reflock) {
       InterlockedAdd(&reflock->state, REFLOCK__DESTROY - REFLOCK__REF);
   long ref_count = state & REFLOCK__REF_MASK;
 
-  assert((state & REFLOCK__DESTROY_MASK) ==
-         REFLOCK__DESTROY); /* Underflow or already destroyed. */
+  /* Verify that the lock was referenced and not already destroyed. */
+  assert((state & REFLOCK__DESTROY_MASK) == REFLOCK__DESTROY);
 
   if (ref_count != 0)
     reflock__await_event(reflock);
