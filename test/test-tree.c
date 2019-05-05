@@ -78,7 +78,7 @@ static void keys_random(tree_t* tree, test_op_t op) {
     key = keys[index];
     keys[index] = keys[left];
     op(tree, key);
-  };
+  }
 }
 
 static void add(tree_t* tree, uintptr_t key) {
