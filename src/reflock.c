@@ -19,8 +19,8 @@ static const long REFLOCK__POISON       = (long) 0x300dead0;
 static HANDLE reflock__keyed_event = NULL;
 
 int reflock_global_init(void) {
-  NTSTATUS status =
-      NtCreateKeyedEvent(&reflock__keyed_event, KEYEDEVENT_ALL_ACCESS, NULL, 0);
+  NTSTATUS status = NtCreateKeyedEvent(
+      &reflock__keyed_event, KEYEDEVENT_ALL_ACCESS, NULL, 0);
   if (status != STATUS_SUCCESS)
     return_set_error(-1, RtlNtStatusToDosError(status));
   return 0;
