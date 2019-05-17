@@ -30,7 +30,7 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
-WEPOLL_INTERNAL int afd_create_helper_handle(HANDLE iocp,
+WEPOLL_INTERNAL int afd_create_helper_handle(HANDLE iocp_handle,
                                              HANDLE* afd_helper_handle_out);
 
 WEPOLL_INTERNAL int afd_poll(HANDLE afd_helper_handle,

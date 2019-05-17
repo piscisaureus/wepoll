@@ -16,7 +16,8 @@ static UNICODE_STRING afd__helper_name =
 static OBJECT_ATTRIBUTES afd__helper_attributes =
     RTL_CONSTANT_OBJECT_ATTRIBUTES(&afd__helper_name, 0);
 
-int afd_create_helper_handle(HANDLE iocp, HANDLE* afd_helper_handle_out) {
+int afd_create_helper_handle(HANDLE iocp_handle,
+                             HANDLE* afd_helper_handle_out) {
   HANDLE afd_helper_handle;
   IO_STATUS_BLOCK iosb;
   NTSTATUS status;
@@ -38,7 +39,7 @@ int afd_create_helper_handle(HANDLE iocp, HANDLE* afd_helper_handle_out) {
   if (status != STATUS_SUCCESS)
     return_set_error(-1, RtlNtStatusToDosError(status));
 
-  if (CreateIoCompletionPort(afd_helper_handle, iocp, 0, 0) == NULL)
+  if (CreateIoCompletionPort(afd_helper_handle, iocp_handle, 0, 0) == NULL)
     goto error;
 
   if (!SetFileCompletionNotificationModes(afd_helper_handle,

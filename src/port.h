@@ -14,7 +14,7 @@
 typedef struct port_state port_state_t;
 typedef struct sock_state sock_state_t;
 
-WEPOLL_INTERNAL port_state_t* port_new(HANDLE* iocp_out);
+WEPOLL_INTERNAL port_state_t* port_new(HANDLE* iocp_handle_out);
 WEPOLL_INTERNAL int port_close(port_state_t* port_state);
 WEPOLL_INTERNAL int port_delete(port_state_t* port_state);
 
@@ -46,7 +46,7 @@ WEPOLL_INTERNAL void port_add_deleted_socket(port_state_t* port_state,
 WEPOLL_INTERNAL void port_remove_deleted_socket(port_state_t* port_state,
                                                 sock_state_t* sock_state);
 
-WEPOLL_INTERNAL HANDLE port_get_iocp(port_state_t* port_state);
+WEPOLL_INTERNAL HANDLE port_get_iocp_handle(port_state_t* port_state);
 WEPOLL_INTERNAL queue_t* port_get_poll_group_queue(port_state_t* port_state);
 
 WEPOLL_INTERNAL port_state_t* port_state_from_handle_tree_node(

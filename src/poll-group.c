@@ -19,7 +19,7 @@ typedef struct poll_group {
 } poll_group_t;
 
 static poll_group_t* poll_group__new(port_state_t* port_state) {
-  HANDLE iocp = port_get_iocp(port_state);
+  HANDLE iocp_handle = port_get_iocp_handle(port_state);
   queue_t* poll_group_queue = port_get_poll_group_queue(port_state);
 
   poll_group_t* poll_group = malloc(sizeof *poll_group);
@@ -31,7 +31,8 @@ static poll_group_t* poll_group__new(port_state_t* port_state) {
   queue_node_init(&poll_group->queue_node);
   poll_group->port_state = port_state;
 
-  if (afd_create_helper_handle(iocp, &poll_group->afd_helper_handle) < 0) {
+  if (afd_create_helper_handle(iocp_handle, &poll_group->afd_helper_handle) <
+      0) {
     free(poll_group);
     return NULL;
   }

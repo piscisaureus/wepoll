@@ -17,7 +17,7 @@
 #define PORT__MAX_ON_STACK_COMPLETIONS 256
 
 typedef struct port_state {
-  HANDLE iocp;
+  HANDLE iocp_handle;
   tree_t sock_tree;
   queue_t sock_update_queue;
   queue_t sock_deleted_queue;
@@ -41,28 +41,29 @@ static void port__free(port_state_t* port) {
 }
 
 static HANDLE port__create_iocp(void) {
-  HANDLE iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-  if (iocp == NULL)
+  HANDLE iocp_handle =
+      CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+  if (iocp_handle == NULL)
     return_map_error(NULL);
 
-  return iocp;
+  return iocp_handle;
 }
 
-port_state_t* port_new(HANDLE* iocp_out) {
+port_state_t* port_new(HANDLE* iocp_handle_out) {
   port_state_t* port_state;
-  HANDLE iocp;
+  HANDLE iocp_handle;
 
   port_state = port__alloc();
   if (port_state == NULL)
     goto err1;
 
-  iocp = port__create_iocp();
-  if (iocp == NULL)
+  iocp_handle = port__create_iocp();
+  if (iocp_handle == NULL)
     goto err2;
 
   memset(port_state, 0, sizeof *port_state);
 
-  port_state->iocp = iocp;
+  port_state->iocp_handle = iocp_handle;
   tree_init(&port_state->sock_tree);
   queue_init(&port_state->sock_update_queue);
   queue_init(&port_state->sock_deleted_queue);
@@ -70,7 +71,7 @@ port_state_t* port_new(HANDLE* iocp_out) {
   ts_tree_node_init(&port_state->handle_tree_node);
   InitializeCriticalSection(&port_state->lock);
 
-  *iocp_out = iocp;
+  *iocp_handle_out = iocp_handle;
   return port_state;
 
 err2:
@@ -80,10 +81,10 @@ err1:
 }
 
 static int port__close_iocp(port_state_t* port_state) {
-  HANDLE iocp = port_state->iocp;
-  port_state->iocp = NULL;
+  HANDLE iocp_handle = port_state->iocp_handle;
+  port_state->iocp_handle = NULL;
 
-  if (!CloseHandle(iocp))
+  if (!CloseHandle(iocp_handle))
     return_map_error(-1);
 
   return 0;
@@ -104,7 +105,7 @@ int port_delete(port_state_t* port_state) {
   queue_node_t* queue_node;
 
   /* At this point the IOCP port should have been closed. */
-  assert(port_state->iocp == NULL);
+  assert(port_state->iocp_handle == NULL);
 
   while ((tree_node = tree_root(&port_state->sock_tree)) != NULL) {
     sock_state_t* sock_state = sock_state_from_tree_node(tree_node);
@@ -184,7 +185,7 @@ static int port__poll(port_state_t* port_state,
 
   LeaveCriticalSection(&port_state->lock);
 
-  BOOL r = GetQueuedCompletionStatusEx(port_state->iocp,
+  BOOL r = GetQueuedCompletionStatusEx(port_state->iocp_handle,
                                        iocp_events,
                                        maxevents,
                                        &completion_count,
@@ -405,9 +406,9 @@ void port_remove_deleted_socket(port_state_t* port_state,
   queue_remove(sock_state_to_queue_node(sock_state));
 }
 
-HANDLE port_get_iocp(port_state_t* port_state) {
-  assert(port_state->iocp != NULL);
-  return port_state->iocp;
+HANDLE port_get_iocp_handle(port_state_t* port_state) {
+  assert(port_state->iocp_handle != NULL);
+  return port_state->iocp_handle;
 }
 
 queue_t* port_get_poll_group_queue(port_state_t* port_state) {
