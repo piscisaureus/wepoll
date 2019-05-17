@@ -319,6 +319,10 @@ int sock_feed_event(port_state_t* port_state,
   return 1;
 }
 
+sock_state_t* sock_state_from_queue_node(queue_node_t* queue_node) {
+  return container_of(queue_node, sock_state_t, queue_node);
+}
+
 queue_node_t* sock_state_to_queue_node(sock_state_t* sock_state) {
   return &sock_state->queue_node;
 }
@@ -329,8 +333,4 @@ sock_state_t* sock_state_from_tree_node(tree_node_t* tree_node) {
 
 tree_node_t* sock_state_to_tree_node(sock_state_t* sock_state) {
   return &sock_state->tree_node;
-}
-
-sock_state_t* sock_state_from_queue_node(queue_node_t* queue_node) {
-  return container_of(queue_node, sock_state_t, queue_node);
 }
