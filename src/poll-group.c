@@ -5,6 +5,7 @@
 #include "error.h"
 #include "poll-group.h"
 #include "port.h"
+#include "queue.h"
 #include "util.h"
 #include "win.h"
 
@@ -18,6 +19,9 @@ typedef struct poll_group {
 } poll_group_t;
 
 static poll_group_t* poll_group__new(port_state_t* port_state) {
+  HANDLE iocp = port_get_iocp(port_state);
+  queue_t* poll_group_queue = port_get_poll_group_queue(port_state);
+
   poll_group_t* poll_group = malloc(sizeof *poll_group);
   if (poll_group == NULL)
     return_set_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
@@ -27,13 +31,12 @@ static poll_group_t* poll_group__new(port_state_t* port_state) {
   queue_node_init(&poll_group->queue_node);
   poll_group->port_state = port_state;
 
-  if (afd_create_helper_handle(port_state->iocp,
-                               &poll_group->afd_helper_handle) < 0) {
+  if (afd_create_helper_handle(iocp, &poll_group->afd_helper_handle) < 0) {
     free(poll_group);
     return NULL;
   }
 
-  queue_append(&port_state->poll_group_queue, &poll_group->queue_node);
+  queue_append(poll_group_queue, &poll_group->queue_node);
 
   return poll_group;
 }
@@ -54,10 +57,11 @@ HANDLE poll_group_get_afd_helper_handle(poll_group_t* poll_group) {
 }
 
 poll_group_t* poll_group_acquire(port_state_t* port_state) {
-  queue_t* queue = &port_state->poll_group_queue;
+  queue_t* poll_group_queue = port_get_poll_group_queue(port_state);
   poll_group_t* poll_group =
-      !queue_empty(queue)
-          ? container_of(queue_last(queue), poll_group_t, queue_node)
+      !queue_empty(poll_group_queue)
+          ? container_of(
+                queue_last(poll_group_queue), poll_group_t, queue_node)
           : NULL;
 
   if (poll_group == NULL ||
@@ -67,18 +71,19 @@ poll_group_t* poll_group_acquire(port_state_t* port_state) {
     return NULL;
 
   if (++poll_group->group_size == POLL_GROUP__MAX_GROUP_SIZE)
-    queue_move_first(&port_state->poll_group_queue, &poll_group->queue_node);
+    queue_move_first(poll_group_queue, &poll_group->queue_node);
 
   return poll_group;
 }
 
 void poll_group_release(poll_group_t* poll_group) {
   port_state_t* port_state = poll_group->port_state;
+  queue_t* poll_group_queue = port_get_poll_group_queue(port_state);
 
   poll_group->group_size--;
   assert(poll_group->group_size < POLL_GROUP__MAX_GROUP_SIZE);
 
-  queue_move_last(&port_state->poll_group_queue, &poll_group->queue_node);
+  queue_move_last(poll_group_queue, &poll_group->queue_node);
 
   /* Poll groups are currently only freed when the epoll port is closed. */
 }

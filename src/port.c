@@ -16,6 +16,17 @@
 
 #define PORT__MAX_ON_STACK_COMPLETIONS 256
 
+typedef struct port_state {
+  HANDLE iocp;
+  tree_t sock_tree;
+  queue_t sock_update_queue;
+  queue_t sock_deleted_queue;
+  queue_t poll_group_queue;
+  ts_tree_node_t handle_tree_node;
+  CRITICAL_SECTION lock;
+  size_t active_poll_count;
+} port_state_t;
+
 static port_state_t* port__alloc(void) {
   port_state_t* port_state = malloc(sizeof *port_state);
   if (port_state == NULL)
@@ -392,4 +403,21 @@ void port_remove_deleted_socket(port_state_t* port_state,
   if (!queue_enqueued(sock_state_to_queue_node(sock_state)))
     return;
   queue_remove(sock_state_to_queue_node(sock_state));
+}
+
+HANDLE port_get_iocp(port_state_t* port_state) {
+  assert(port_state->iocp != NULL);
+  return port_state->iocp;
+}
+
+queue_t* port_get_poll_group_queue(port_state_t* port_state) {
+  return &port_state->poll_group_queue;
+}
+
+port_state_t* port_state_from_handle_tree_node(ts_tree_node_t* tree_node) {
+  return container_of(tree_node, port_state_t, handle_tree_node);
+}
+
+ts_tree_node_t* port_state_to_handle_tree_node(port_state_t* port_state) {
+  return &port_state->handle_tree_node;
 }
