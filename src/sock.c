@@ -9,6 +9,7 @@
 #include "poll-group.h"
 #include "port.h"
 #include "sock.h"
+#include "wepoll.h"
 #include "ws.h"
 
 static const uint32_t SOCK__KNOWN_EPOLL_EVENTS =
