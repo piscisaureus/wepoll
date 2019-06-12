@@ -6,7 +6,6 @@
 #include "init.h"
 #include "port.h"
 #include "thread-safe-tree.h"
-#include "util.h"
 #include "wepoll.h"
 #include "win.h"
 

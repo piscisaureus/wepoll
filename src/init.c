@@ -1,11 +1,12 @@
 #include <stdbool.h>
+#include <stdlib.h>
 
-#include "afd.h"
 #include "api.h"
 #include "init.h"
 #include "nt.h"
 #include "reflock.h"
 #include "util.h"
+#include "win.h"
 #include "ws.h"
 
 static bool init__done = false;

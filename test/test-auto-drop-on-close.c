@@ -10,6 +10,7 @@
  */
 
 #include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include "test-util.h"

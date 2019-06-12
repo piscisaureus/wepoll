@@ -1,8 +1,6 @@
-#include <malloc.h>
 #include <stdlib.h>
 
 #include "error.h"
-#include "util.h"
 #include "win.h"
 #include "ws.h"
 

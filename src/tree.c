@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "tree.h"
+#include "util.h"
 
 void tree_init(tree_t* tree) {
   memset(tree, 0, sizeof *tree);

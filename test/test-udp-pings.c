@@ -1,7 +1,7 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "error.h"
 #include "test-util.h"
 #include "wepoll.h"
 #include "win.h"

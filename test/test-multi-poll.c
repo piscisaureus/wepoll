@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "init.h"
 #include "test-util.h"
 #include "util.h"
 #include "wepoll.h"

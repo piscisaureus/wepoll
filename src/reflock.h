@@ -19,8 +19,6 @@
  * should use another lock to guarantee that this can't happen.
  */
 
-#include <stdint.h>
-
 #include "internal.h"
 
 typedef struct reflock {

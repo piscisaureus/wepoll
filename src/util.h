@@ -1,11 +1,8 @@
 #ifndef WEPOLL_UTIL_H_
 #define WEPOLL_UTIL_H_
 
-#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#include "internal.h"
 
 #define array_count(a) (sizeof(a) / (sizeof((a)[0])))
 

@@ -1,8 +1,5 @@
-#include <malloc.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "test-util.h"
 #include "tree.h"

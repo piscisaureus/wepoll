@@ -1,7 +1,8 @@
 #include <assert.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "afd.h"
 #include "error.h"
 #include "poll-group.h"
 #include "port.h"

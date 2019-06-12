@@ -3,7 +3,6 @@
 
 #include "internal.h"
 #include "nt.h"
-#include "util.h"
 #include "win.h"
 
 /* clang-format off */

@@ -1,17 +1,14 @@
 #ifndef WEPOLL_SOCK_H_
 #define WEPOLL_SOCK_H_
 
-#include <stdint.h>
-
 #include "internal.h"
-#include "queue.h"
-#include "tree.h"
-#include "util.h"
 #include "wepoll.h"
 #include "win.h"
 
 typedef struct port_state port_state_t;
+typedef struct queue_node queue_node_t;
 typedef struct sock_state sock_state_t;
+typedef struct tree_node tree_node_t;
 
 WEPOLL_INTERNAL sock_state_t* sock_new(port_state_t* port_state,
                                        SOCKET socket);

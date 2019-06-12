@@ -1,18 +1,14 @@
 #ifndef WEPOLL_PORT_H_
 #define WEPOLL_PORT_H_
 
-#include "afd.h"
 #include "internal.h"
-#include "poll-group.h"
-#include "queue.h"
-#include "sock.h"
-#include "thread-safe-tree.h"
-#include "tree.h"
-#include "util.h"
+#include "wepoll.h"
 #include "win.h"
 
 typedef struct port_state port_state_t;
+typedef struct queue queue_t;
 typedef struct sock_state sock_state_t;
+typedef struct ts_tree_node ts_tree_node_t;
 
 WEPOLL_INTERNAL port_state_t* port_new(HANDLE* iocp_handle_out);
 WEPOLL_INTERNAL int port_close(port_state_t* port_state);

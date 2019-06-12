@@ -1,12 +1,11 @@
-#include <malloc.h>
+#include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include "afd.h"
 #include "error.h"
 #include "nt.h"
-#include "util.h"
 #include "win.h"
-#include "ws.h"
 
 #define IOCTL_AFD_POLL 0x00012024
 

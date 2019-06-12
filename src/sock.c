@@ -1,14 +1,17 @@
 #include <assert.h>
-#include <malloc.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "afd.h"
 #include "error.h"
 #include "poll-group.h"
 #include "port.h"
+#include "queue.h"
 #include "sock.h"
+#include "tree.h"
+#include "util.h"
 #include "wepoll.h"
 #include "ws.h"
 
