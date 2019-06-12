@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "error.h"
+#include "nt.h"
 #include "poll-group.h"
 #include "port.h"
 #include "queue.h"
@@ -162,10 +163,11 @@ static int port__feed_events(port_state_t* port_state,
   DWORD i;
 
   for (i = 0; i < iocp_event_count; i++) {
-    OVERLAPPED* overlapped = iocp_events[i].lpOverlapped;
+    IO_STATUS_BLOCK* io_status_block =
+        (IO_STATUS_BLOCK*) iocp_events[i].lpOverlapped;
     struct epoll_event* ev = &epoll_events[epoll_event_count];
 
-    epoll_event_count += sock_feed_event(port_state, overlapped, ev);
+    epoll_event_count += sock_feed_event(port_state, io_status_block, ev);
   }
 
   return epoll_event_count;

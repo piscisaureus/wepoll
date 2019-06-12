@@ -25,6 +25,10 @@ typedef NTSTATUS* PNTSTATUS;
 #define STATUS_CANCELLED ((NTSTATUS) 0xC0000120L)
 #endif
 
+#ifndef STATUS_NOT_FOUND
+#define STATUS_NOT_FOUND ((NTSTATUS) 0xC0000225L)
+#endif
+
 typedef struct _IO_STATUS_BLOCK {
   NTSTATUS Status;
   ULONG_PTR Information;
@@ -65,6 +69,13 @@ typedef struct _OBJECT_ATTRIBUTES {
   (STANDARD_RIGHTS_REQUIRED | KEYEDEVENT_WAIT | KEYEDEVENT_WAKE)
 
 #define NT_NTDLL_IMPORT_LIST(X)           \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtCancelIoFileEx,                     \
+    (HANDLE FileHandle,                   \
+     PIO_STATUS_BLOCK IoRequestToCancel,  \
+     PIO_STATUS_BLOCK IoStatusBlock))     \
+                                          \
   X(NTSTATUS,                             \
     NTAPI,                                \
     NtCreateFile,                         \

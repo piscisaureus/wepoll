@@ -34,6 +34,8 @@ WEPOLL_INTERNAL int afd_create_helper_handle(HANDLE iocp_handle,
 
 WEPOLL_INTERNAL int afd_poll(HANDLE afd_helper_handle,
                              AFD_POLL_INFO* poll_info,
-                             OVERLAPPED* overlapped);
+                             IO_STATUS_BLOCK* io_status_block);
+WEPOLL_INTERNAL int afd_cancel_poll(HANDLE afd_helper_handle,
+                                    IO_STATUS_BLOCK* io_status_block);
 
 #endif /* WEPOLL_AFD_H_ */

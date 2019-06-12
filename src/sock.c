@@ -26,7 +26,7 @@ typedef enum sock__poll_status {
 } sock__poll_status_t;
 
 typedef struct sock_state {
-  OVERLAPPED overlapped;
+  IO_STATUS_BLOCK io_status_block;
   AFD_POLL_INFO poll_info;
   queue_node_t queue_node;
   tree_node_t tree_node;
@@ -51,16 +51,11 @@ static inline void sock__free(sock_state_t* sock_state) {
 }
 
 static int sock__cancel_poll(sock_state_t* sock_state) {
-  HANDLE afd_helper_handle =
-      poll_group_get_afd_helper_handle(sock_state->poll_group);
   assert(sock_state->poll_status == SOCK__POLL_PENDING);
 
-  /* CancelIoEx() may fail with ERROR_NOT_FOUND if the overlapped operation has
-   * already completed. This is not a problem and we proceed normally. */
-  if (!HasOverlappedIoCompleted(&sock_state->overlapped) &&
-      !CancelIoEx(afd_helper_handle, &sock_state->overlapped) &&
-      GetLastError() != ERROR_NOT_FOUND)
-    return_map_error(-1);
+  if (afd_cancel_poll(poll_group_get_afd_helper_handle(sock_state->poll_group),
+                      &sock_state->io_status_block) < 0)
+    return -1;
 
   sock_state->poll_status = SOCK__POLL_CANCELLED;
   sock_state->pending_events = 0;
@@ -237,11 +232,9 @@ int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
     sock_state->poll_info.Handles[0].Events =
         sock__epoll_events_to_afd_events(sock_state->user_events);
 
-    memset(&sock_state->overlapped, 0, sizeof sock_state->overlapped);
-
     if (afd_poll(poll_group_get_afd_helper_handle(sock_state->poll_group),
                  &sock_state->poll_info,
-                 &sock_state->overlapped) < 0) {
+                 &sock_state->io_status_block) < 0) {
       switch (GetLastError()) {
         case ERROR_IO_PENDING:
           /* Overlapped poll operation in progress; this is expected. */
@@ -269,10 +262,10 @@ int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
 }
 
 int sock_feed_event(port_state_t* port_state,
-                    OVERLAPPED* overlapped,
+                    IO_STATUS_BLOCK* io_status_block,
                     struct epoll_event* ev) {
   sock_state_t* sock_state =
-      container_of(overlapped, sock_state_t, overlapped);
+      container_of(io_status_block, sock_state_t, io_status_block);
   AFD_POLL_INFO* poll_info = &sock_state->poll_info;
   uint32_t epoll_events = 0;
 
@@ -283,10 +276,10 @@ int sock_feed_event(port_state_t* port_state,
     /* Socket has been deleted earlier and can now be freed. */
     return sock__delete(port_state, sock_state, false);
 
-  } else if ((NTSTATUS) overlapped->Internal == STATUS_CANCELLED) {
+  } else if (io_status_block->Status == STATUS_CANCELLED) {
     /* The poll request was cancelled by CancelIoEx. */
 
-  } else if (!NT_SUCCESS(overlapped->Internal)) {
+  } else if (!NT_SUCCESS(io_status_block->Status)) {
     /* The overlapped request itself failed in an unexpected way. */
     epoll_events = EPOLLERR;
 

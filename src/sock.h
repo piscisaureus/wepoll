@@ -2,6 +2,7 @@
 #define WEPOLL_SOCK_H_
 
 #include "internal.h"
+#include "nt.h"
 #include "wepoll.h"
 #include "win.h"
 
@@ -24,7 +25,7 @@ WEPOLL_INTERNAL int sock_set_event(port_state_t* port_state,
 WEPOLL_INTERNAL int sock_update(port_state_t* port_state,
                                 sock_state_t* sock_state);
 WEPOLL_INTERNAL int sock_feed_event(port_state_t* port_state,
-                                    OVERLAPPED* overlapped,
+                                    IO_STATUS_BLOCK* io_status_block,
                                     struct epoll_event* ev);
 
 WEPOLL_INTERNAL sock_state_t* sock_state_from_queue_node(
