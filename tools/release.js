@@ -42,12 +42,14 @@ const distTree = getSHA(stdout);
 
 exec('git reset');
 
+// prettier-ignore
 stdout = exec(`git commit-tree -S ${distTree} ` +
               `-p ${previousTagCommit} ` +
               `-p ${sourceCommit} ` +
               `-m "version ${version}"`, utf8);
 const distCommit = getSHA(stdout);
 
+// prettier-ignore
 stdout = exec(`git commit-tree -S ${sourceTree} ` +
               `-p ${sourceCommit} ` +
               `-p ${distCommit} ` +
@@ -60,6 +62,7 @@ console.log('');
 console.log(`Previous release tag: ${previousTag}`);
 console.log(`New release tag ${distTag}`);
 
+// prettier-ignore
 exec(`git tag ${distTag} ${distCommit} ` +
      `-sm "version ${version}"`, inherit);
 

@@ -9,23 +9,23 @@ const files = [];
 const includeDirs = [];
 let stripGuardsEnabled = false;
 
-process.argv
-  .slice(2)
-  .forEach(arg => {
-    let match;
-    if ((match = /^-I(.*)$/.exec(arg)))
-      includeDirs.push(match[1]);
-    else if (arg === '--strip-guards')
-      stripGuardsEnabled = true;
-    else
-      files.push(arg);
-  });
+process.argv.slice(2).forEach(arg => {
+  let match;
+  if ((match = /^-I(.*)$/.exec(arg))) {
+    includeDirs.push(match[1]);
+  } else if (arg === '--strip-guards') {
+    stripGuardsEnabled = true;
+  } else {
+    files.push(arg);
+  }
+});
 
 const included = {};
 
 function readFileWithPath(fileName, dirs) {
-  if (/[/\\]/.test(fileName))
+  if (/[/\\]/.test(fileName)) {
     return fs.readFileSync(fileName, 'utf8');
+  }
 
   for (let i = 0; i < dirs.length; i++) {
     const filePath = path.resolve(dirs[i], fileName);
@@ -70,14 +70,17 @@ function strip_guards(filename, source) {
 
 function lines(filename, strip) {
   let source = readFileWithPath(filename, ['.'].concat(includeDirs));
-  if (strip) source = strip_guards(filename, source);
+  if (strip) {
+    source = strip_guards(filename, source);
+  }
   return source.split(/\r?\n/g);
 }
 
 function include(line, filename) {
   const key = path.basename(filename).toLowerCase();
-  if (included[key])
+  if (included[key]) {
     return ''; // Included earlier.
+  }
   console.error('Including: ' + key);
   included[key] = true;
   return lines(filename, true);
@@ -93,20 +96,23 @@ function add(filename) {
 const sys_included = {};
 function include_sys(line, filename) {
   const key = path.basename(filename).toLowerCase();
-  if (sys_included[key])
+  if (sys_included[key]) {
     return ''; // Included earlier.
-
+  }
   sys_included[key] = true;
 }
 
 let source = [];
 
-source = source.concat('/*')
-  .concat(fs.readFileSync('LICENSE', 'utf8')
-    .replace(/^\s+|\s+$/g, '')
-    .split(/\r?\n/g)
-    .map(line => ' * ' + line)
-    .map(line => line.replace(/\s+$/, ''))
+source = source
+  .concat('/*')
+  .concat(
+    fs
+      .readFileSync('LICENSE', 'utf8')
+      .replace(/^\s+|\s+$/g, '')
+      .split(/\r?\n/g)
+      .map(line => ' * ' + line)
+      .map(line => line.replace(/\s+$/, ''))
   )
   .concat(' */')
   .concat('');
@@ -121,7 +127,7 @@ const patterns = [
   { re: /^\s*#include\s*<([^"]*)>.*$/, fn: include_sys }
 ];
 
-restart: for (let lno = 0; lno < source.length;) {
+restart: for (let lno = 0; lno < source.length; ) {
   for (const i in patterns) {
     const line = source[lno];
     const pattern = patterns[i];
