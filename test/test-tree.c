@@ -6,7 +6,6 @@
 
 #include "test-util.h"
 #include "tree.h"
-#include "util.h"
 
 #define NODE_COUNT 1000
 static_assert(NODE_COUNT <= RAND_MAX, "NODE_COUNT too high");
@@ -54,21 +53,21 @@ static void check_tree_count(const tree_t* tree, size_t expected_count) {
 }
 
 static void keys_increasing(tree_t* tree, test_op_t op) {
-  size_t i;
+  uintptr_t i;
   for (i = 0; i < NODE_COUNT; i++)
     op(tree, i);
 }
 
 static void keys_decreasing(tree_t* tree, test_op_t op) {
-  ssize_t i;
+  intptr_t i;
   for (i = NODE_COUNT - 1; i >= 0; i--)
-    op(tree, (size_t) i);
+    op(tree, (uintptr_t) i);
 }
 
 static void keys_random(tree_t* tree, test_op_t op) {
   uintptr_t keys[NODE_COUNT];
   uintptr_t index, key;
-  ssize_t left;
+  intptr_t left;
 
   for (index = 0; index < NODE_COUNT; index++)
     keys[index] = index;

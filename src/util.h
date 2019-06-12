@@ -7,10 +7,6 @@
 
 #include "internal.h"
 
-#ifndef _SSIZE_T_DEFINED
-typedef intptr_t ssize_t;
-#endif
-
 #define array_count(a) (sizeof(a) / (sizeof((a)[0])))
 
 /* clang-format off */
