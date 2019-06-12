@@ -102,6 +102,15 @@ function include_sys(line, filename) {
   sys_included[key] = true;
 }
 
+const declarations = {};
+function declare(line) {
+  const key = line.replace(/\s+/g, ' ').trim();
+  if (declarations[key]) {
+    return ''; // Declared earlier.
+  }
+  declarations[key] = true;
+}
+
 let source = [];
 
 source = source
@@ -124,7 +133,8 @@ for (let i = 0; i < files.length; i++) {
 
 const patterns = [
   { re: /^\s*#include\s*"([^"]*)".*$/, fn: include },
-  { re: /^\s*#include\s*<([^"]*)>.*$/, fn: include_sys }
+  { re: /^\s*#include\s*<([^"]*)>.*$/, fn: include_sys },
+  { re: /^\s*typedef\s+struct\s+\w+\s+\w+\s*;\s*$/, fn: declare }
 ];
 
 restart: for (let lno = 0; lno < source.length; ) {
