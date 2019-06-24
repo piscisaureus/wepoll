@@ -44,7 +44,7 @@ function readFileWithPath(fileName, dirs) {
 function strip_guards(filename, source) {
   const lead_comments_re = /^(\s*\/\*((?!\*\/)[\s\S])*\*\/)*\s*/;
   const trail_comments_re = /(\s*\/\*((?!\*\/)[\s\S])*\*\/)*\s*$/;
-  const lead_guards_re = /^#ifndef\s+(\w+)\s+#define\s+(\w+)\s+/;
+  const lead_guards_re = /^#ifndef\s+(\w+_H_)\s+#define\s+(\w+_H_)\s+/;
   const trail_guards_re = /#endif$/;
 
   // Strip leading and trailing comments and whitespace.
