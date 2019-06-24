@@ -57,9 +57,11 @@ function strip_guards(filename, source) {
 
   // Remove include guards, if found.
   if (lead_guards && trail_guards && lead_guards[1] == lead_guards[2]) {
-    console.error('Stripping include guards: ' + filename);
+    console.error('Stripping include guards from ' + filename);
     source = source.replace(lead_guards_re, '');
     source = source.replace(trail_guards_re, '');
+  } else {
+    console.error('No include guards found in ' + filename);
   }
 
   // Add back a trailing newline.
