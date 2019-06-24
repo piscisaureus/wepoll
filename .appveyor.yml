@@ -140,7 +140,7 @@ before_build:
 
 build_script:
   - cmd: cmake --build . --config "%configuration%" --target wepoll.dll
-  - cmd: cmake --build . --config "%configuration%" --target wepoll-combined.dll
+  - cmd: cmake --build . --config "%configuration%" --target wepoll-bundle.dll
 
 test_script:
   - cmd: cmake --build . --config "%configuration%" --target test-all
