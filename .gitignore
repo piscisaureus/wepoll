@@ -1,7 +1,7 @@
-*_BASE_*
 *_BACKUP_*
-*_REMOTE_*
+*_BASE_*
 *_LOCAL_*
+*_REMOTE_*
 
 *.a
 *.dll
@@ -10,9 +10,9 @@
 *.ilk
 *.lib
 *.manifest
-*.pdb
 *.opensdf
 *.orig
+*.pdb
 *.sdf
 *.sln
 *.suo
@@ -43,9 +43,9 @@
 /out/
 /Release/
 /RelWithDebInfo/
-/x64/
 /Win32/
+/x64/
 
-/CMakeCache.txt
 /cmake_install.cmake
+/CMakeCache.txt
 /Makefile
