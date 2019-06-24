@@ -47,14 +47,14 @@ source_group(${DIST_DIR} FILES ${BUNDLE_HEADER} ${BUNDLE_SRC})
 
 add_custom_command(
   OUTPUT ${BUNDLE_HEADER}
-  COMMAND node tools/combine.js ${SOURCES_HEADER} > ${BUNDLE_HEADER}
+  COMMAND node tools/bundle.js ${SOURCES_HEADER} > ${BUNDLE_HEADER}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   IMPLICIT_DEPENDS c ${SOURCES_HEADER}
 )
 
 add_custom_command(
   OUTPUT ${BUNDLE_SRC}
-  COMMAND node tools/combine.js -Iinclude -Isrc -Isrc/bundle --strip-guards ${SOURCES_HEADER} ${SOURCES_SRC_C} > ${BUNDLE_SRC}
+  COMMAND node tools/bundle.js -Iinclude -Isrc -Isrc/bundle --strip-guards ${SOURCES_HEADER} ${SOURCES_SRC_C} > ${BUNDLE_SRC}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   IMPLICIT_DEPENDS c ${SOURCES_HEADER} ${SOURCES_SRC} ${SOURCES_SRC_BUNDLE}
 )
