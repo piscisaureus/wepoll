@@ -1,7 +1,7 @@
 #ifndef WEPOLL_AFD_H_
 #define WEPOLL_AFD_H_
 
-#include "internal.h"
+#include "config.h"
 #include "nt.h"
 #include "win.h"
 

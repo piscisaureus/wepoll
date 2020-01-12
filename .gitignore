@@ -37,6 +37,7 @@
 /CMakeScripts/
 /Debug/
 /dist/
+/gen/
 /ipch/
 /lib/
 /MinSizeRel/

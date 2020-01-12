@@ -1,7 +1,7 @@
 #ifndef WEPOLL_SOCK_H_
 #define WEPOLL_SOCK_H_
 
-#include "internal.h"
+#include "config.h"
 #include "nt.h"
 #include "wepoll.h"
 #include "win.h"

@@ -1,7 +1,7 @@
 #ifndef WEPOLL_NT_H_
 #define WEPOLL_NT_H_
 
-#include "internal.h"
+#include "config.h"
 #include "win.h"
 
 WEPOLL_INTERNAL int nt_global_init(void);

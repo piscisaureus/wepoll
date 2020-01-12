@@ -19,7 +19,7 @@
  * should use another lock to guarantee that this can't happen.
  */
 
-#include "internal.h"
+#include "config.h"
 
 typedef struct reflock {
   volatile long state; /* 32-bit Interlocked APIs operate on `long` values. */

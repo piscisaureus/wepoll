@@ -1,7 +1,7 @@
 #ifndef WEPOLL_INIT_H_
 #define WEPOLL_INIT_H_
 
-#include "internal.h"
+#include "config.h"
 
 WEPOLL_INTERNAL int init(void);
 

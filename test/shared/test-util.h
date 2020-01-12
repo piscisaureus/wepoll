@@ -12,13 +12,13 @@
 
 #ifdef _MSC_VER
 #define no_return __declspec(noreturn)
-#else /* GCC/clang */
+#else /* GCC/Clang */
 #define no_return __attribute__((noreturn))
 #endif
 
 #ifdef _MSC_VER
 #define no_inline __declspec(noinline)
-#else /* GCC/clang */
+#else /* GCC/Clang */
 #define no_inline __attribute__((noinline))
 #endif
 

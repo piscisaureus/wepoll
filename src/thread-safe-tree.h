@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "internal.h"
+#include "config.h"
 #include "reflock.h"
 #include "tree.h"
 #include "win.h"

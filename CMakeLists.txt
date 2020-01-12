@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(wepoll)
 
+include(CMakeParseArguments)
+
 link_libraries(ws2_32)
 
 if(MSVC)
@@ -15,91 +17,148 @@ endif()
 # Work around bug in in Windows SDK 10.0.17763.0 and maybe other versions.
 add_definitions(-D_CRT_HAS_CXX17=0)
 
-set(DIST_DIR "dist")
-set(TEST_RUNNER "tools/run-tests.js")
-
-file(GLOB SOURCES_HEADER include/*.h)
+file(GLOB SOURCES_DOC LICENSE *.md)
+file(GLOB_RECURSE SOURCES_CONFIG config/*.h)
+file(GLOB SOURCES_CONFIG_EXTERNAL_DLLEXPORT config/external/dllexport/*.h)
+file(GLOB SOURCES_CONFIG_EXTERNAL_STATIC config/external/static/*.h)
+file(GLOB SOURCES_CONFIG_INTERNAL_BUNDLE config/internal/bundle/*.h)
+file(GLOB SOURCES_CONFIG_INTERNAL_DEFAULT config/internal/default/*.h)
+file(GLOB SOURCES_INCLUDE include/*.h)
 file(GLOB SOURCES_SRC src/*.c src/*.h)
 file(GLOB SOURCES_SRC_C src/*.c)
-file(GLOB SOURCES_SRC_REGULAR src/regular/*.c src/regular/*.h)
-file(GLOB SOURCES_SRC_BUNDLE src/bundle/*.c src/bundle/*.h)
 file(GLOB SOURCES_TEST test/*.c)
 file(GLOB SOURCES_TEST_SHARED test/shared/*.c test/shared/*.h)
-file(GLOB SOURCES_DOC LICENSE *.md)
-
-get_filename_component(HEADER_NAME ${SOURCES_HEADER} NAME_WE)
-string(TOUPPER ${HEADER_NAME} HEADER_NAME_UC)
-
-set(BUNDLE_HEADER "${DIST_DIR}/${HEADER_NAME}.h")
-set(BUNDLE_SRC "${DIST_DIR}/${HEADER_NAME}.c")
-set(DLL_NAME "${HEADER_NAME}")
-set(BUNDLE_DLL_NAME "${HEADER_NAME}-bundle")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-source_group("" FILES ${SOURCES_HEADER})
+source_group(doc FILES ${SOURCES_DOC})
+source_group(config FILES ${SOURCES_CONFIG})
+source_group(include FILES ${SOURCES_INCLUDE})
 source_group(src FILES ${SOURCES_SRC})
-source_group(src FILES ${SOURCES_SRC_REGULAR})
-source_group(src FILES ${SOURCES_SRC_BUNDLE})
 source_group("" FILES ${SOURCES_TEST})
 source_group(test/shared FILES ${SOURCES_TEST_SHARED})
-source_group(doc FILES ${SOURCES_DOC})
-source_group(${DIST_DIR} FILES ${BUNDLE_HEADER} ${BUNDLE_SRC})
 
-add_custom_command(
-  OUTPUT ${BUNDLE_HEADER}
-  COMMAND node tools/bundle.js ${SOURCES_HEADER} > ${BUNDLE_HEADER}
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  IMPLICIT_DEPENDS c ${SOURCES_HEADER}
-)
+get_filename_component(LIB_NAME ${SOURCES_INCLUDE} NAME_WE)
 
-add_custom_command(
-  OUTPUT ${BUNDLE_SRC}
-  COMMAND node tools/bundle.js -Iinclude -Isrc -Isrc/bundle --strip-guards ${SOURCES_HEADER} ${SOURCES_SRC_C} > ${BUNDLE_SRC}
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  IMPLICIT_DEPENDS c ${SOURCES_HEADER} ${SOURCES_SRC} ${SOURCES_SRC_BUNDLE}
-)
+set(TOOL_RUN_TESTS "tools/run-tests.js")
+set(TOOL_BUNDLE "tools/bundle.js")
 
-add_custom_target(dist DEPENDS ${BUNDLE_SRC} ${BUNDLE_HEADER})
+set(DIST_DIR "${PROJECT_BINARY_DIR}/dist")
+set(GEN_DIR "${PROJECT_BINARY_DIR}/gen")
+
 file(MAKE_DIRECTORY ${DIST_DIR})
+file(MAKE_DIRECTORY ${GEN_DIR})
+
+function(bundle_header)
+  cmake_parse_arguments(BUNDLE "" "OUTPUT;EXTERNAL_CONFIG" "" ${ARGN})
+  set(CONFIG_EXTERNAL_DIR "config/external/${BUNDLE_EXTERNAL_CONFIG}")
+  file(GLOB SOURCES_CONFIG_EXTERNAL "${CONFIG_EXTERNAL_DIR}/*.h")
+  add_custom_command(
+    OUTPUT ${BUNDLE_OUTPUT}
+    COMMAND node ${TOOL_BUNDLE}
+            -I${CONFIG_EXTERNAL_DIR}
+            ${SOURCES_INCLUDE}
+            > ${BUNDLE_OUTPUT}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS ${TOOL_BUNDLE} ${SOURCES_CONFIG_EXTERNAL} ${SOURCES_INCLUDE}
+  )
+endfunction()
+
+function(bundle_source)
+  cmake_parse_arguments(BUNDLE "" "OUTPUT;EXTERNAL_CONFIG" "" ${ARGN})
+  set(CONFIG_EXTERNAL_DIR "config/external/${BUNDLE_EXTERNAL_CONFIG}")
+  file(GLOB SOURCES_CONFIG_EXTERNAL "${CONFIG_EXTERNAL_DIR}/*.h")
+  add_custom_command(
+    OUTPUT ${BUNDLE_OUTPUT}
+    COMMAND node ${TOOL_BUNDLE} --strip-guards
+            -I${CONFIG_EXTERNAL_DIR} -Iconfig/internal/bundle -Iinclude -Isrc
+            ${SOURCES_INCLUDE} ${SOURCES_SRC_C}
+            > ${BUNDLE_OUTPUT}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS ${TOOL_BUNDLE}
+            ${SOURCES_CONFIG_EXTERNAL} ${SOURCES_CONFIG_INTERNAL_BUNDLE}
+            ${SOURCES_INCLUDE} ${SOURCES_SRC}
+  )
+endfunction()
+
+set(BUNDLE_DIST_TARGET "dist")
+set(BUNDLE_DIST_HEADER "${DIST_DIR}/${LIB_NAME}.h")
+set(BUNDLE_DIST_SOURCE "${DIST_DIR}/${LIB_NAME}.c")
+bundle_header(OUTPUT ${BUNDLE_DIST_HEADER} EXTERNAL_CONFIG static)
+bundle_source(OUTPUT ${BUNDLE_DIST_SOURCE} EXTERNAL_CONFIG static)
+set_source_files_properties(
+  ${BUNDLE_DIST_HEADER} ${BUNDLE_DIST_SOURCE}
+  PROPERTIES GENERATED TRUE
+)
+add_custom_target(
+  ${BUNDLE_DIST_TARGET}
+  DEPENDS ${BUNDLE_DIST_SOURCE} ${BUNDLE_DIST_HEADER}
+  SOURCES ${SOURCES_CONFIG_EXTERNAL_STATIC} ${SOURCES_CONFIG_INTERNAL_BUNDLE}
+          ${SOURCES_INCLUDE} ${SOURCES_SRC} ${SOURCES_DOC}
+)
 add_custom_command(
-  TARGET dist POST_BUILD
+  TARGET ${BUNDLE_DIST_TARGET} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCES_DOC} ${DIST_DIR}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${SOURCES_DOC}
 )
 
-set(DLL_TARGET "${HEADER_NAME}.dll")
-add_library(${DLL_TARGET} SHARED ${SOURCES_HEADER} ${SOURCES_SRC} ${SOURCES_SRC_REGULAR})
-target_include_directories(${DLL_TARGET} PUBLIC include src/regular)
-if(MSVC)
-  target_compile_definitions(${DLL_TARGET} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__declspec(dllexport)" )
-else()
-  target_compile_options(${DLL_TARGET} PUBLIC -fvisibility=hidden)
-  target_compile_definitions(${DLL_TARGET} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__attribute__((visibility(\"default\")))")
-endif()
-set_target_properties(${DLL_TARGET} PROPERTIES OUTPUT_NAME ${DLL_NAME})
+set(DLL_TARGET "${LIB_NAME}.dll")
+add_library(
+  ${DLL_TARGET} SHARED
+  ${SOURCES_CONFIG_EXTERNAL_DLLEXPORT} ${SOURCES_CONFIG_INTERNAL_DEFAULT}
+  ${SOURCES_INCLUDE} ${SOURCES_SRC}
+)
+target_include_directories(
+  ${DLL_TARGET} PUBLIC
+  config/external/dllexport config/internal/default include src
+)
+set_target_properties(${DLL_TARGET} PROPERTIES OUTPUT_NAME ${DLL_TARGET})
 
-set(BUNDLE_DLL_TARGET "${BUNDLE_DLL_NAME}.dll")
-add_library(${BUNDLE_DLL_TARGET} SHARED ${BUNDLE_HEADER} ${BUNDLE_SRC})
-if(MSVC)
-  target_compile_definitions(${BUNDLE_DLL_TARGET} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__declspec(dllexport)" )
-else()
-  target_compile_definitions(${BUNDLE_DLL_TARGET} PUBLIC "-D${HEADER_NAME_UC}_EXPORT=__attribute__((visibility(\"default\")))")
-endif()
-set_target_properties(${BUNDLE_DLL_TARGET} PROPERTIES OUTPUT_NAME ${BUNDLE_DLL_NAME})
+set(BUNDLE_DLL_TARGET "${LIB_NAME}-bundle.dll")
+set(BUNDLE_DLL_SOURCE "${GEN_DIR}/${LIB_NAME}-bundle-dll.c")
+bundle_source(OUTPUT ${BUNDLE_DLL_SOURCE} EXTERNAL_CONFIG dllexport)
+set_source_files_properties(${BUNDLE_DLL_SOURCE} PROPERTIES GENERATED TRUE)
+add_library(
+  ${BUNDLE_DLL_TARGET} SHARED
+  ${SOURCES_CONFIG_EXTERNAL_DLLEXPORT} ${SOURCES_CONFIG_INTERNAL_DEFAULT}
+  ${BUNDLE_DLL_SOURCE}
+)
+set_target_properties(
+  ${BUNDLE_DLL_TARGET}
+  PROPERTIES OUTPUT_NAME "${LIB_NAME}-bundle"
+)
+
+set(TESTING_LIB_TARGET "${LIB_NAME}-testing.lib")
+add_library(
+  ${TESTING_LIB_TARGET} STATIC
+  ${SOURCES_CONFIG_EXTERNAL_STATIC} ${SOURCES_CONFIG_INTERNAL_DEFAULT}
+  ${SOURCES_INCLUDE} ${SOURCES_SRC} ${SOURCES_TEST_SHARED}
+)
+target_include_directories(
+  ${TESTING_LIB_TARGET} PUBLIC
+  config/external/static config/internal/default include src
+)
+set_target_properties(
+  ${TESTING_LIB_TARGET} PROPERTIES
+  OUTPUT_NAME "${LIB_NAME}-testing"
+)
 
 foreach(TEST_SOURCE ${SOURCES_TEST})
   get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
-  add_executable(${TEST_NAME} ${TEST_SOURCE} ${SOURCES_SRC} ${SOURCES_SRC_REGULAR} ${SOURCES_TEST_SHARED})
+  add_executable(${TEST_NAME} ${TEST_SOURCE})
+  target_include_directories(
+    ${TEST_NAME} PUBLIC
+    config/external/static config/internal/default include src test/shared
+  )
+  target_link_libraries(${TEST_NAME} ${TESTING_LIB_TARGET})
   set_target_properties(${TEST_NAME} PROPERTIES FOLDER Tests)
-  target_include_directories(${TEST_NAME} PUBLIC include src src/regular test/shared)
   list(APPEND TEST_TARGETS ${TEST_NAME})
   list(APPEND TEST_OUTPUTS $<TARGET_FILE:${TEST_NAME}>)
-endforeach(TEST_SOURCE ${SOURCES_TEST})
+endforeach()
 
 add_custom_target(
   test-all
-  COMMAND node ${TEST_RUNNER} ${TEST_OUTPUTS}
+  COMMAND node ${TOOL_RUN_TESTS} ${TEST_OUTPUTS}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  DEPENDS ${TEST_RUNNER} ${TEST_TARGETS}
+  DEPENDS ${TOOL_RUN_TESTS} ${TEST_TARGETS}
 )

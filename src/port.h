@@ -1,7 +1,7 @@
 #ifndef WEPOLL_PORT_H_
 #define WEPOLL_PORT_H_
 
-#include "internal.h"
+#include "config.h"
 #include "wepoll.h"
 #include "win.h"
 

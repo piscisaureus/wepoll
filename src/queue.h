@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "internal.h"
+#include "config.h"
 
 typedef struct queue_node queue_node_t;
 

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "internal.h"
+#include "config.h"
 
 /* N.b.: the tree functions do not set errno or LastError when they fail. Each
  * of the API functions has at most one failure mode. It is up to the caller to

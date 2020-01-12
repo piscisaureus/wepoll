@@ -1,7 +1,7 @@
 #ifndef WEPOLL_WS_H_
 #define WEPOLL_WS_H_
 
-#include "internal.h"
+#include "config.h"
 #include "win.h"
 
 WEPOLL_INTERNAL int ws_global_init(void);

@@ -1,7 +1,7 @@
 #ifndef WEPOLL_POLL_GROUP_H_
 #define WEPOLL_POLL_GROUP_H_
 
-#include "internal.h"
+#include "config.h"
 #include "win.h"
 
 typedef struct poll_group poll_group_t;

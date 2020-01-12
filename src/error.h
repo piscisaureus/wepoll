@@ -1,7 +1,7 @@
 #ifndef WEPOLL_ERROR_H_
 #define WEPOLL_ERROR_H_
 
-#include "internal.h"
+#include "config.h"
 #include "win.h"
 
 #define return_map_error(value) \
