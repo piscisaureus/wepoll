@@ -7,6 +7,7 @@
 #pragma clang diagnostic ignored "-Wbad-function-cast"
 #pragma clang diagnostic ignored "-Wcast-qual"
 #pragma clang diagnostic ignored "-Wformat-non-iso"
+#pragma clang diagnostic ignored "-Wkeyword-macro"
 #endif
 
 #ifdef _MSC_VER
