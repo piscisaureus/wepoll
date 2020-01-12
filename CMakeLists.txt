@@ -12,6 +12,9 @@ else()
   add_compile_options(-Wall -Wextra -Werror)
 endif()
 
+# Work around bug in in Windows SDK 10.0.17763.0 and maybe other versions.
+add_definitions(-D_CRT_HAS_CXX17=0)
+
 set(DIST_DIR "dist")
 set(TEST_RUNNER "tools/run-tests.js")
 
