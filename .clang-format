@@ -12,11 +12,9 @@ BreakBeforeBraces: Attach
 ColumnLimit: 79
 Cpp11BracedListStyle: true
 DerivePointerAlignment: false
+IncludeBlocks: Preserve
 IndentWrappedFunctionNames: true
 MaxEmptyLinesToKeep: 1
 PointerAlignment: Left
 SpaceAfterCStyleCast: true
 SpacesInContainerLiterals: false
-
-# Alas, not supported:
-# ForceEmptyLineAtEOF: true
