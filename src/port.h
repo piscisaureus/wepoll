@@ -24,11 +24,11 @@ WEPOLL_INTERNAL int port_ctl(port_state_t* port_state,
                              SOCKET sock,
                              struct epoll_event* ev);
 
-WEPOLL_INTERNAL int port_register_socket_handle(port_state_t* port_state,
-                                                sock_state_t* sock_state,
-                                                SOCKET socket);
-WEPOLL_INTERNAL void port_unregister_socket_handle(port_state_t* port_state,
-                                                   sock_state_t* sock_state);
+WEPOLL_INTERNAL int port_register_socket(port_state_t* port_state,
+                                         sock_state_t* sock_state,
+                                         SOCKET socket);
+WEPOLL_INTERNAL void port_unregister_socket(port_state_t* port_state,
+                                            sock_state_t* sock_state);
 WEPOLL_INTERNAL sock_state_t* port_find_socket(port_state_t* port_state,
                                                SOCKET socket);
 

@@ -354,9 +354,9 @@ int port_ctl(port_state_t* port_state,
   return result;
 }
 
-int port_register_socket_handle(port_state_t* port_state,
-                                sock_state_t* sock_state,
-                                SOCKET socket) {
+int port_register_socket(port_state_t* port_state,
+                         sock_state_t* sock_state,
+                         SOCKET socket) {
   if (tree_add(&port_state->sock_tree,
                sock_state_to_tree_node(sock_state),
                socket) < 0)
@@ -364,8 +364,8 @@ int port_register_socket_handle(port_state_t* port_state,
   return 0;
 }
 
-void port_unregister_socket_handle(port_state_t* port_state,
-                                   sock_state_t* sock_state) {
+void port_unregister_socket(port_state_t* port_state,
+                            sock_state_t* sock_state) {
   tree_del(&port_state->sock_tree, sock_state_to_tree_node(sock_state));
 }
 

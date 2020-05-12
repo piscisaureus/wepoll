@@ -90,7 +90,7 @@ sock_state_t* sock_new(port_state_t* port_state, SOCKET socket) {
   tree_node_init(&sock_state->tree_node);
   queue_node_init(&sock_state->queue_node);
 
-  if (port_register_socket_handle(port_state, sock_state, socket) < 0)
+  if (port_register_socket(port_state, sock_state, socket) < 0)
     goto err2;
 
   return sock_state;
@@ -111,7 +111,7 @@ static int sock__delete(port_state_t* port_state,
       sock__cancel_poll(sock_state);
 
     port_cancel_socket_update(port_state, sock_state);
-    port_unregister_socket_handle(port_state, sock_state);
+    port_unregister_socket(port_state, sock_state);
 
     sock_state->delete_pending = true;
   }
