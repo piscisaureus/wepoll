@@ -123,7 +123,7 @@ int port_delete(port_state_t* port_state) {
     poll_group_delete(poll_group);
   }
 
-  assert(queue_empty(&port_state->sock_update_queue));
+  assert(queue_is_empty(&port_state->sock_update_queue));
 
   DeleteCriticalSection(&port_state->lock);
 
@@ -137,7 +137,7 @@ static int port__update_events(port_state_t* port_state) {
 
   /* Walk the queue, submitting new poll requests for every socket that needs
    * it. */
-  while (!queue_empty(sock_update_queue)) {
+  while (!queue_is_empty(sock_update_queue)) {
     queue_node_t* queue_node = queue_first(sock_update_queue);
     sock_state_t* sock_state = sock_state_from_queue_node(queue_node);
 
@@ -378,7 +378,7 @@ sock_state_t* port_find_socket(port_state_t* port_state, SOCKET socket) {
 
 void port_request_socket_update(port_state_t* port_state,
                                 sock_state_t* sock_state) {
-  if (queue_enqueued(sock_state_to_queue_node(sock_state)))
+  if (queue_is_enqueued(sock_state_to_queue_node(sock_state)))
     return;
   queue_append(&port_state->sock_update_queue,
                sock_state_to_queue_node(sock_state));
@@ -387,14 +387,14 @@ void port_request_socket_update(port_state_t* port_state,
 void port_cancel_socket_update(port_state_t* port_state,
                                sock_state_t* sock_state) {
   unused_var(port_state);
-  if (!queue_enqueued(sock_state_to_queue_node(sock_state)))
+  if (!queue_is_enqueued(sock_state_to_queue_node(sock_state)))
     return;
   queue_remove(sock_state_to_queue_node(sock_state));
 }
 
 void port_add_deleted_socket(port_state_t* port_state,
                              sock_state_t* sock_state) {
-  if (queue_enqueued(sock_state_to_queue_node(sock_state)))
+  if (queue_is_enqueued(sock_state_to_queue_node(sock_state)))
     return;
   queue_append(&port_state->sock_deleted_queue,
                sock_state_to_queue_node(sock_state));
@@ -403,7 +403,7 @@ void port_add_deleted_socket(port_state_t* port_state,
 void port_remove_deleted_socket(port_state_t* port_state,
                                 sock_state_t* sock_state) {
   unused_var(port_state);
-  if (!queue_enqueued(sock_state_to_queue_node(sock_state)))
+  if (!queue_is_enqueued(sock_state_to_queue_node(sock_state)))
     return;
   queue_remove(sock_state_to_queue_node(sock_state));
 }

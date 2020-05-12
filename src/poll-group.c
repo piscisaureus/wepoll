@@ -61,7 +61,7 @@ HANDLE poll_group_get_afd_helper_handle(poll_group_t* poll_group) {
 poll_group_t* poll_group_acquire(port_state_t* port_state) {
   queue_t* poll_group_queue = port_get_poll_group_queue(port_state);
   poll_group_t* poll_group =
-      !queue_empty(poll_group_queue)
+      !queue_is_empty(poll_group_queue)
           ? container_of(
                 queue_last(poll_group_queue), poll_group_t, queue_node)
           : NULL;
@@ -73,7 +73,7 @@ poll_group_t* poll_group_acquire(port_state_t* port_state) {
     return NULL;
 
   if (++poll_group->group_size == POLL_GROUP__MAX_GROUP_SIZE)
-    queue_move_first(poll_group_queue, &poll_group->queue_node);
+    queue_move_to_start(poll_group_queue, &poll_group->queue_node);
 
   return poll_group;
 }
@@ -85,7 +85,7 @@ void poll_group_release(poll_group_t* poll_group) {
   poll_group->group_size--;
   assert(poll_group->group_size < POLL_GROUP__MAX_GROUP_SIZE);
 
-  queue_move_last(poll_group_queue, &poll_group->queue_node);
+  queue_move_to_end(poll_group_queue, &poll_group->queue_node);
 
   /* Poll groups are currently only freed when the epoll port is closed. */
 }
