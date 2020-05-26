@@ -132,7 +132,7 @@ typedef struct _OBJECT_ATTRIBUTES {
   X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))
 
 #define X(return_type, attributes, name, parameters) \
-  WEPOLL_INTERNAL_VAR return_type(attributes* name) parameters;
+  WEPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
 NT_NTDLL_IMPORT_LIST(X)
 #undef X
 
