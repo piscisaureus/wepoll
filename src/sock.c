@@ -47,6 +47,7 @@ static inline sock_state_t* sock__alloc(void) {
 }
 
 static inline void sock__free(sock_state_t* sock_state) {
+  assert(sock_state != NULL);
   free(sock_state);
 }
 

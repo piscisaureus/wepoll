@@ -28,7 +28,7 @@ typedef struct port_state {
   size_t active_poll_count;
 } port_state_t;
 
-static port_state_t* port__alloc(void) {
+static inline port_state_t* port__alloc(void) {
   port_state_t* port_state = malloc(sizeof *port_state);
   if (port_state == NULL)
     return_set_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
@@ -36,12 +36,12 @@ static port_state_t* port__alloc(void) {
   return port_state;
 }
 
-static void port__free(port_state_t* port) {
+static inline void port__free(port_state_t* port) {
   assert(port != NULL);
   free(port);
 }
 
-static HANDLE port__create_iocp(void) {
+static inline HANDLE port__create_iocp(void) {
   HANDLE iocp_handle =
       CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   if (iocp_handle == NULL)
