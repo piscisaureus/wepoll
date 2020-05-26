@@ -103,9 +103,6 @@ clone_depth: 1
 cache:
   - c:\lspinst
 
-init:
-  - cmd: set
-
 install:
   - ps: Install-Product node 10
   - ps: >-
