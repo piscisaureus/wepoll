@@ -146,7 +146,7 @@ int sock_set_event(port_state_t* port_state,
                    const struct epoll_event* ev) {
   /* EPOLLERR and EPOLLHUP are always reported, even when not requested by the
    * caller. However they are disabled after a event has been reported for a
-   * socket for which the EPOLLONESHOT flag as set. */
+   * socket for which the EPOLLONESHOT flag was set. */
   uint32_t events = ev->events | EPOLLERR | EPOLLHUP;
 
   sock_state->user_events = events;

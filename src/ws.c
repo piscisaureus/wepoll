@@ -60,10 +60,10 @@ SOCKET ws_get_base_socket(SOCKET socket) {
      * never intercept the `SIO_BASE_HANDLE` ioctl [1], Komodia based LSPs do
      * so anyway, breaking it, with the apparent intention of preventing LSP
      * bypass [2]. Fortunately they don't handle `SIO_BSP_HANDLE_POLL`, which
-     * we can use to obtain the socket associated with the next protocol chain
-     * entry. If this succeeds, loop around and call `SIO_BASE_HANDLE` again
-     * with the retrieved BSP socket to be sure that we actually got all the
-     * way to the base.
+     * will at least let us obtain the socket associated with the next winsock
+     * protocol chain entry. If this succeeds, loop around and call
+     * `SIO_BASE_HANDLE` again with the returned BSP socket, to make sure that
+     * we unwrap all layers and retrieve the actual base socket.
      *  [1] https://docs.microsoft.com/en-us/windows/win32/winsock/winsock-ioctls
      *  [2] https://www.komodia.com/newwiki/index.php?title=Komodia%27s_Redirector_bug_fixes#Version_2.2.2.6
      */
