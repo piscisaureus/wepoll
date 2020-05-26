@@ -9,24 +9,24 @@
 
 #define IOCTL_AFD_POLL 0x00012024
 
-static UNICODE_STRING afd__helper_name =
+static UNICODE_STRING afd__device_name =
     RTL_CONSTANT_STRING(L"\\Device\\Afd\\Wepoll");
 
-static OBJECT_ATTRIBUTES afd__helper_attributes =
-    RTL_CONSTANT_OBJECT_ATTRIBUTES(&afd__helper_name, 0);
+static OBJECT_ATTRIBUTES afd__device_attributes =
+    RTL_CONSTANT_OBJECT_ATTRIBUTES(&afd__device_name, 0);
 
-int afd_create_helper_handle(HANDLE iocp_handle,
-                             HANDLE* afd_helper_handle_out) {
-  HANDLE afd_helper_handle;
+int afd_create_device_handle(HANDLE iocp_handle,
+                             HANDLE* afd_device_handle_out) {
+  HANDLE afd_device_handle;
   IO_STATUS_BLOCK iosb;
   NTSTATUS status;
 
   /* By opening \Device\Afd without specifying any extended attributes, we'll
    * get a handle that lets us talk to the AFD driver, but that doesn't have an
    * associated endpoint (so it's not a socket). */
-  status = NtCreateFile(&afd_helper_handle,
+  status = NtCreateFile(&afd_device_handle,
                         SYNCHRONIZE,
-                        &afd__helper_attributes,
+                        &afd__device_attributes,
                         &iosb,
                         NULL,
                         0,
@@ -38,22 +38,22 @@ int afd_create_helper_handle(HANDLE iocp_handle,
   if (status != STATUS_SUCCESS)
     return_set_error(-1, RtlNtStatusToDosError(status));
 
-  if (CreateIoCompletionPort(afd_helper_handle, iocp_handle, 0, 0) == NULL)
+  if (CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) == NULL)
     goto error;
 
-  if (!SetFileCompletionNotificationModes(afd_helper_handle,
+  if (!SetFileCompletionNotificationModes(afd_device_handle,
                                           FILE_SKIP_SET_EVENT_ON_HANDLE))
     goto error;
 
-  *afd_helper_handle_out = afd_helper_handle;
+  *afd_device_handle_out = afd_device_handle;
   return 0;
 
 error:
-  CloseHandle(afd_helper_handle);
+  CloseHandle(afd_device_handle);
   return_map_error(-1);
 }
 
-int afd_poll(HANDLE afd_helper_handle,
+int afd_poll(HANDLE afd_device_handle,
              AFD_POLL_INFO* poll_info,
              IO_STATUS_BLOCK* io_status_block) {
   NTSTATUS status;
@@ -62,7 +62,7 @@ int afd_poll(HANDLE afd_helper_handle,
   assert(io_status_block != NULL);
 
   io_status_block->Status = STATUS_PENDING;
-  status = NtDeviceIoControlFile(afd_helper_handle,
+  status = NtDeviceIoControlFile(afd_device_handle,
                                  NULL,
                                  NULL,
                                  io_status_block,
@@ -81,7 +81,7 @@ int afd_poll(HANDLE afd_helper_handle,
     return_set_error(-1, RtlNtStatusToDosError(status));
 }
 
-int afd_cancel_poll(HANDLE afd_helper_handle,
+int afd_cancel_poll(HANDLE afd_device_handle,
                     IO_STATUS_BLOCK* io_status_block) {
   NTSTATUS cancel_status;
   IO_STATUS_BLOCK cancel_iosb;
@@ -92,7 +92,7 @@ int afd_cancel_poll(HANDLE afd_helper_handle,
     return 0;
 
   cancel_status =
-      NtCancelIoFileEx(afd_helper_handle, io_status_block, &cancel_iosb);
+      NtCancelIoFileEx(afd_device_handle, io_status_block, &cancel_iosb);
 
   /* NtCancelIoFileEx() may return STATUS_NOT_FOUND if the operation completed
    * just before calling NtCancelIoFileEx(). This is not an error. */

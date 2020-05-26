@@ -29,13 +29,13 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
-WEPOLL_INTERNAL int afd_create_helper_handle(HANDLE iocp_handle,
-                                             HANDLE* afd_helper_handle_out);
+WEPOLL_INTERNAL int afd_create_device_handle(HANDLE iocp_handle,
+                                             HANDLE* afd_device_handle_out);
 
-WEPOLL_INTERNAL int afd_poll(HANDLE afd_helper_handle,
+WEPOLL_INTERNAL int afd_poll(HANDLE afd_device_handle,
                              AFD_POLL_INFO* poll_info,
                              IO_STATUS_BLOCK* io_status_block);
-WEPOLL_INTERNAL int afd_cancel_poll(HANDLE afd_helper_handle,
+WEPOLL_INTERNAL int afd_cancel_poll(HANDLE afd_device_handle,
                                     IO_STATUS_BLOCK* io_status_block);
 
 #endif /* WEPOLL_AFD_H_ */

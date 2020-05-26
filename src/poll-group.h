@@ -16,6 +16,6 @@ WEPOLL_INTERNAL void poll_group_delete(poll_group_t* poll_group);
 WEPOLL_INTERNAL poll_group_t* poll_group_from_queue_node(
     queue_node_t* queue_node);
 WEPOLL_INTERNAL HANDLE
-    poll_group_get_afd_helper_handle(poll_group_t* poll_group);
+    poll_group_get_afd_device_handle(poll_group_t* poll_group);
 
 #endif /* WEPOLL_POLL_GROUP_H_ */

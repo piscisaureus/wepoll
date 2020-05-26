@@ -54,7 +54,7 @@ static inline void sock__free(sock_state_t* sock_state) {
 static int sock__cancel_poll(sock_state_t* sock_state) {
   assert(sock_state->poll_status == SOCK__POLL_PENDING);
 
-  if (afd_cancel_poll(poll_group_get_afd_helper_handle(sock_state->poll_group),
+  if (afd_cancel_poll(poll_group_get_afd_device_handle(sock_state->poll_group),
                       &sock_state->io_status_block) < 0)
     return -1;
 
@@ -233,7 +233,7 @@ int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
     sock_state->poll_info.Handles[0].Events =
         sock__epoll_events_to_afd_events(sock_state->user_events);
 
-    if (afd_poll(poll_group_get_afd_helper_handle(sock_state->poll_group),
+    if (afd_poll(poll_group_get_afd_device_handle(sock_state->poll_group),
                  &sock_state->poll_info,
                  &sock_state->io_status_block) < 0) {
       switch (GetLastError()) {
