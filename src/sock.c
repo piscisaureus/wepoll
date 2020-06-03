@@ -51,7 +51,7 @@ static inline void sock__free(sock_state_t* sock_state) {
   free(sock_state);
 }
 
-static int sock__cancel_poll(sock_state_t* sock_state) {
+static inline int sock__cancel_poll(sock_state_t* sock_state) {
   assert(sock_state->poll_status == SOCK__POLL_PENDING);
 
   if (afd_cancel_poll(poll_group_get_afd_device_handle(sock_state->poll_group),

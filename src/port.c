@@ -81,7 +81,7 @@ err1:
   return NULL;
 }
 
-static int port__close_iocp(port_state_t* port_state) {
+static inline int port__close_iocp(port_state_t* port_state) {
   HANDLE iocp_handle = port_state->iocp_handle;
   port_state->iocp_handle = NULL;
 
@@ -150,15 +150,15 @@ static int port__update_events(port_state_t* port_state) {
   return 0;
 }
 
-static void port__update_events_if_polling(port_state_t* port_state) {
+static inline void port__update_events_if_polling(port_state_t* port_state) {
   if (port_state->active_poll_count > 0)
     port__update_events(port_state);
 }
 
-static int port__feed_events(port_state_t* port_state,
-                             struct epoll_event* epoll_events,
-                             OVERLAPPED_ENTRY* iocp_events,
-                             DWORD iocp_event_count) {
+static inline int port__feed_events(port_state_t* port_state,
+                                    struct epoll_event* epoll_events,
+                                    OVERLAPPED_ENTRY* iocp_events,
+                                    DWORD iocp_event_count) {
   int epoll_event_count = 0;
   DWORD i;
 
@@ -173,11 +173,11 @@ static int port__feed_events(port_state_t* port_state,
   return epoll_event_count;
 }
 
-static int port__poll(port_state_t* port_state,
-                      struct epoll_event* epoll_events,
-                      OVERLAPPED_ENTRY* iocp_events,
-                      DWORD maxevents,
-                      DWORD timeout) {
+static inline int port__poll(port_state_t* port_state,
+                             struct epoll_event* epoll_events,
+                             OVERLAPPED_ENTRY* iocp_events,
+                             DWORD maxevents,
+                             DWORD timeout) {
   DWORD completion_count;
 
   if (port__update_events(port_state) < 0)
@@ -283,9 +283,9 @@ int port_wait(port_state_t* port_state,
     return -1;
 }
 
-static int port__ctl_add(port_state_t* port_state,
-                         SOCKET sock,
-                         struct epoll_event* ev) {
+static inline int port__ctl_add(port_state_t* port_state,
+                                SOCKET sock,
+                                struct epoll_event* ev) {
   sock_state_t* sock_state = sock_new(port_state, sock);
   if (sock_state == NULL)
     return -1;
@@ -300,9 +300,9 @@ static int port__ctl_add(port_state_t* port_state,
   return 0;
 }
 
-static int port__ctl_mod(port_state_t* port_state,
-                         SOCKET sock,
-                         struct epoll_event* ev) {
+static inline int port__ctl_mod(port_state_t* port_state,
+                                SOCKET sock,
+                                struct epoll_event* ev) {
   sock_state_t* sock_state = port_find_socket(port_state, sock);
   if (sock_state == NULL)
     return -1;
@@ -315,7 +315,7 @@ static int port__ctl_mod(port_state_t* port_state,
   return 0;
 }
 
-static int port__ctl_del(port_state_t* port_state, SOCKET sock) {
+static inline int port__ctl_del(port_state_t* port_state, SOCKET sock) {
   sock_state_t* sock_state = port_find_socket(port_state, sock);
   if (sock_state == NULL)
     return -1;
@@ -325,10 +325,10 @@ static int port__ctl_del(port_state_t* port_state, SOCKET sock) {
   return 0;
 }
 
-static int port__ctl_op(port_state_t* port_state,
-                        int op,
-                        SOCKET sock,
-                        struct epoll_event* ev) {
+static inline int port__ctl_op(port_state_t* port_state,
+                               int op,
+                               SOCKET sock,
+                               struct epoll_event* ev) {
   switch (op) {
     case EPOLL_CTL_ADD:
       return port__ctl_add(port_state, sock, ev);
