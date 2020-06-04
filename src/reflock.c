@@ -49,6 +49,7 @@ void reflock_ref(reflock_t* reflock) {
   /* Verify that the counter didn't overflow and the lock isn't destroyed. */
   assert((state & REFLOCK__DESTROY_MASK) == 0);
   unused_var(state);
+  unused_var(REFLOCK__DESTROY_MASK);
 }
 
 void reflock_unref(reflock_t* reflock) {
@@ -56,6 +57,7 @@ void reflock_unref(reflock_t* reflock) {
 
   /* Verify that the lock was referenced and not already destroyed. */
   assert((state & REFLOCK__DESTROY_MASK & ~REFLOCK__DESTROY) == 0);
+  unused_var(REFLOCK__DESTROY_MASK);
 
   if (state == REFLOCK__DESTROY)
     reflock__signal_event(reflock);
