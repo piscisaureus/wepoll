@@ -8,11 +8,11 @@
 #include "win.h"
 
 /* clang-format off */
-static const long REFLOCK__REF          = (long) 0x00000001;
-static const long REFLOCK__REF_MASK     = (long) 0x0fffffff;
-static const long REFLOCK__DESTROY      = (long) 0x10000000;
-static const long REFLOCK__DESTROY_MASK = (long) 0xf0000000;
-static const long REFLOCK__POISON       = (long) 0x300dead0;
+#define REFLOCK__REF          ((long) 0x00000001UL)
+#define REFLOCK__REF_MASK     ((long) 0x0fffffffUL)
+#define REFLOCK__DESTROY      ((long) 0x10000000UL)
+#define REFLOCK__DESTROY_MASK ((long) 0xf0000000UL)
+#define REFLOCK__POISON       ((long) 0x300dead0UL)
 /* clang-format on */
 
 static HANDLE reflock__keyed_event = NULL;
@@ -49,7 +49,6 @@ void reflock_ref(reflock_t* reflock) {
   /* Verify that the counter didn't overflow and the lock isn't destroyed. */
   assert((state & REFLOCK__DESTROY_MASK) == 0);
   unused_var(state);
-  unused_var(REFLOCK__DESTROY_MASK);
 }
 
 void reflock_unref(reflock_t* reflock) {
@@ -57,7 +56,6 @@ void reflock_unref(reflock_t* reflock) {
 
   /* Verify that the lock was referenced and not already destroyed. */
   assert((state & REFLOCK__DESTROY_MASK & ~REFLOCK__DESTROY) == 0);
-  unused_var(REFLOCK__DESTROY_MASK);
 
   if (state == REFLOCK__DESTROY)
     reflock__signal_event(reflock);

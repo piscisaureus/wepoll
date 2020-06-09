@@ -15,9 +15,9 @@
 #include "wepoll.h"
 #include "ws.h"
 
-static const uint32_t SOCK__KNOWN_EPOLL_EVENTS =
-    EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM |
-    EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLMSG | EPOLLRDHUP;
+#define SOCK__KNOWN_EPOLL_EVENTS                                       \
+  (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM | \
+   EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLMSG | EPOLLRDHUP)
 
 typedef enum sock__poll_status {
   SOCK__POLL_IDLE = 0,

@@ -10,7 +10,7 @@
 #include "util.h"
 #include "win.h"
 
-static const size_t POLL_GROUP__MAX_GROUP_SIZE = 32;
+#define POLL_GROUP__MAX_GROUP_SIZE 32
 
 typedef struct poll_group {
   port_state_t* port_state;
