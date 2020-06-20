@@ -104,7 +104,7 @@ cache:
   - c:\lspinst
 
 install:
-  - ps: Install-Product node 10
+  - ps: Install-Product node 12
   - ps: >-
       if ($env:lsp_name) {
         if (-Not (Test-Path -Path "c:\lspinst\${env:lsp_name}.exe")) {
