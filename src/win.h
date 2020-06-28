@@ -1,34 +1,29 @@
 #ifndef WEPOLL_WIN_H_
 #define WEPOLL_WIN_H_
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonportable-system-include-path"
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
-#endif
-
-#ifdef _WIN32_WINNT
-#undef _WIN32_WINNT
-#endif
-
-#define _WIN32_WINNT 0x0600
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
-#ifndef __GNUC__
+#elif defined(_MSC_VER)
 #pragma warning(push, 1)
 #endif
 
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#include <Windows.h>
+#undef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 
-#ifndef __GNUC__
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+
+/* clang-format off */
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+/* clang-format on */
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
