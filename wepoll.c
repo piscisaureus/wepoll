@@ -29,7 +29,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef WEPOLL_EXPORT
 #define WEPOLL_EXPORT
+#endif
 
 #include <stdint.h>
 
@@ -110,36 +112,29 @@ WEPOLL_EXPORT int epoll_wait(HANDLE ephnd,
 #include <stdlib.h>
 
 #define WEPOLL_INTERNAL static
-#define WEPOLL_INTERNAL_VAR static
+#define WEPOLL_INTERNAL_EXTERN static
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonportable-system-include-path"
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
-#endif
-
-#ifdef _WIN32_WINNT
-#undef _WIN32_WINNT
-#endif
-
-#define _WIN32_WINNT 0x0600
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
-#ifndef __GNUC__
+#elif defined(_MSC_VER)
 #pragma warning(push, 1)
 #endif
 
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#include <Windows.h>
+#undef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 
-#ifndef __GNUC__
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
@@ -271,7 +266,7 @@ typedef struct _OBJECT_ATTRIBUTES {
   X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))
 
 #define X(return_type, attributes, name, parameters) \
-  WEPOLL_INTERNAL_VAR return_type(attributes* name) parameters;
+  WEPOLL_INTERNAL_EXTERN return_type(attributes* name) parameters;
 NT_NTDLL_IMPORT_LIST(X)
 #undef X
 
@@ -297,13 +292,13 @@ typedef struct _AFD_POLL_INFO {
   AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
-WEPOLL_INTERNAL int afd_create_helper_handle(HANDLE iocp_handle,
-                                             HANDLE* afd_helper_handle_out);
+WEPOLL_INTERNAL int afd_create_device_handle(HANDLE iocp_handle,
+                                             HANDLE* afd_device_handle_out);
 
-WEPOLL_INTERNAL int afd_poll(HANDLE afd_helper_handle,
+WEPOLL_INTERNAL int afd_poll(HANDLE afd_device_handle,
                              AFD_POLL_INFO* poll_info,
                              IO_STATUS_BLOCK* io_status_block);
-WEPOLL_INTERNAL int afd_cancel_poll(HANDLE afd_helper_handle,
+WEPOLL_INTERNAL int afd_cancel_poll(HANDLE afd_device_handle,
                                     IO_STATUS_BLOCK* io_status_block);
 
 #define return_map_error(value) \
@@ -324,24 +319,24 @@ WEPOLL_INTERNAL int err_check_handle(HANDLE handle);
 
 #define IOCTL_AFD_POLL 0x00012024
 
-static UNICODE_STRING afd__helper_name =
+static UNICODE_STRING afd__device_name =
     RTL_CONSTANT_STRING(L"\\Device\\Afd\\Wepoll");
 
-static OBJECT_ATTRIBUTES afd__helper_attributes =
-    RTL_CONSTANT_OBJECT_ATTRIBUTES(&afd__helper_name, 0);
+static OBJECT_ATTRIBUTES afd__device_attributes =
+    RTL_CONSTANT_OBJECT_ATTRIBUTES(&afd__device_name, 0);
 
-int afd_create_helper_handle(HANDLE iocp_handle,
-                             HANDLE* afd_helper_handle_out) {
-  HANDLE afd_helper_handle;
+int afd_create_device_handle(HANDLE iocp_handle,
+                             HANDLE* afd_device_handle_out) {
+  HANDLE afd_device_handle;
   IO_STATUS_BLOCK iosb;
   NTSTATUS status;
 
   /* By opening \Device\Afd without specifying any extended attributes, we'll
    * get a handle that lets us talk to the AFD driver, but that doesn't have an
    * associated endpoint (so it's not a socket). */
-  status = NtCreateFile(&afd_helper_handle,
+  status = NtCreateFile(&afd_device_handle,
                         SYNCHRONIZE,
-                        &afd__helper_attributes,
+                        &afd__device_attributes,
                         &iosb,
                         NULL,
                         0,
@@ -353,22 +348,22 @@ int afd_create_helper_handle(HANDLE iocp_handle,
   if (status != STATUS_SUCCESS)
     return_set_error(-1, RtlNtStatusToDosError(status));
 
-  if (CreateIoCompletionPort(afd_helper_handle, iocp_handle, 0, 0) == NULL)
+  if (CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) == NULL)
     goto error;
 
-  if (!SetFileCompletionNotificationModes(afd_helper_handle,
+  if (!SetFileCompletionNotificationModes(afd_device_handle,
                                           FILE_SKIP_SET_EVENT_ON_HANDLE))
     goto error;
 
-  *afd_helper_handle_out = afd_helper_handle;
+  *afd_device_handle_out = afd_device_handle;
   return 0;
 
 error:
-  CloseHandle(afd_helper_handle);
+  CloseHandle(afd_device_handle);
   return_map_error(-1);
 }
 
-int afd_poll(HANDLE afd_helper_handle,
+int afd_poll(HANDLE afd_device_handle,
              AFD_POLL_INFO* poll_info,
              IO_STATUS_BLOCK* io_status_block) {
   NTSTATUS status;
@@ -377,7 +372,7 @@ int afd_poll(HANDLE afd_helper_handle,
   assert(io_status_block != NULL);
 
   io_status_block->Status = STATUS_PENDING;
-  status = NtDeviceIoControlFile(afd_helper_handle,
+  status = NtDeviceIoControlFile(afd_device_handle,
                                  NULL,
                                  NULL,
                                  io_status_block,
@@ -396,7 +391,7 @@ int afd_poll(HANDLE afd_helper_handle,
     return_set_error(-1, RtlNtStatusToDosError(status));
 }
 
-int afd_cancel_poll(HANDLE afd_helper_handle,
+int afd_cancel_poll(HANDLE afd_device_handle,
                     IO_STATUS_BLOCK* io_status_block) {
   NTSTATUS cancel_status;
   IO_STATUS_BLOCK cancel_iosb;
@@ -407,7 +402,7 @@ int afd_cancel_poll(HANDLE afd_helper_handle,
     return 0;
 
   cancel_status =
-      NtCancelIoFileEx(afd_helper_handle, io_status_block, &cancel_iosb);
+      NtCancelIoFileEx(afd_device_handle, io_status_block, &cancel_iosb);
 
   /* NtCancelIoFileEx() may return STATUS_NOT_FOUND if the operation completed
    * just before calling NtCancelIoFileEx(). This is not an error. */
@@ -922,7 +917,7 @@ WEPOLL_INTERNAL void poll_group_delete(poll_group_t* poll_group);
 WEPOLL_INTERNAL poll_group_t* poll_group_from_queue_node(
     queue_node_t* queue_node);
 WEPOLL_INTERNAL HANDLE
-    poll_group_get_afd_helper_handle(poll_group_t* poll_group);
+    poll_group_get_afd_device_handle(poll_group_t* poll_group);
 
 typedef struct queue_node {
   queue_node_t* prev;
@@ -948,12 +943,12 @@ WEPOLL_INTERNAL void queue_remove(queue_node_t* node);
 WEPOLL_INTERNAL bool queue_is_empty(const queue_t* queue);
 WEPOLL_INTERNAL bool queue_is_enqueued(const queue_node_t* node);
 
-static const size_t POLL_GROUP__MAX_GROUP_SIZE = 32;
+#define POLL_GROUP__MAX_GROUP_SIZE 32
 
 typedef struct poll_group {
   port_state_t* port_state;
   queue_node_t queue_node;
-  HANDLE afd_helper_handle;
+  HANDLE afd_device_handle;
   size_t group_size;
 } poll_group_t;
 
@@ -970,7 +965,7 @@ static poll_group_t* poll_group__new(port_state_t* port_state) {
   queue_node_init(&poll_group->queue_node);
   poll_group->port_state = port_state;
 
-  if (afd_create_helper_handle(iocp_handle, &poll_group->afd_helper_handle) <
+  if (afd_create_device_handle(iocp_handle, &poll_group->afd_device_handle) <
       0) {
     free(poll_group);
     return NULL;
@@ -983,7 +978,7 @@ static poll_group_t* poll_group__new(port_state_t* port_state) {
 
 void poll_group_delete(poll_group_t* poll_group) {
   assert(poll_group->group_size == 0);
-  CloseHandle(poll_group->afd_helper_handle);
+  CloseHandle(poll_group->afd_device_handle);
   queue_remove(&poll_group->queue_node);
   free(poll_group);
 }
@@ -992,8 +987,8 @@ poll_group_t* poll_group_from_queue_node(queue_node_t* queue_node) {
   return container_of(queue_node, poll_group_t, queue_node);
 }
 
-HANDLE poll_group_get_afd_helper_handle(poll_group_t* poll_group) {
-  return poll_group->afd_helper_handle;
+HANDLE poll_group_get_afd_device_handle(poll_group_t* poll_group) {
+  return poll_group->afd_device_handle;
 }
 
 poll_group_t* poll_group_acquire(port_state_t* port_state) {
@@ -1066,7 +1061,7 @@ typedef struct port_state {
   size_t active_poll_count;
 } port_state_t;
 
-static port_state_t* port__alloc(void) {
+static inline port_state_t* port__alloc(void) {
   port_state_t* port_state = malloc(sizeof *port_state);
   if (port_state == NULL)
     return_set_error(NULL, ERROR_NOT_ENOUGH_MEMORY);
@@ -1074,12 +1069,12 @@ static port_state_t* port__alloc(void) {
   return port_state;
 }
 
-static void port__free(port_state_t* port) {
+static inline void port__free(port_state_t* port) {
   assert(port != NULL);
   free(port);
 }
 
-static HANDLE port__create_iocp(void) {
+static inline HANDLE port__create_iocp(void) {
   HANDLE iocp_handle =
       CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   if (iocp_handle == NULL)
@@ -1119,7 +1114,7 @@ err1:
   return NULL;
 }
 
-static int port__close_iocp(port_state_t* port_state) {
+static inline int port__close_iocp(port_state_t* port_state) {
   HANDLE iocp_handle = port_state->iocp_handle;
   port_state->iocp_handle = NULL;
 
@@ -1188,15 +1183,15 @@ static int port__update_events(port_state_t* port_state) {
   return 0;
 }
 
-static void port__update_events_if_polling(port_state_t* port_state) {
+static inline void port__update_events_if_polling(port_state_t* port_state) {
   if (port_state->active_poll_count > 0)
     port__update_events(port_state);
 }
 
-static int port__feed_events(port_state_t* port_state,
-                             struct epoll_event* epoll_events,
-                             OVERLAPPED_ENTRY* iocp_events,
-                             DWORD iocp_event_count) {
+static inline int port__feed_events(port_state_t* port_state,
+                                    struct epoll_event* epoll_events,
+                                    OVERLAPPED_ENTRY* iocp_events,
+                                    DWORD iocp_event_count) {
   int epoll_event_count = 0;
   DWORD i;
 
@@ -1211,11 +1206,11 @@ static int port__feed_events(port_state_t* port_state,
   return epoll_event_count;
 }
 
-static int port__poll(port_state_t* port_state,
-                      struct epoll_event* epoll_events,
-                      OVERLAPPED_ENTRY* iocp_events,
-                      DWORD maxevents,
-                      DWORD timeout) {
+static inline int port__poll(port_state_t* port_state,
+                             struct epoll_event* epoll_events,
+                             OVERLAPPED_ENTRY* iocp_events,
+                             DWORD maxevents,
+                             DWORD timeout) {
   DWORD completion_count;
 
   if (port__update_events(port_state) < 0)
@@ -1321,9 +1316,9 @@ int port_wait(port_state_t* port_state,
     return -1;
 }
 
-static int port__ctl_add(port_state_t* port_state,
-                         SOCKET sock,
-                         struct epoll_event* ev) {
+static inline int port__ctl_add(port_state_t* port_state,
+                                SOCKET sock,
+                                struct epoll_event* ev) {
   sock_state_t* sock_state = sock_new(port_state, sock);
   if (sock_state == NULL)
     return -1;
@@ -1338,9 +1333,9 @@ static int port__ctl_add(port_state_t* port_state,
   return 0;
 }
 
-static int port__ctl_mod(port_state_t* port_state,
-                         SOCKET sock,
-                         struct epoll_event* ev) {
+static inline int port__ctl_mod(port_state_t* port_state,
+                                SOCKET sock,
+                                struct epoll_event* ev) {
   sock_state_t* sock_state = port_find_socket(port_state, sock);
   if (sock_state == NULL)
     return -1;
@@ -1353,7 +1348,7 @@ static int port__ctl_mod(port_state_t* port_state,
   return 0;
 }
 
-static int port__ctl_del(port_state_t* port_state, SOCKET sock) {
+static inline int port__ctl_del(port_state_t* port_state, SOCKET sock) {
   sock_state_t* sock_state = port_find_socket(port_state, sock);
   if (sock_state == NULL)
     return -1;
@@ -1363,10 +1358,10 @@ static int port__ctl_del(port_state_t* port_state, SOCKET sock) {
   return 0;
 }
 
-static int port__ctl_op(port_state_t* port_state,
-                        int op,
-                        SOCKET sock,
-                        struct epoll_event* ev) {
+static inline int port__ctl_op(port_state_t* port_state,
+                               int op,
+                               SOCKET sock,
+                               struct epoll_event* ev) {
   switch (op) {
     case EPOLL_CTL_ADD:
       return port__ctl_add(port_state, sock, ev);
@@ -1522,11 +1517,11 @@ bool queue_is_enqueued(const queue_node_t* node) {
   return node->prev != node;
 }
 
-static const long REFLOCK__REF          = (long) 0x00000001;
-static const long REFLOCK__REF_MASK     = (long) 0x0fffffff;
-static const long REFLOCK__DESTROY      = (long) 0x10000000;
-static const long REFLOCK__DESTROY_MASK = (long) 0xf0000000;
-static const long REFLOCK__POISON       = (long) 0x300dead0;
+#define REFLOCK__REF          ((long) 0x00000001UL)
+#define REFLOCK__REF_MASK     ((long) 0x0fffffffUL)
+#define REFLOCK__DESTROY      ((long) 0x10000000UL)
+#define REFLOCK__DESTROY_MASK ((long) 0xf0000000UL)
+#define REFLOCK__POISON       ((long) 0x300dead0UL)
 
 static HANDLE reflock__keyed_event = NULL;
 
@@ -1589,9 +1584,9 @@ void reflock_unref_and_destroy(reflock_t* reflock) {
   assert(state == REFLOCK__DESTROY);
 }
 
-static const uint32_t SOCK__KNOWN_EPOLL_EVENTS =
-    EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM |
-    EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLMSG | EPOLLRDHUP;
+#define SOCK__KNOWN_EPOLL_EVENTS                                       \
+  (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM | \
+   EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLMSG | EPOLLRDHUP)
 
 typedef enum sock__poll_status {
   SOCK__POLL_IDLE = 0,
@@ -1621,13 +1616,14 @@ static inline sock_state_t* sock__alloc(void) {
 }
 
 static inline void sock__free(sock_state_t* sock_state) {
+  assert(sock_state != NULL);
   free(sock_state);
 }
 
-static int sock__cancel_poll(sock_state_t* sock_state) {
+static inline int sock__cancel_poll(sock_state_t* sock_state) {
   assert(sock_state->poll_status == SOCK__POLL_PENDING);
 
-  if (afd_cancel_poll(poll_group_get_afd_helper_handle(sock_state->poll_group),
+  if (afd_cancel_poll(poll_group_get_afd_device_handle(sock_state->poll_group),
                       &sock_state->io_status_block) < 0)
     return -1;
 
@@ -1719,7 +1715,7 @@ int sock_set_event(port_state_t* port_state,
                    const struct epoll_event* ev) {
   /* EPOLLERR and EPOLLHUP are always reported, even when not requested by the
    * caller. However they are disabled after a event has been reported for a
-   * socket for which the EPOLLONESHOT flag as set. */
+   * socket for which the EPOLLONESHOT flag was set. */
   uint32_t events = ev->events | EPOLLERR | EPOLLHUP;
 
   sock_state->user_events = events;
@@ -1806,7 +1802,7 @@ int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
     sock_state->poll_info.Handles[0].Events =
         sock__epoll_events_to_afd_events(sock_state->user_events);
 
-    if (afd_poll(poll_group_get_afd_helper_handle(sock_state->poll_group),
+    if (afd_poll(poll_group_get_afd_device_handle(sock_state->poll_group),
                  &sock_state->poll_info,
                  &sock_state->io_status_block) < 0) {
       switch (GetLastError()) {
@@ -2241,14 +2237,13 @@ SOCKET ws_get_base_socket(SOCKET socket) {
      * never intercept the `SIO_BASE_HANDLE` ioctl [1], Komodia based LSPs do
      * so anyway, breaking it, with the apparent intention of preventing LSP
      * bypass [2]. Fortunately they don't handle `SIO_BSP_HANDLE_POLL`, which
-     * we can use to obtain the socket associated with the next protocol chain
-     * entry. If this succeeds, loop around and call `SIO_BASE_HANDLE` again
-     * with the retrieved BSP socket to be sure that we actually got all the
-     * way to the base.
+     * will at least let us obtain the socket associated with the next winsock
+     * protocol chain entry. If this succeeds, loop around and call
+     * `SIO_BASE_HANDLE` again with the returned BSP socket, to make sure that
+     * we unwrap all layers and retrieve the actual base socket.
      *  [1] https://docs.microsoft.com/en-us/windows/win32/winsock/winsock-ioctls
      *  [2] https://www.komodia.com/newwiki/index.php?title=Komodia%27s_Redirector_bug_fixes#Version_2.2.2.6
      */
-
     base_socket = ws__ioctl_get_bsp_socket(socket, SIO_BSP_HANDLE_POLL);
     if (base_socket != INVALID_SOCKET && base_socket != socket)
       socket = base_socket;
