@@ -26,6 +26,14 @@ environment:
       appveyor_build_worker_image: Visual Studio 2017
       cmake_options: -G "Visual Studio 15 2017" -A x64 -T host=x64
 
+    - job: msvc-vs2019-x86
+      appveyor_build_worker_image: Visual Studio 2019
+      cmake_options: -G "Visual Studio 16 2019" -A Win32
+
+    - job: msvc-vs2019-x64
+      appveyor_build_worker_image: Visual Studio 2019
+      cmake_options: -G "Visual Studio 16 2019" -A x64 -T host=x64
+
     - job: gcc-mingw-x86
       appveyor_build_worker_image: Visual Studio 2015
       mingw_path: c:\msys64\mingw32\bin
@@ -76,9 +84,9 @@ environment:
       lsp_name: Proxifier
       lsp_installer: http://www.proxifier.com/download/ProxifierSetup.exe
 
-    - job: msvc-vs2017-x64-lsp-ifs
-      appveyor_build_worker_image: Visual Studio 2017
-      cmake_options: -G "Visual Studio 15 2017" -A x64 -T host=x64
+    - job: msvc-vs2019-x64-lsp-ifs
+      appveyor_build_worker_image: Visual Studio 2019
+      cmake_options: -G "Visual Studio 16 2019" -A x64 -T host=x64
       lsp_name: Proxifier
       lsp_installer: http://www.proxifier.com/download/ProxifierSetup.exe
 
@@ -88,9 +96,9 @@ environment:
       lsp_name: PCTools
       lsp_installer: http://download.pctools.com/mirror/updates/9.0.0.2308-SDavfree-lite_en.exe
 
-    - job: msvc-vs2017-x64-lsp-nonifs
-      appveyor_build_worker_image: Visual Studio 2017
-      cmake_options: -G "Visual Studio 15 2017" -A x64 -T host=x64
+    - job: msvc-vs2019-x64-lsp-nonifs
+      appveyor_build_worker_image: Visual Studio 2019
+      cmake_options: -G "Visual Studio 16 2019" -A x64 -T host=x64
       lsp_name: PCTools
       lsp_installer: http://download.pctools.com/mirror/updates/9.0.0.2308-SDavfree-lite_en.exe
 
