@@ -102,6 +102,50 @@ environment:
       lsp_name: PCTools
       lsp_installer: http://download.pctools.com/mirror/updates/9.0.0.2308-SDavfree-lite_en.exe
 
+    - job: msvc-vs2013-x86-lsp-komodia
+      appveyor_build_worker_image: Visual Studio 2013
+      cmake_options: -G "Visual Studio 12 2013" -A Win32
+      lsp_name: Astrill
+      lsp_installer: http://fs3.softfamous.com/downloads/tname-110575cb0f191/software/astrill-setup-win.exe
+      lsp_certificate: astrill_code_signing.cer
+
+    - job: msvc-vs2019-x64-lsp-komodia
+      appveyor_build_worker_image: Visual Studio 2019
+      cmake_options: -G "Visual Studio 16 2019" -A x64 -T host=x64
+      lsp_name: Astrill
+      lsp_installer: http://fs3.softfamous.com/downloads/tname-110575cb0f191/software/astrill-setup-win.exe
+      lsp_certificate: astrill_code_signing.cer
+
+  astrill_code_signing.cer:
+    -----BEGIN CERTIFICATE-----
+    MIIEujCCA6KgAwIBAgISESF92oi/0x7NA/pEqjlncigzMA0GCSqGSIb3DQEBBQUA
+    MFExCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52LXNhMScwJQYD
+    VQQDEx5HbG9iYWxTaWduIENvZGVTaWduaW5nIENBIC0gRzIwHhcNMTQwNTIyMTg1
+    NDI5WhcNMTYwODIyMTg1NDI5WjBQMQswCQYDVQQGEwJBVTEMMAoGA1UECBMDTlNX
+    MQ8wDQYDVQQHEwZDYXN1bGExEDAOBgNVBAoTB0FzdHJpbGwxEDAOBgNVBAMTB0Fz
+    dHJpbGwwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCawEbB+Rt1Dkne
+    SmutllKQ4QelWERRmppeAQz1lx8ox5ibvjHAhEvUX9T7PTTnhBd0yrd6MEI5Kzxi
+    F/TQo3aq8ytKoz+wA65Ds9a+MMhsWBuYFhvjhbigV5y5wiawFeNKNWCvhAZwO40D
+    5u9mF0wIg6MUvmiw67jA8wEhpUTzRylt4f8IA3pvg6iIlK1G8nCemkDnB4SulVl7
+    4+PfPOTvmBrKQHuOe2Z0tvarXO9bR4LJcXJIfQXo/fcUi1I1w8RtbFaft4ETOuX9
+    X6KMy+mmyqv5xiMIL1zWu9VYp+SbhuWM7NccNCqKLaa/CjuxsKdd9bRbHIZKyBO7
+    aYR4hAzLAgMBAAGjggGLMIIBhzAOBgNVHQ8BAf8EBAMCB4AwTAYDVR0gBEUwQzBB
+    BgkrBgEEAaAyATIwNDAyBggrBgEFBQcCARYmaHR0cHM6Ly93d3cuZ2xvYmFsc2ln
+    bi5jb20vcmVwb3NpdG9yeS8wCQYDVR0TBAIwADATBgNVHSUEDDAKBggrBgEFBQcD
+    AzA+BgNVHR8ENzA1MDOgMaAvhi1odHRwOi8vY3JsLmdsb2JhbHNpZ24uY29tL2dz
+    L2dzY29kZXNpZ25nMi5jcmwwgYYGCCsGAQUFBwEBBHoweDBABggrBgEFBQcwAoY0
+    aHR0cDovL3NlY3VyZS5nbG9iYWxzaWduLmNvbS9jYWNlcnQvZ3Njb2Rlc2lnbmcy
+    LmNydDA0BggrBgEFBQcwAYYoaHR0cDovL29jc3AyLmdsb2JhbHNpZ24uY29tL2dz
+    Y29kZXNpZ25nMjAdBgNVHQ4EFgQU98tKG3QFqsqqykH1HhyZGeJ3/jIwHwYDVR0j
+    BBgwFoAUCG7YtpyKv+0+18N0XcyAH6gvUHowDQYJKoZIhvcNAQEFBQADggEBAA8z
+    CmPfOYCrC/SBr++QW7ReUCwfO1MXIp88fl7L1WItfHzHMgpmrJm2BdgCbBo0G0ub
+    MM1VB2Mk5c6QkToK9UOdCJ6SfdoTeTOxK5zrRUpHuTvB4Qe5LOl2drRMs1XybQ52
+    1SRABN9E805PnBn5wLtHfHsmInomVDsN93Vj0u3sLeYrDxgv19ydxTv7aEsWizo6
+    o2Qk857W4ku0zfgErNrvU3vAEXJkZgxvWN30uPJ/Wxe+LPK4epOzuSq1urn024uN
+    T06/sXdIm/0jIswGkMw9l28zG/aVFR7q4djVeY0MddsoVjryK6fkli/9Swyy1sl0
+    VUdpl+GM3CXz+sGPCfY=
+    -----END CERTIFICATE-----
+
 configuration: Debug
 
 clone_folder: c:\wepoll
@@ -113,13 +157,22 @@ cache:
 
 install:
   - ps: Install-Product node 12
-  - ps: >-
+  - ps: |-
       if ($env:lsp_name) {
         if (-Not (Test-Path -Path "c:\lspinst\${env:lsp_name}.exe")) {
           "Downloading ${env:lsp_name} LSP installer..."
-          $null = & New-Item -Path "c:\lspinst" -ItemType directory -Force
+          $null = New-Item -Path "c:\lspinst" -ItemType directory -Force
           Invoke-WebRequest -Uri ${env:lsp_installer} `
                             -OutFile "c:\lspinst\${env:lsp_name}.exe"
+        }
+
+        if ($env:lsp_certificate) {
+          "Installing certificate for ${env:lsp_name} LSP..."
+          Get-Content -Path "Env:\${env:lsp_certificate}" |
+            Out-File -FilePath "${env:lsp_certificate}"
+          $null = Import-Certificate `
+                    -FilePath "${env:lsp_certificate}" `
+                    -CertStoreLocation "Cert:\LocalMachine\TrustedPublisher"
         }
 
         "Installing ${env:lsp_name} LSP..."
@@ -130,7 +183,7 @@ install:
         "Waiting for ${env:lsp_name} LSP to appear in the Winsock Catalog..."
         do {
           Start-Sleep -Seconds 1
-          $catalog = & netsh winsock show catalog
+          $catalog = netsh winsock show catalog
         } until ($catalog -Like "*Layered Chain Entry*")
 
         $catalog | Select-String -Pattern "Layered Chain Entry" -Context 0,14
@@ -151,7 +204,7 @@ test_script:
   - cmd: cmake --build . --config "%configuration%" --target test-all
 
 after_test:
-  - ps: >-
+  - ps: |-
       if ($env:lsp_name) {
         # Prevent LSPs from interfering with uploading the build cache.
         netsh winsock reset
