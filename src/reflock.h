@@ -1,7 +1,9 @@
 #ifndef WEPOLL_REFLOCK_H_
 #define WEPOLL_REFLOCK_H_
 
-/* The reflock is a special kind of lock that normally prevents a chunk of
+#include "config.h"
+
+/* A reflock is a special kind of lock that normally prevents a chunk of
  * memory from being freed, but does allow the chunk of memory to eventually be
  * released in a coordinated fashion.
  *
@@ -14,12 +16,10 @@
  * "destroy" returns, the calling thread may assume that no other threads have
  * a reference to the lock.
  *
- * Attemmpting to lock or destroy a lock after reflock_unref_and_destroy() has
+ * Attempting to lock or destroy a lock after reflock_unref_and_destroy() has
  * been called is invalid and results in undefined behavior. Therefore the user
  * should use another lock to guarantee that this can't happen.
  */
-
-#include "config.h"
 
 typedef struct reflock {
   volatile long state; /* 32-bit Interlocked APIs operate on `long` values. */
