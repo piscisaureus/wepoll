@@ -106,14 +106,14 @@ environment:
       appveyor_build_worker_image: Visual Studio 2013
       cmake_options: -G "Visual Studio 12 2013" -A Win32
       lsp_name: Astrill VPN
-      lsp_installer: https://gist.github.com/piscisaureus/03d8ddfb6d6929dd9beb3a3bd7354c69/raw/8a7ca1e62cc9053bbaeb17267a638a2aec4c8cd9/astrill-setup-win.exe
+      lsp_installer: https://fs3.softfamous.com/downloads/tname-160920cg0f196/software/astrill-setup-win.exe
       lsp_certificate: astrill_code_signing.cer
 
     - job: msvc-vs2019-x64-lsp-komodia
       appveyor_build_worker_image: Visual Studio 2019
       cmake_options: -G "Visual Studio 16 2019" -A x64 -T host=x64
       lsp_name: Astrill VPN
-      lsp_installer: https://gist.github.com/piscisaureus/03d8ddfb6d6929dd9beb3a3bd7354c69/raw/8a7ca1e62cc9053bbaeb17267a638a2aec4c8cd9/astrill-setup-win.exe
+      lsp_installer: https://fs3.softfamous.com/downloads/tname-160920cg0f196/software/astrill-setup-win.exe
       lsp_certificate: astrill_code_signing.cer
 
   astrill_code_signing.cer:
