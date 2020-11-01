@@ -93,26 +93,26 @@ environment:
     - job: msvc-vs2013-x86-lsp-nonifs
       appveyor_build_worker_image: Visual Studio 2013
       cmake_options: -G "Visual Studio 12 2013" -A Win32
-      lsp_name: PCTools
+      lsp_name: PC Tools Antivirus
       lsp_installer: http://download.pctools.com/mirror/updates/9.0.0.2308-SDavfree-lite_en.exe
 
     - job: msvc-vs2019-x64-lsp-nonifs
       appveyor_build_worker_image: Visual Studio 2019
       cmake_options: -G "Visual Studio 16 2019" -A x64 -T host=x64
-      lsp_name: PCTools
+      lsp_name: PC Tools Antivirus
       lsp_installer: http://download.pctools.com/mirror/updates/9.0.0.2308-SDavfree-lite_en.exe
 
     - job: msvc-vs2013-x86-lsp-komodia
       appveyor_build_worker_image: Visual Studio 2013
       cmake_options: -G "Visual Studio 12 2013" -A Win32
-      lsp_name: Astrill
+      lsp_name: Astrill VPN
       lsp_installer: https://gist.github.com/piscisaureus/03d8ddfb6d6929dd9beb3a3bd7354c69/raw/8a7ca1e62cc9053bbaeb17267a638a2aec4c8cd9/astrill-setup-win.exe
       lsp_certificate: astrill_code_signing.cer
 
     - job: msvc-vs2019-x64-lsp-komodia
       appveyor_build_worker_image: Visual Studio 2019
       cmake_options: -G "Visual Studio 16 2019" -A x64 -T host=x64
-      lsp_name: Astrill
+      lsp_name: Astrill VPN
       lsp_installer: https://gist.github.com/piscisaureus/03d8ddfb6d6929dd9beb3a3bd7354c69/raw/8a7ca1e62cc9053bbaeb17267a638a2aec4c8cd9/astrill-setup-win.exe
       lsp_certificate: astrill_code_signing.cer
 
@@ -160,14 +160,14 @@ install:
   - ps: |-
       if ($env:lsp_name) {
         if (-Not (Test-Path -Path "c:\lspinst\${env:lsp_name}.exe")) {
-          "Downloading ${env:lsp_name} LSP installer..."
+          "Downloading ${env:lsp_name} installer..."
           $null = New-Item -Path "c:\lspinst" -ItemType directory -Force
           Invoke-WebRequest -Uri ${env:lsp_installer} `
                             -OutFile "c:\lspinst\${env:lsp_name}.exe"
         }
 
         if ($env:lsp_certificate) {
-          "Installing certificate for ${env:lsp_name} LSP..."
+          "Installing certificate for ${env:lsp_name}..."
           Get-Content -Path "Env:\${env:lsp_certificate}" |
             Out-File -FilePath "${env:lsp_certificate}"
           $null = Import-Certificate `
@@ -175,7 +175,7 @@ install:
                     -CertStoreLocation "Cert:\LocalMachine\TrustedPublisher"
         }
 
-        "Installing ${env:lsp_name} LSP..."
+        "Installing ${env:lsp_name}..."
         Start-Process -FilePath "c:\lspinst\${env:lsp_name}.exe" `
                       -ArgumentList /silent,/norestart `
                       -Wait
