@@ -115,6 +115,19 @@ int main(void) {
     r = epoll_ctl(ep_type, -1, sock_hinv, &ev);
     check_error(r < 0, EBADF, ERROR_INVALID_HANDLE);
 
+    /* Precedence: `ENOTSOCK` before `EINVAL`.
+     * If both `ephnd` and `sock` are valid handles, the next step is to verify
+     * that `sock` is actually a socket. Any further checks of `ephnd` and
+     * `op` are done later.
+     *
+     * TODO: this test currently doesn't pass; fix it.
+     *
+     * r = epoll_ctl(ep_type, EPOLL_CTL_ADD, sock_type, &ev);
+     * check_error(r < 0, ENOTSOCK, WSAENOTSOCK);
+     * r = epoll_ctl(ep_good, 4, sock_type, &ev);
+     * check_error(r < 0, ENOTSOCK, WSAENOTSOCK);
+     */
+
     /* Socket already in epoll set. */
     r = epoll_ctl(ep_good, EPOLL_CTL_ADD, sock_good, &ev);
     check(r == 0);
