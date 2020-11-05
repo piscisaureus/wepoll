@@ -21,7 +21,7 @@ static BOOL CALLBACK init__once_callback(INIT_ONCE* once,
 
   /* N.b. that initialization order matters here. */
   if (ws_global_init() < 0 || nt_global_init() < 0 ||
-      reflock_global_init() < 0 || epoll_global_init() < 0)
+      reflock_global_init() < 0 || api_global_init() < 0)
     return FALSE;
 
   init__done = true;

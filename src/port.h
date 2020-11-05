@@ -45,9 +45,9 @@ WEPOLL_INTERNAL void port_remove_deleted_socket(port_state_t* port_state,
 WEPOLL_INTERNAL HANDLE port_get_iocp_handle(port_state_t* port_state);
 WEPOLL_INTERNAL queue_t* port_get_poll_group_queue(port_state_t* port_state);
 
-WEPOLL_INTERNAL port_state_t* port_state_from_handle_tree_node(
+WEPOLL_INTERNAL port_state_t* port_state_from_tree_node(
     ts_tree_node_t* tree_node);
-WEPOLL_INTERNAL ts_tree_node_t* port_state_to_handle_tree_node(
+WEPOLL_INTERNAL ts_tree_node_t* port_state_to_tree_node(
     port_state_t* port_state);
 
 #endif /* WEPOLL_PORT_H_ */

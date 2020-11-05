@@ -417,10 +417,10 @@ queue_t* port_get_poll_group_queue(port_state_t* port_state) {
   return &port_state->poll_group_queue;
 }
 
-port_state_t* port_state_from_handle_tree_node(ts_tree_node_t* tree_node) {
+port_state_t* port_state_from_tree_node(ts_tree_node_t* tree_node) {
   return container_of(tree_node, port_state_t, handle_tree_node);
 }
 
-ts_tree_node_t* port_state_to_handle_tree_node(port_state_t* port_state) {
+ts_tree_node_t* port_state_to_tree_node(port_state_t* port_state) {
   return &port_state->handle_tree_node;
 }

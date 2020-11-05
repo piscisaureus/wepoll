@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "afd.h"
+#include "api.h"
 #include "error.h"
 #include "poll-group.h"
 #include "port.h"
@@ -14,10 +15,6 @@
 #include "util.h"
 #include "wepoll.h"
 #include "ws.h"
-
-#define SOCK__KNOWN_EPOLL_EVENTS                                       \
-  (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDNORM | \
-   EPOLLRDBAND | EPOLLWRNORM | EPOLLWRBAND | EPOLLMSG | EPOLLRDHUP)
 
 typedef enum sock__poll_status {
   SOCK__POLL_IDLE = 0,
@@ -152,7 +149,7 @@ int sock_set_event(port_state_t* port_state,
   sock_state->user_events = events;
   sock_state->user_data = ev->data;
 
-  if ((events & SOCK__KNOWN_EPOLL_EVENTS & ~sock_state->pending_events) != 0)
+  if ((events & API_VALID_EPOLL_EVENTS & ~sock_state->pending_events) != 0)
     port_request_socket_update(port_state, sock_state);
 
   return 0;
@@ -204,7 +201,7 @@ int sock_update(port_state_t* port_state, sock_state_t* sock_state) {
   assert(!sock_state->delete_pending);
 
   if ((sock_state->poll_status == SOCK__POLL_PENDING) &&
-      (sock_state->user_events & SOCK__KNOWN_EPOLL_EVENTS &
+      (sock_state->user_events & API_VALID_EPOLL_EVENTS &
        ~sock_state->pending_events) == 0) {
     /* All the events the user is interested in are already being monitored by
      * the pending poll operation. It might spuriously complete because of an

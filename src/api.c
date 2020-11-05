@@ -9,10 +9,10 @@
 #include "wepoll.h"
 #include "win.h"
 
-static ts_tree_t epoll__handle_tree;
+static ts_tree_t api__port_tree;
 
-int epoll_global_init(void) {
-  ts_tree_init(&epoll__handle_tree);
+int api_global_init(void) {
+  ts_tree_init(&api__port_tree);
   return 0;
 }
 
@@ -28,8 +28,8 @@ static HANDLE epoll__create(void) {
   if (port_state == NULL)
     return NULL;
 
-  tree_node = port_state_to_handle_tree_node(port_state);
-  if (ts_tree_add(&epoll__handle_tree, tree_node, (uintptr_t) ephnd) < 0) {
+  tree_node = port_state_to_tree_node(port_state);
+  if (ts_tree_add(&api__port_tree, tree_node, (uintptr_t) ephnd) < 0) {
     /* This should never happen. */
     port_delete(port_state);
     return_set_error(NULL, ERROR_ALREADY_EXISTS);
@@ -59,13 +59,13 @@ int epoll_close(HANDLE ephnd) {
   if (init() < 0)
     return -1;
 
-  tree_node = ts_tree_del_and_ref(&epoll__handle_tree, (uintptr_t) ephnd);
+  tree_node = ts_tree_del_and_ref(&api__port_tree, (uintptr_t) ephnd);
   if (tree_node == NULL) {
     err_set_win_error(ERROR_INVALID_PARAMETER);
     goto err;
   }
 
-  port_state = port_state_from_handle_tree_node(tree_node);
+  port_state = port_state_from_tree_node(tree_node);
   port_close(port_state);
 
   ts_tree_node_unref_and_destroy(tree_node);
@@ -85,13 +85,13 @@ int epoll_ctl(HANDLE ephnd, int op, SOCKET sock, struct epoll_event* ev) {
   if (init() < 0)
     return -1;
 
-  tree_node = ts_tree_find_and_ref(&epoll__handle_tree, (uintptr_t) ephnd);
+  tree_node = ts_tree_find_and_ref(&api__port_tree, (uintptr_t) ephnd);
   if (tree_node == NULL) {
     err_set_win_error(ERROR_INVALID_PARAMETER);
     goto err;
   }
 
-  port_state = port_state_from_handle_tree_node(tree_node);
+  port_state = port_state_from_tree_node(tree_node);
   r = port_ctl(port_state, op, sock, ev);
 
   ts_tree_node_unref(tree_node);
@@ -123,13 +123,13 @@ int epoll_wait(HANDLE ephnd,
   if (init() < 0)
     return -1;
 
-  tree_node = ts_tree_find_and_ref(&epoll__handle_tree, (uintptr_t) ephnd);
+  tree_node = ts_tree_find_and_ref(&api__port_tree, (uintptr_t) ephnd);
   if (tree_node == NULL) {
     err_set_win_error(ERROR_INVALID_PARAMETER);
     goto err;
   }
 
-  port_state = port_state_from_handle_tree_node(tree_node);
+  port_state = port_state_from_tree_node(tree_node);
   num_events = port_wait(port_state, events, maxevents, timeout);
 
   ts_tree_node_unref(tree_node);

@@ -34,6 +34,12 @@ typedef struct _IO_STATUS_BLOCK {
   ULONG_PTR Information;
 } IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
 
+typedef struct _FILE_IO_COMPLETION_INFORMATION {
+  PVOID KeyContext;
+  PVOID ApcContext;
+  IO_STATUS_BLOCK IoStatusBlock;
+} FILE_IO_COMPLETION_INFORMATION, *PFILE_IO_COMPLETION_INFORMATION;
+
 typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext,
                                      PIO_STATUS_BLOCK IoStatusBlock,
                                      ULONG Reserved);
@@ -120,6 +126,15 @@ typedef struct _OBJECT_ATTRIBUTES {
      PVOID KeyValue,                      \
      BOOLEAN Alertable,                   \
      PLARGE_INTEGER Timeout))             \
+                                          \
+  X(NTSTATUS,                             \
+    NTAPI,                                \
+    NtSetIoCompletion,                    \
+    (HANDLE IoCompletionHandle,           \
+     PVOID KeyContext,                    \
+     PVOID ApcContext,                    \
+     NTSTATUS IoStatus,                   \
+     ULONG_PTR IoStatusInformation))      \
                                           \
   X(NTSTATUS,                             \
     NTAPI,                                \
