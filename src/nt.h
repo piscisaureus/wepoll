@@ -63,11 +63,6 @@ typedef struct _OBJECT_ATTRIBUTES {
 #define FILE_OPEN 0x00000001UL
 #endif
 
-#define KEYEDEVENT_WAIT 0x00000001UL
-#define KEYEDEVENT_WAKE 0x00000002UL
-#define KEYEDEVENT_ALL_ACCESS \
-  (STANDARD_RIGHTS_REQUIRED | KEYEDEVENT_WAIT | KEYEDEVENT_WAKE)
-
 #define NT_NTDLL_IMPORT_LIST(X)           \
   X(NTSTATUS,                             \
     NTAPI,                                \
@@ -93,14 +88,6 @@ typedef struct _OBJECT_ATTRIBUTES {
                                           \
   X(NTSTATUS,                             \
     NTAPI,                                \
-    NtCreateKeyedEvent,                   \
-    (PHANDLE KeyedEventHandle,            \
-     ACCESS_MASK DesiredAccess,           \
-     POBJECT_ATTRIBUTES ObjectAttributes, \
-     ULONG Flags))                        \
-                                          \
-  X(NTSTATUS,                             \
-    NTAPI,                                \
     NtDeviceIoControlFile,                \
     (HANDLE FileHandle,                   \
      HANDLE Event,                        \
@@ -112,22 +99,6 @@ typedef struct _OBJECT_ATTRIBUTES {
      ULONG InputBufferLength,             \
      PVOID OutputBuffer,                  \
      ULONG OutputBufferLength))           \
-                                          \
-  X(NTSTATUS,                             \
-    NTAPI,                                \
-    NtReleaseKeyedEvent,                  \
-    (HANDLE KeyedEventHandle,             \
-     PVOID KeyValue,                      \
-     BOOLEAN Alertable,                   \
-     PLARGE_INTEGER Timeout))             \
-                                          \
-  X(NTSTATUS,                             \
-    NTAPI,                                \
-    NtWaitForKeyedEvent,                  \
-    (HANDLE KeyedEventHandle,             \
-     PVOID KeyValue,                      \
-     BOOLEAN Alertable,                   \
-     PLARGE_INTEGER Timeout))             \
                                           \
   X(ULONG, WINAPI, RtlNtStatusToDosError, (NTSTATUS Status))
 

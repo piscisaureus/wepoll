@@ -2,6 +2,7 @@
 #define WEPOLL_REFLOCK_H_
 
 #include "config.h"
+#include "win.h"
 
 /* A reflock is a special kind of lock that normally prevents a chunk of
  * memory from being freed, but does allow the chunk of memory to eventually be
@@ -23,6 +24,8 @@
 
 typedef struct reflock {
   volatile long state; /* 32-bit Interlocked APIs operate on `long` values. */
+  CONDITION_VARIABLE cv_signal;
+  CONDITION_VARIABLE cv_await;
 } reflock_t;
 
 WEPOLL_INTERNAL int reflock_global_init(void);

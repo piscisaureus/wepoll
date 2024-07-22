@@ -11,36 +11,61 @@
 #define REFLOCK__REF          ((long) 0x00000001UL)
 #define REFLOCK__REF_MASK     ((long) 0x0fffffffUL)
 #define REFLOCK__DESTROY      ((long) 0x10000000UL)
-#define REFLOCK__DESTROY_MASK ((long) 0xf0000000UL)
-#define REFLOCK__POISON       ((long) 0x300dead0UL)
+#define REFLOCK__DESTROY_MASK ((long) 0x10000000UL)
+#define REFLOCK__SIGNAL       ((long) 0x20000000UL)
+#define REFLOCK__SIGNAL_MASK  ((long) 0x20000000UL)
+#define REFLOCK__AWAIT        ((long) 0x40000000UL)
+#define REFLOCK__AWAIT_MASK   ((long) 0x40000000UL)
+#define REFLOCK__POISON       ((long) 0x800dead0UL)
 /* clang-format on */
 
-static HANDLE reflock__keyed_event = NULL;
+static CRITICAL_SECTION signalMutex;
 
 int reflock_global_init(void) {
-  NTSTATUS status = NtCreateKeyedEvent(
-      &reflock__keyed_event, KEYEDEVENT_ALL_ACCESS, NULL, 0);
-  if (status != STATUS_SUCCESS)
-    return_set_error(-1, RtlNtStatusToDosError(status));
+  InitializeCriticalSection(&signalMutex);
   return 0;
 }
 
 void reflock_init(reflock_t* reflock) {
   reflock->state = 0;
+  InitializeConditionVariable(&reflock->cv_signal);
+  InitializeConditionVariable(&reflock->cv_await);
 }
 
-static void reflock__signal_event(void* address) {
-  NTSTATUS status =
-      NtReleaseKeyedEvent(reflock__keyed_event, address, FALSE, NULL);
-  if (status != STATUS_SUCCESS)
+static void reflock__signal_event(reflock_t* reflock) {
+  BOOL status = TRUE;
+
+  EnterCriticalSection(&signalMutex);
+  long state = InterlockedOr(&reflock->state, REFLOCK__SIGNAL);
+  while ((reflock->state & REFLOCK__AWAIT_MASK) == 0) {
+    status = SleepConditionVariableCS(&reflock->cv_signal, &signalMutex, INFINITE);
+  }
+  LeaveCriticalSection(&signalMutex);
+
+  if (status != TRUE)
     abort();
+
+  /* At most one reflock__await_event call per reflock. */
+  WakeConditionVariable(&reflock->cv_await);
+  unused_var(state);
 }
 
-static void reflock__await_event(void* address) {
-  NTSTATUS status =
-      NtWaitForKeyedEvent(reflock__keyed_event, address, FALSE, NULL);
-  if (status != STATUS_SUCCESS)
+static void reflock__await_event(reflock_t* reflock) {
+  BOOL status = TRUE;
+
+  EnterCriticalSection(&signalMutex);
+  long state = InterlockedOr(&reflock->state, REFLOCK__AWAIT);
+  while ((reflock->state & REFLOCK__SIGNAL_MASK) == 0) {
+    status = SleepConditionVariableCS(&reflock->cv_await, &signalMutex, INFINITE);
+  }
+  LeaveCriticalSection(&signalMutex);
+
+  if (status != TRUE)
     abort();
+
+  /* Multiple threads could be waiting. */
+  WakeAllConditionVariable(&reflock->cv_signal);
+  unused_var(state);
 }
 
 void reflock_ref(reflock_t* reflock) {
@@ -57,7 +82,8 @@ void reflock_unref(reflock_t* reflock) {
   /* Verify that the lock was referenced and not already destroyed. */
   assert((state & REFLOCK__DESTROY_MASK & ~REFLOCK__DESTROY) == 0);
 
-  if (state == REFLOCK__DESTROY)
+  if ((state & REFLOCK__DESTROY_MASK) == REFLOCK__DESTROY &&
+      (state & REFLOCK__REF_MASK) == 0)
     reflock__signal_event(reflock);
 }
 
@@ -73,5 +99,6 @@ void reflock_unref_and_destroy(reflock_t* reflock) {
     reflock__await_event(reflock);
 
   state = InterlockedExchange(&reflock->state, REFLOCK__POISON);
-  assert(state == REFLOCK__DESTROY);
+  assert((state & REFLOCK__DESTROY_MASK) == REFLOCK__DESTROY);
+  assert((state & REFLOCK__REF_MASK) == 0);
 }

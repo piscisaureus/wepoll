@@ -6,7 +6,7 @@ include(CMakeParseArguments)
 link_libraries(ws2_32)
 
 if(MSVC)
-  add_compile_options(/Wall /WX /wd4127 /wd4201 /wd4242 /wd4710 /wd4711 /wd4820)
+  add_compile_options(/Wall /WX /wd4127 /wd4191 /wd4201 /wd4242 /wd4710 /wd4711 /wd4820)
   if(MSVC_VERSION GREATER_EQUAL 1900)
     add_compile_options(/wd5045)
   endif()
